@@ -68,6 +68,9 @@ func (f *fakeRepo) FindOrCreatePerson(userID int64, name string) (*models.Person
 	return &models.Person{ID: int64(len(f.personsCreated)), Name: name}, nil
 }
 func (f *fakeRepo) ListHashtags() ([]models.Hashtag, error) { return nil, nil }
+func (f *fakeRepo) ListHashtagsByUser(userID int64) ([]models.Hashtag, error) {
+	return nil, nil
+}
 func (f *fakeRepo) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
 	f.tagsCreated = append(f.tagsCreated, name)
 	return &models.Hashtag{ID: int64(len(f.tagsCreated)), Name: name}, nil
@@ -104,6 +107,14 @@ func (f *fakeRepo) ListCommentsForPosts(postIDs []int64) (map[int64][]models.Com
 }
 func (f *fakeRepo) ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error) {
 	return map[int64][]models.Attachment{}, nil
+}
+func (f *fakeRepo) SavePostWithRelations(userID int64, post *models.Post, tagNames, personNames []string) error {
+	f.tagsCreated = append(f.tagsCreated, tagNames...)
+	f.personsCreated = append(f.personsCreated, personNames...)
+	if post.ID == 0 {
+		post.ID = 1
+	}
+	return nil
 }
 
 func TestRegisterLoginSession(t *testing.T) {

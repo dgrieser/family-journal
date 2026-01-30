@@ -9,6 +9,7 @@ import (
 	"familyjournal/backend/internal/db"
 	"familyjournal/backend/internal/handlers"
 	"familyjournal/backend/internal/middleware"
+	"familyjournal/backend/internal/models"
 	"familyjournal/backend/internal/repositories"
 	"familyjournal/backend/internal/services"
 
@@ -22,6 +23,13 @@ import (
 
 func main() {
 	cfg := config.Load()
+	if cfg.SessionSecret == "" {
+		if cfg.Env == "production" {
+			log.Fatal("SESSION_SECRET must be set in production")
+		}
+		log.Println("SESSION_SECRET not set; using insecure development default")
+		cfg.SessionSecret = "dev-secret"
+	}
 	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
 		log.Fatal(err)
 	}
@@ -52,10 +60,6 @@ func main() {
 		Expiration:     24 * time.Hour,
 	}))
 
-	app.Use("/uploads", func(c *fiber.Ctx) error {
-		c.Set("Content-Disposition", "attachment")
-		return c.Next()
-	})
 	app.Static("/uploads", cfg.UploadDir)
 
 	api := app.Group("/api/v1")
@@ -70,7 +74,7 @@ func main() {
 	api.Get("/auth/profile", middleware.RequireAuth(store), authHandler.Profile)
 	api.Put("/auth/profile", middleware.RequireAuth(store), authHandler.UpdateProfile)
 
-	admin := api.Group("/admin", middleware.RequireAuth(store), middleware.RequireRole(store, "admin"))
+	admin := api.Group("/admin", middleware.RequireAuth(store), middleware.RequireRole(store, models.RoleAdmin))
 	admin.Get("/users", adminHandler.ListUsers)
 	admin.Patch("/users/:id/role", adminHandler.UpdateRole)
 	admin.Patch("/users/:id/active", adminHandler.UpdateActive)

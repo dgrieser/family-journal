@@ -3,8 +3,8 @@ services:
   mysql:
     image: mysql:8.3
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: familyjournal
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-familyjournal}
     ports:
       - "3306:3306"
     volumes:
@@ -13,8 +13,8 @@ services:
   backend:
     build: ./backend
     environment:
-      MYSQL_DSN: root:password@tcp(mysql:3306)/familyjournal?parseTime=true
-      SESSION_SECRET: dev-secret
+      MYSQL_DSN: ${MYSQL_DSN:-root:password@tcp(mysql:3306)/familyjournal?parseTime=true}
+      SESSION_SECRET: ${SESSION_SECRET:-}
       COOKIE_SECURE: "false"
       UPLOAD_DIR: /app/uploads
       MAX_UPLOAD_MB: "10"
@@ -30,9 +30,9 @@ services:
     depends_on:
       - backend
     ports:
-      - "5173:5173"
+      - "5173:80"
     environment:
-      VITE_API_URL: http://localhost:8080
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
 
 volumes:
   mysql_data:

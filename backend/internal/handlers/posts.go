@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"log"
 	"mime"
 	"mime/multipart"
 	"net/http"
@@ -51,7 +52,8 @@ func (h *PostsHandler) List(c *fiber.Ctx) error {
 	search := c.Query("search")
 	posts, err := h.Service.ListPosts(userID, date, tags, persons, search)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("list posts error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to list posts")
 	}
 	return c.JSON(posts)
 }
@@ -92,7 +94,8 @@ func (h *PostsHandler) Create(c *fiber.Ctx) error {
 		Mood:     req.Mood,
 	}
 	if err := h.Service.CreateOrUpdatePost(userID, post); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("create post error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to save post")
 	}
 	return c.Status(fiber.StatusCreated).JSON(post)
 }
@@ -123,7 +126,8 @@ func (h *PostsHandler) Update(c *fiber.Ctx) error {
 		Mood:     req.Mood,
 	}
 	if err := h.Service.CreateOrUpdatePost(userID, post); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("update post error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to update post")
 	}
 	return c.JSON(post)
 }
@@ -154,7 +158,8 @@ func (h *PostsHandler) Delete(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
 	if err := h.Service.DeletePost(userID, int64(id)); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("delete post error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete post")
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -179,7 +184,8 @@ func (h *PostsHandler) AddComment(c *fiber.Ctx) error {
 	}
 	comment := &models.Comment{PostID: int64(postID), UserID: userID, Text: req.Text}
 	if err := h.Service.AddComment(comment); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("add comment error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to add comment")
 	}
 	return c.Status(fiber.StatusCreated).JSON(comment)
 }
@@ -201,7 +207,8 @@ func (h *PostsHandler) UpdateComment(c *fiber.Ctx) error {
 	}
 	comment := &models.Comment{ID: int64(commentID), UserID: userID, Text: req.Text}
 	if err := h.Service.UpdateComment(comment); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("update comment error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to update comment")
 	}
 	return c.JSON(comment)
 }
@@ -216,15 +223,21 @@ func (h *PostsHandler) DeleteComment(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
 	if err := h.Service.DeleteComment(userID, int64(commentID)); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("delete comment error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete comment")
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func (h *PostsHandler) ListHashtags(c *fiber.Ctx) error {
-	tags, err := h.Service.ListHashtags()
+	userID, _, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+	}
+	tags, err := h.Service.ListHashtags(userID)
+	if err != nil {
+		log.Printf("list hashtags error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to list hashtags")
 	}
 	return c.JSON(tags)
 }
@@ -277,7 +290,8 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 			URL:      "/uploads/" + fileName,
 		}
 		if err := h.Service.CreateAttachment(&attachment); err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+			log.Printf("create attachment error: %v", err)
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to save attachment")
 		}
 		saved = append(saved, attachment)
 	}

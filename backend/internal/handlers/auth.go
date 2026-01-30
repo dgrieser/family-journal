@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"log"
+
 	"familyjournal/backend/internal/middleware"
 	"familyjournal/backend/internal/models"
 	"familyjournal/backend/internal/services"
@@ -42,11 +44,17 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	}
 	sess, err := h.Store.Get(c)
 	if err != nil {
+		log.Printf("session get error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "session error")
+	}
+	if err := sess.Regenerate(); err != nil {
+		log.Printf("session regenerate error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "session error")
 	}
 	sess.Set("user_id", user.ID)
 	sess.Set("role", user.Role)
 	if err := sess.Save(); err != nil {
+		log.Printf("session save error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "session error")
 	}
 	return c.JSON(user)
@@ -55,9 +63,11 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	sess, err := h.Store.Get(c)
 	if err != nil {
+		log.Printf("session get error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "session error")
 	}
 	if err := sess.Destroy(); err != nil {
+		log.Printf("session destroy error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "session error")
 	}
 	return c.SendStatus(fiber.StatusNoContent)
@@ -88,10 +98,12 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "email required")
 	}
 	if err := h.Service.UpdateUserProfile(userID, req.Email); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		log.Printf("update profile error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to update profile")
 	}
 	user, err := h.Service.GetUserByID(userID)
 	if err != nil {
+		log.Printf("get profile error: %v", err)
 		return fiber.NewError(fiber.StatusNotFound, "not found")
 	}
 	return c.JSON(user)

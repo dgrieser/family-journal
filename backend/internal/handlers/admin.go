@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"log"
+
+	"familyjournal/backend/internal/models"
 	"familyjournal/backend/internal/services"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,7 +24,8 @@ type activeRequest struct {
 func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 	users, err := h.Service.ListUsers()
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("list users error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to retrieve users")
 	}
 	return c.JSON(users)
 }
@@ -35,11 +39,12 @@ func (h *AdminHandler) UpdateRole(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}
-	if req.Role != "admin" && req.Role != "user" {
+	if req.Role != models.RoleAdmin && req.Role != models.RoleUser {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid role")
 	}
 	if err := h.Service.UpdateUserRole(int64(id), req.Role); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("update user role error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to update role")
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -54,7 +59,8 @@ func (h *AdminHandler) UpdateActive(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}
 	if err := h.Service.UpdateUserActive(int64(id), req.Active); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("update user active error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to update user")
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }

@@ -12,6 +12,11 @@ type User struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
+const (
+	RoleAdmin = "admin"
+	RoleUser  = "user"
+)
+
 type Person struct {
 	ID          int64     `db:"id" json:"id"`
 	Name        string    `db:"name" json:"name"`

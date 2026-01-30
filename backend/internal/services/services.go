@@ -53,6 +53,8 @@ type Repository interface {
 	ListPersonsForPosts(postIDs []int64) (map[int64][]models.Person, error)
 	ListCommentsForPosts(postIDs []int64) (map[int64][]models.Comment, error)
 	ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error)
+	SavePostWithRelations(userID int64, post *models.Post, tagNames, personNames []string) error
+	ListHashtagsByUser(userID int64) ([]models.Hashtag, error)
 }
 
 type Service struct {
@@ -71,7 +73,7 @@ func (s *Service) Register(email, password string) (*models.User, error) {
 	user := &models.User{
 		Email:    email,
 		Password: string(hash),
-		Role:     "user",
+		Role:     models.RoleUser,
 		Active:   true,
 	}
 	if err := s.Repo.CreateUser(user); err != nil {
@@ -123,41 +125,9 @@ func (s *Service) ParseMentions(text string) []string {
 }
 
 func (s *Service) CreateOrUpdatePost(userID int64, post *models.Post) error {
-	var err error
-	if post.ID == 0 {
-		err = s.Repo.CreatePost(post)
-	} else {
-		err = s.Repo.UpdatePost(post)
-	}
-	if err != nil {
-		return err
-	}
-
 	tags := s.ParseHashtags(post.Text)
 	persons := s.ParseMentions(post.Text)
-	var tagModels []models.Hashtag
-	for _, tag := range tags {
-		model, err := s.Repo.FindOrCreateHashtag(tag)
-		if err != nil {
-			return err
-		}
-		tagModels = append(tagModels, *model)
-	}
-	var personModels []models.Person
-	for _, name := range persons {
-		model, err := s.Repo.FindOrCreatePerson(userID, name)
-		if err != nil {
-			return err
-		}
-		personModels = append(personModels, *model)
-	}
-	if err := s.Repo.ReplacePostTags(post.ID, tagModels); err != nil {
-		return err
-	}
-	if err := s.Repo.ReplacePostMentions(post.ID, personModels); err != nil {
-		return err
-	}
-	return nil
+	return s.Repo.SavePostWithRelations(userID, post, tags, persons)
 }
 
 func (s *Service) ListPosts(userID int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error) {
@@ -183,8 +153,8 @@ func (s *Service) GetPost(userID, postID int64) (*models.Post, error) {
 	return &posts[0], nil
 }
 
-func (s *Service) ListHashtags() ([]models.Hashtag, error) {
-	return s.Repo.ListHashtags()
+func (s *Service) ListHashtags(userID int64) ([]models.Hashtag, error) {
+	return s.Repo.ListHashtagsByUser(userID)
 }
 
 func (s *Service) ListPersons(userID int64) ([]models.Person, error) {

@@ -20,7 +20,7 @@ func Load() Config {
 		Env:           getEnv("APP_ENV", "development"),
 		Port:          getEnv("PORT", "8080"),
 		DatabaseDSN:   getEnv("MYSQL_DSN", "root:password@tcp(mysql:3306)/familyjournal?parseTime=true"),
-		SessionSecret: getEnv("SESSION_SECRET", "super-secret"),
+		SessionSecret: getEnv("SESSION_SECRET", ""),
 		CookieSecure:  getEnv("COOKIE_SECURE", "false") == "true",
 		UploadDir:     getEnv("UPLOAD_DIR", "./uploads"),
 		MaxUploadMB:   getEnvInt("MAX_UPLOAD_MB", 10),

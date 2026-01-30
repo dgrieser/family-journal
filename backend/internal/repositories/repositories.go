@@ -128,6 +128,20 @@ func (r *Repository) ListHashtags() ([]models.Hashtag, error) {
 	return tags, nil
 }
 
+func (r *Repository) ListHashtagsByUser(userID int64) ([]models.Hashtag, error) {
+	var tags []models.Hashtag
+	query := `SELECT DISTINCT h.id, h.name, h.created_at
+		FROM hashtags h
+		JOIN post_hashtags ph ON ph.hashtag_id = h.id
+		JOIN posts p ON p.id = ph.post_id
+		WHERE p.user_id = ?
+		ORDER BY h.name ASC`
+	if err := r.DB.Select(&tags, query, userID); err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
 func (r *Repository) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
 	var tag models.Hashtag
 	query := `SELECT id, name, created_at FROM hashtags WHERE name = ?`
@@ -145,6 +159,71 @@ func (r *Repository) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
 	tag.Name = name
 	tag.CreatedAt = time.Now()
 	return &tag, nil
+}
+
+func (r *Repository) SavePostWithRelations(userID int64, post *models.Post, tagNames, personNames []string) error {
+	tx, err := r.DB.Beginx()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if post.ID == 0 {
+		query := `INSERT INTO posts (user_id, date, text, category, mood, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, NOW(), NOW())`
+		res, execErr := tx.Exec(query, post.UserID, post.Date, post.Text, post.Category, post.Mood)
+		if execErr != nil {
+			err = execErr
+			return err
+		}
+		id, _ := res.LastInsertId()
+		post.ID = id
+	} else {
+		if _, execErr := tx.Exec(`UPDATE posts SET text = ?, category = ?, mood = ?, updated_at = NOW() WHERE id = ? AND user_id = ?`,
+			post.Text, post.Category, post.Mood, post.ID, post.UserID); execErr != nil {
+			err = execErr
+			return err
+		}
+	}
+
+	var tagModels []models.Hashtag
+	for _, tag := range tagNames {
+		model, execErr := findOrCreateHashtagTx(tx, tag)
+		if execErr != nil {
+			err = execErr
+			return err
+		}
+		tagModels = append(tagModels, *model)
+	}
+
+	var personModels []models.Person
+	for _, name := range personNames {
+		model, execErr := findOrCreatePersonTx(tx, userID, name)
+		if execErr != nil {
+			err = execErr
+			return err
+		}
+		personModels = append(personModels, *model)
+	}
+
+	if execErr := replacePostTagsTx(tx, post.ID, tagModels); execErr != nil {
+		err = execErr
+		return err
+	}
+	if execErr := replacePostMentionsTx(tx, post.ID, personModels); execErr != nil {
+		err = execErr
+		return err
+	}
+
+	if execErr := tx.Commit(); execErr != nil {
+		err = execErr
+		return err
+	}
+	return nil
 }
 
 func (r *Repository) CreatePost(post *models.Post) error {
@@ -460,4 +539,67 @@ func (r *Repository) ListAttachmentsForPosts(postIDs []int64) (map[int64][]model
 		})
 	}
 	return results, nil
+}
+
+func findOrCreateHashtagTx(tx *sqlx.Tx, name string) (*models.Hashtag, error) {
+	var tag models.Hashtag
+	if err := tx.Get(&tag, `SELECT id, name, created_at FROM hashtags WHERE name = ?`, name); err == nil {
+		return &tag, nil
+	} else if err != sql.ErrNoRows {
+		return nil, err
+	}
+	res, err := tx.Exec(`INSERT INTO hashtags (name, created_at) VALUES (?, NOW())`, name)
+	if err != nil {
+		return nil, err
+	}
+	id, _ := res.LastInsertId()
+	tag.ID = id
+	tag.Name = name
+	tag.CreatedAt = time.Now()
+	return &tag, nil
+}
+
+func findOrCreatePersonTx(tx *sqlx.Tx, userID int64, name string) (*models.Person, error) {
+	var person models.Person
+	if err := tx.Get(&person, `SELECT id, name, description, created_by_user_id, created_at, updated_at
+		FROM persons WHERE created_by_user_id = ? AND name = ?`, userID, name); err == nil {
+		return &person, nil
+	} else if err != sql.ErrNoRows {
+		return nil, err
+	}
+	person = models.Person{Name: name, CreatedBy: userID}
+	res, err := tx.Exec(`INSERT INTO persons (name, description, created_by_user_id, created_at, updated_at)
+		VALUES (?, ?, ?, NOW(), NOW())`, person.Name, person.Description, person.CreatedBy)
+	if err != nil {
+		return nil, err
+	}
+	id, _ := res.LastInsertId()
+	person.ID = id
+	person.CreatedAt = time.Now()
+	person.UpdatedAt = time.Now()
+	return &person, nil
+}
+
+func replacePostTagsTx(tx *sqlx.Tx, postID int64, tags []models.Hashtag) error {
+	if _, err := tx.Exec(`DELETE FROM post_hashtags WHERE post_id = ?`, postID); err != nil {
+		return err
+	}
+	for _, tag := range tags {
+		if _, err := tx.Exec(`INSERT INTO post_hashtags (post_id, hashtag_id) VALUES (?, ?)`, postID, tag.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func replacePostMentionsTx(tx *sqlx.Tx, postID int64, persons []models.Person) error {
+	if _, err := tx.Exec(`DELETE FROM mentions WHERE post_id = ?`, postID); err != nil {
+		return err
+	}
+	for _, person := range persons {
+		if _, err := tx.Exec(`INSERT INTO mentions (post_id, person_id) VALUES (?, ?)`, postID, person.ID); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"log"
+
 	"familyjournal/backend/internal/middleware"
 	"familyjournal/backend/internal/models"
 	"familyjournal/backend/internal/services"
@@ -21,7 +23,8 @@ func (h *PersonsHandler) List(c *fiber.Ctx) error {
 	}
 	persons, err := h.Service.ListPersons(userID)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("list persons error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to list persons")
 	}
 	return c.JSON(persons)
 }
@@ -40,7 +43,8 @@ func (h *PersonsHandler) Create(c *fiber.Ctx) error {
 	}
 	person, err := h.Service.CreatePerson(userID, req.Name, req.Description)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("create person error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to create person")
 	}
 	return c.Status(fiber.StatusCreated).JSON(person)
 }
@@ -63,7 +67,8 @@ func (h *PersonsHandler) Update(c *fiber.Ctx) error {
 	}
 	person := &models.Person{ID: int64(id), Name: req.Name, Description: req.Description}
 	if err := h.Service.UpdatePerson(userID, person); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("update person error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to update person")
 	}
 	return c.JSON(person)
 }
@@ -78,7 +83,8 @@ func (h *PersonsHandler) Delete(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
 	if err := h.Service.DeletePerson(userID, int64(id)); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		log.Printf("delete person error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete person")
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
