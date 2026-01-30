@@ -1,0 +1,80 @@
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import api from '../api';
+import { UserCog, Shield, ShieldAlert } from 'lucide-react';
+
+export const Admin = () => {
+  const { t } = useTranslation();
+  const [users, setUsers] = useState([]);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('/admin/users');
+      setUsers(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleRoleChange = async (userId: number, newRole: string) => {
+    try {
+      await api.put(`/admin/users/${userId}/role`, { role: newRole });
+      fetchUsers();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+        <UserCog size={24} /> {t('admin')}
+      </h2>
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('email')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('role')}</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {users.map((u: any) => (
+              <tr key={u.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{u.email}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <span className={`px-2 py-1 rounded text-xs font-semibold ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
+                    {u.role === 'admin' ? t('admin_role') : t('user')}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  {u.role === 'admin' ? (
+                    <button
+                      onClick={() => handleRoleChange(u.id, 'user')}
+                      className="text-red-600 hover:text-red-900 flex items-center gap-1 ml-auto"
+                    >
+                      <ShieldAlert size={16} /> Demote
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleRoleChange(u.id, 'admin')}
+                      className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 ml-auto"
+                    >
+                      <Shield size={16} /> Promote
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
