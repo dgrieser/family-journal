@@ -13,6 +13,8 @@ FROM alpine:latest
 
 WORKDIR /app
 
+RUN mkdir -p uploads
+
 COPY --from=builder /app/main .
 
 EXPOSE 8080

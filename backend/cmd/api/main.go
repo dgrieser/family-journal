@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
+	"github.com/gofiber/fiber/v2/middleware/encryptcookie"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/gofiber/storage/mysql/v2"
@@ -72,6 +73,15 @@ func main() {
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:3000",
 		AllowCredentials: true,
+	}))
+
+	// Encrypt Cookies
+	secret := os.Getenv("SESSION_SECRET")
+	if secret == "" {
+		secret = "default-secret-at-least-32-chars-long"
+	}
+	app.Use(encryptcookie.New(encryptcookie.Config{
+		Key: secret,
 	}))
 
 	// CSRF Protection

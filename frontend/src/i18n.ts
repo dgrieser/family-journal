@@ -43,6 +43,7 @@ const resources = {
       "error": "Error",
       "activate": "Activate",
       "deactivate": "Deactivate",
+      "clear_filters": "Clear all filters",
     }
   },
   de: {
@@ -86,6 +87,7 @@ const resources = {
       "error": "Fehler",
       "activate": "Aktivieren",
       "deactivate": "Deaktivieren",
+      "clear_filters": "Alle Filter löschen",
     }
   }
 };
