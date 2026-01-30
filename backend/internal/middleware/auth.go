@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
 )
@@ -40,7 +42,10 @@ func GetSessionUser(c *fiber.Ctx, store *session.Store) (int64, string, error) {
 	}
 	idValue := sess.Get("user_id")
 	roleValue := sess.Get("role")
-	id, _ := idValue.(int64)
-	role, _ := roleValue.(string)
+	id, idOk := idValue.(int64)
+	role, roleOk := roleValue.(string)
+	if !idOk || !roleOk {
+		return 0, "", errors.New("invalid user session data")
+	}
 	return id, role, nil
 }

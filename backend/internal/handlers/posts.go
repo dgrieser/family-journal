@@ -1,8 +1,13 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
+	"mime"
+	"mime/multipart"
+	"net/http"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -163,6 +168,9 @@ func (h *PostsHandler) AddComment(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
+	if _, err := h.Service.GetPost(userID, int64(postID)); err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "post not found")
+	}
 	var req struct {
 		Text string `json:"text"`
 	}
@@ -221,75 +229,6 @@ func (h *PostsHandler) ListHashtags(c *fiber.Ctx) error {
 	return c.JSON(tags)
 }
 
-func (h *PostsHandler) ListPersons(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
-	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
-	}
-	persons, err := h.Service.ListPersons(userID)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}
-	return c.JSON(persons)
-}
-
-func (h *PostsHandler) CreatePerson(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
-	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
-	}
-	var req struct {
-		Name        string  `json:"name"`
-		Description *string `json:"description"`
-	}
-	if err := c.BodyParser(&req); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
-	}
-	person, err := h.Service.CreatePerson(userID, req.Name, req.Description)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}
-	return c.Status(fiber.StatusCreated).JSON(person)
-}
-
-func (h *PostsHandler) UpdatePerson(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
-	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
-	}
-	id, err := c.ParamsInt("id")
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
-	}
-	var req struct {
-		Name        string  `json:"name"`
-		Description *string `json:"description"`
-	}
-	if err := c.BodyParser(&req); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
-	}
-	person := &models.Person{ID: int64(id), Name: req.Name, Description: req.Description}
-	if err := h.Service.UpdatePerson(userID, person); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}
-	return c.JSON(person)
-}
-
-func (h *PostsHandler) DeletePerson(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
-	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
-	}
-	id, err := c.ParamsInt("id")
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
-	}
-	if err := h.Service.DeletePerson(userID, int64(id)); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}
-	return c.SendStatus(fiber.StatusNoContent)
-}
-
 func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 	userID, _, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
@@ -315,18 +254,24 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 		if file.Size > h.MaxUploadMB*1024*1024 {
 			return fiber.NewError(fiber.StatusBadRequest, "file too large")
 		}
-		contentType := file.Header.Get("Content-Type")
+		contentType, err := detectFileType(file)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
 		if !isAllowedType(contentType) {
 			return fiber.NewError(fiber.StatusBadRequest, "invalid file type")
 		}
-		fileName := strconv.FormatInt(time.Now().UnixNano(), 10) + "_" + file.Filename
+		fileName, err := uniqueFileName(file.Filename, contentType)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to generate filename")
+		}
 		path := filepath.Join(h.UploadDir, fileName)
 		if err := c.SaveFile(file, path); err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "save failed")
 		}
 		attachment := models.Attachment{
 			PostID:   int64(postID),
-			FileName: file.Filename,
+			FileName: filepath.Base(file.Filename),
 			FileType: contentType,
 			FileSize: file.Size,
 			URL:      "/uploads/" + fileName,
@@ -347,4 +292,51 @@ func isAllowedType(contentType string) bool {
 		}
 	}
 	return false
+}
+
+func detectFileType(file *multipart.FileHeader) (string, error) {
+	reader, err := file.Open()
+	if err != nil {
+		return "", errors.New("unable to read file")
+	}
+	defer reader.Close()
+
+	buffer := make([]byte, 512)
+	n, _ := reader.Read(buffer)
+	if n == 0 {
+		return "", errors.New("empty file")
+	}
+	return http.DetectContentType(buffer[:n]), nil
+}
+
+func uniqueFileName(originalName, contentType string) (string, error) {
+	base := filepath.Base(originalName)
+	ext := filepath.Ext(base)
+	if ext == "" {
+		if derived, err := extensionForType(contentType); err == nil {
+			ext = derived
+		}
+	}
+	randomBytes := make([]byte, 16)
+	if _, err := rand.Read(randomBytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(randomBytes) + ext, nil
+}
+
+func extensionForType(contentType string) (string, error) {
+	extensions, err := mime.ExtensionsByType(contentType)
+	if err != nil || len(extensions) == 0 {
+		switch contentType {
+		case "image/jpeg":
+			return ".jpg", nil
+		case "image/png":
+			return ".png", nil
+		case "application/pdf":
+			return ".pdf", nil
+		default:
+			return "", errors.New("unsupported content type")
+		}
+	}
+	return extensions[0], nil
 }

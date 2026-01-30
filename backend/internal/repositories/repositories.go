@@ -310,3 +310,154 @@ func (r *Repository) CreateAttachment(att *models.Attachment) error {
 	att.ID = id
 	return nil
 }
+
+func (r *Repository) ListTagsForPosts(postIDs []int64) (map[int64][]models.Hashtag, error) {
+	results := make(map[int64][]models.Hashtag)
+	if len(postIDs) == 0 {
+		return results, nil
+	}
+	query, args, err := sqlx.In(`SELECT ph.post_id, h.id, h.name, h.created_at
+		FROM post_hashtags ph
+		JOIN hashtags h ON h.id = ph.hashtag_id
+		WHERE ph.post_id IN (?)`, postIDs)
+	if err != nil {
+		return nil, err
+	}
+	query = r.DB.Rebind(query)
+	type row struct {
+		PostID    int64     `db:"post_id"`
+		ID        int64     `db:"id"`
+		Name      string    `db:"name"`
+		CreatedAt time.Time `db:"created_at"`
+	}
+	var rows []row
+	if err := r.DB.Select(&rows, query, args...); err != nil {
+		return nil, err
+	}
+	for _, item := range rows {
+		results[item.PostID] = append(results[item.PostID], models.Hashtag{
+			ID:        item.ID,
+			Name:      item.Name,
+			CreatedAt: item.CreatedAt,
+		})
+	}
+	return results, nil
+}
+
+func (r *Repository) ListPersonsForPosts(postIDs []int64) (map[int64][]models.Person, error) {
+	results := make(map[int64][]models.Person)
+	if len(postIDs) == 0 {
+		return results, nil
+	}
+	query, args, err := sqlx.In(`SELECT m.post_id, p.id, p.name, p.description, p.created_by_user_id, p.created_at, p.updated_at
+		FROM mentions m
+		JOIN persons p ON p.id = m.person_id
+		WHERE m.post_id IN (?)`, postIDs)
+	if err != nil {
+		return nil, err
+	}
+	query = r.DB.Rebind(query)
+	type row struct {
+		PostID      int64     `db:"post_id"`
+		ID          int64     `db:"id"`
+		Name        string    `db:"name"`
+		Description *string   `db:"description"`
+		CreatedBy   int64     `db:"created_by_user_id"`
+		CreatedAt   time.Time `db:"created_at"`
+		UpdatedAt   time.Time `db:"updated_at"`
+	}
+	var rows []row
+	if err := r.DB.Select(&rows, query, args...); err != nil {
+		return nil, err
+	}
+	for _, item := range rows {
+		results[item.PostID] = append(results[item.PostID], models.Person{
+			ID:          item.ID,
+			Name:        item.Name,
+			Description: item.Description,
+			CreatedBy:   item.CreatedBy,
+			CreatedAt:   item.CreatedAt,
+			UpdatedAt:   item.UpdatedAt,
+		})
+	}
+	return results, nil
+}
+
+func (r *Repository) ListCommentsForPosts(postIDs []int64) (map[int64][]models.Comment, error) {
+	results := make(map[int64][]models.Comment)
+	if len(postIDs) == 0 {
+		return results, nil
+	}
+	query, args, err := sqlx.In(`SELECT c.post_id, c.id, c.user_id, c.text, c.created_at, c.updated_at, u.email AS author_email
+		FROM comments c
+		JOIN users u ON u.id = c.user_id
+		WHERE c.post_id IN (?)
+		ORDER BY c.created_at ASC`, postIDs)
+	if err != nil {
+		return nil, err
+	}
+	query = r.DB.Rebind(query)
+	type row struct {
+		PostID      int64     `db:"post_id"`
+		ID          int64     `db:"id"`
+		UserID      int64     `db:"user_id"`
+		Text        string    `db:"text"`
+		CreatedAt   time.Time `db:"created_at"`
+		UpdatedAt   time.Time `db:"updated_at"`
+		AuthorEmail string    `db:"author_email"`
+	}
+	var rows []row
+	if err := r.DB.Select(&rows, query, args...); err != nil {
+		return nil, err
+	}
+	for _, item := range rows {
+		results[item.PostID] = append(results[item.PostID], models.Comment{
+			ID:          item.ID,
+			PostID:      item.PostID,
+			UserID:      item.UserID,
+			Text:        item.Text,
+			CreatedAt:   item.CreatedAt,
+			UpdatedAt:   item.UpdatedAt,
+			AuthorEmail: item.AuthorEmail,
+		})
+	}
+	return results, nil
+}
+
+func (r *Repository) ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error) {
+	results := make(map[int64][]models.Attachment)
+	if len(postIDs) == 0 {
+		return results, nil
+	}
+	query, args, err := sqlx.In(`SELECT post_id, id, file_name, file_type, file_size, url, created_at
+		FROM attachments WHERE post_id IN (?)`, postIDs)
+	if err != nil {
+		return nil, err
+	}
+	query = r.DB.Rebind(query)
+	type row struct {
+		PostID    int64     `db:"post_id"`
+		ID        int64     `db:"id"`
+		FileName  string    `db:"file_name"`
+		FileType  string    `db:"file_type"`
+		FileSize  int64     `db:"file_size"`
+		URL       string    `db:"url"`
+		CreatedAt time.Time `db:"created_at"`
+	}
+	var rows []row
+	if err := r.DB.Select(&rows, query, args...); err != nil {
+		return nil, err
+	}
+	for _, item := range rows {
+		results[item.PostID] = append(results[item.PostID], models.Attachment{
+			ID:        item.ID,
+			PostID:    item.PostID,
+			FileName:  item.FileName,
+			FileType:  item.FileType,
+			FileSize:  item.FileSize,
+			URL:       item.URL,
+			CreatedAt: item.CreatedAt,
+		})
+	}
+	return results, nil
+}

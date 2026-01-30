@@ -93,6 +93,18 @@ func (f *fakeRepo) ListPostTags(postID int64) ([]models.Hashtag, error)         
 func (f *fakeRepo) ListPostPersons(postID int64) ([]models.Person, error)           { return nil, nil }
 func (f *fakeRepo) ListPostAttachments(postID int64) ([]models.Attachment, error)   { return nil, nil }
 func (f *fakeRepo) CreateAttachment(att *models.Attachment) error                   { return nil }
+func (f *fakeRepo) ListTagsForPosts(postIDs []int64) (map[int64][]models.Hashtag, error) {
+	return map[int64][]models.Hashtag{}, nil
+}
+func (f *fakeRepo) ListPersonsForPosts(postIDs []int64) (map[int64][]models.Person, error) {
+	return map[int64][]models.Person{}, nil
+}
+func (f *fakeRepo) ListCommentsForPosts(postIDs []int64) (map[int64][]models.Comment, error) {
+	return map[int64][]models.Comment{}, nil
+}
+func (f *fakeRepo) ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error) {
+	return map[int64][]models.Attachment{}, nil
+}
 
 func TestRegisterLoginSession(t *testing.T) {
 	repo := newFakeRepo()

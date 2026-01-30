@@ -49,6 +49,10 @@ type Repository interface {
 	ListPostPersons(postID int64) ([]models.Person, error)
 	ListPostAttachments(postID int64) ([]models.Attachment, error)
 	CreateAttachment(att *models.Attachment) error
+	ListTagsForPosts(postIDs []int64) (map[int64][]models.Hashtag, error)
+	ListPersonsForPosts(postIDs []int64) (map[int64][]models.Person, error)
+	ListCommentsForPosts(postIDs []int64) (map[int64][]models.Comment, error)
+	ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error)
 }
 
 type Service struct {
@@ -161,17 +165,7 @@ func (s *Service) ListPosts(userID int64, date time.Time, hashtags, persons []st
 	if err != nil {
 		return nil, err
 	}
-	for i := range posts {
-		tags, _ := s.Repo.ListPostTags(posts[i].ID)
-		posts[i].Hashtags = tags
-		people, _ := s.Repo.ListPostPersons(posts[i].ID)
-		posts[i].Persons = people
-		comments, _ := s.Repo.ListPostComments(posts[i].ID)
-		posts[i].Comments = comments
-		attachments, _ := s.Repo.ListPostAttachments(posts[i].ID)
-		posts[i].Attachments = attachments
-	}
-	return posts, nil
+	return s.hydratePosts(posts)
 }
 
 func (s *Service) GetPost(userID, postID int64) (*models.Post, error) {
@@ -179,11 +173,14 @@ func (s *Service) GetPost(userID, postID int64) (*models.Post, error) {
 	if err != nil {
 		return nil, err
 	}
-	post.Hashtags, _ = s.Repo.ListPostTags(post.ID)
-	post.Persons, _ = s.Repo.ListPostPersons(post.ID)
-	post.Comments, _ = s.Repo.ListPostComments(post.ID)
-	post.Attachments, _ = s.Repo.ListPostAttachments(post.ID)
-	return post, nil
+	posts, err := s.hydratePosts([]models.Post{*post})
+	if err != nil {
+		return nil, err
+	}
+	if len(posts) == 0 {
+		return nil, errors.New("post not found")
+	}
+	return &posts[0], nil
 }
 
 func (s *Service) ListHashtags() ([]models.Hashtag, error) {
@@ -249,4 +246,37 @@ func (s *Service) DeleteComment(userID, commentID int64) error {
 
 func (s *Service) CreateAttachment(att *models.Attachment) error {
 	return s.Repo.CreateAttachment(att)
+}
+
+func (s *Service) hydratePosts(posts []models.Post) ([]models.Post, error) {
+	if len(posts) == 0 {
+		return posts, nil
+	}
+	ids := make([]int64, 0, len(posts))
+	for _, post := range posts {
+		ids = append(ids, post.ID)
+	}
+	tagsByPost, err := s.Repo.ListTagsForPosts(ids)
+	if err != nil {
+		return nil, err
+	}
+	personsByPost, err := s.Repo.ListPersonsForPosts(ids)
+	if err != nil {
+		return nil, err
+	}
+	commentsByPost, err := s.Repo.ListCommentsForPosts(ids)
+	if err != nil {
+		return nil, err
+	}
+	attachmentsByPost, err := s.Repo.ListAttachmentsForPosts(ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range posts {
+		posts[i].Hashtags = tagsByPost[posts[i].ID]
+		posts[i].Persons = personsByPost[posts[i].ID]
+		posts[i].Comments = commentsByPost[posts[i].ID]
+		posts[i].Attachments = attachmentsByPost[posts[i].ID]
+	}
+	return posts, nil
 }

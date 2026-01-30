@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	"familyjournal/backend/internal/config"
@@ -54,13 +53,16 @@ func main() {
 	}))
 
 	app.Use("/uploads", func(c *fiber.Ctx) error {
-		return c.SendFile(filepath.Join(cfg.UploadDir, c.Params("*")))
+		c.Set("Content-Disposition", "attachment")
+		return c.Next()
 	})
+	app.Static("/uploads", cfg.UploadDir)
 
 	api := app.Group("/api/v1")
 	authHandler := &handlers.AuthHandler{Service: service, Store: store}
 	adminHandler := &handlers.AdminHandler{Service: service}
 	postsHandler := &handlers.PostsHandler{Service: service, Store: store, UploadDir: cfg.UploadDir, MaxUploadMB: cfg.MaxUploadMB}
+	personsHandler := &handlers.PersonsHandler{Service: service, Store: store}
 
 	api.Post("/auth/register", authHandler.Register)
 	api.Post("/auth/login", authHandler.Login)
@@ -86,10 +88,10 @@ func main() {
 	api.Delete("/comments/:id", middleware.RequireAuth(store), postsHandler.DeleteComment)
 
 	api.Get("/hashtags", middleware.RequireAuth(store), postsHandler.ListHashtags)
-	api.Get("/persons", middleware.RequireAuth(store), postsHandler.ListPersons)
-	api.Post("/persons", middleware.RequireAuth(store), postsHandler.CreatePerson)
-	api.Put("/persons/:id", middleware.RequireAuth(store), postsHandler.UpdatePerson)
-	api.Delete("/persons/:id", middleware.RequireAuth(store), postsHandler.DeletePerson)
+	api.Get("/persons", middleware.RequireAuth(store), personsHandler.List)
+	api.Post("/persons", middleware.RequireAuth(store), personsHandler.Create)
+	api.Put("/persons/:id", middleware.RequireAuth(store), personsHandler.Update)
+	api.Delete("/persons/:id", middleware.RequireAuth(store), personsHandler.Delete)
 
 	log.Fatal(app.Listen(":" + cfg.Port))
 }

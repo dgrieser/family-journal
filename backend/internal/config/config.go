@@ -1,8 +1,8 @@
 package config
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 )
 
 type Config struct {
@@ -36,9 +36,7 @@ func getEnv(key, fallback string) string {
 
 func getEnvInt(key string, fallback int64) int64 {
 	if value := os.Getenv(key); value != "" {
-		var parsed int64
-		_, err := fmt.Sscanf(value, "%d", &parsed)
-		if err == nil {
+		if parsed, err := strconv.ParseInt(value, 10, 64); err == nil {
 			return parsed
 		}
 	}
