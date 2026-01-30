@@ -30,6 +30,9 @@ func main() {
 		log.Println("SESSION_SECRET not set; using insecure development default")
 		cfg.SessionSecret = "dev-secret"
 	}
+	if cfg.DatabaseDSN == "" {
+		log.Fatal("MYSQL_DSN must be set")
+	}
 	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
 		log.Fatal(err)
 	}

@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -41,7 +42,7 @@ func (f *fakeRepo) CreateUser(user *models.User) error {
 func (f *fakeRepo) GetUserByEmail(email string) (*models.User, error) {
 	user, ok := f.users[email]
 	if !ok {
-		return nil, fiber.ErrUnauthorized
+		return nil, sql.ErrNoRows
 	}
 	return user, nil
 }

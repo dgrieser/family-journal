@@ -3,7 +3,7 @@ services:
   mysql:
     image: mysql:8.3
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-familyjournal}
     ports:
       - "3306:3306"
@@ -13,7 +13,7 @@ services:
   backend:
     build: ./backend
     environment:
-      MYSQL_DSN: ${MYSQL_DSN:-root:password@tcp(mysql:3306)/familyjournal?parseTime=true}
+      MYSQL_DSN: ${MYSQL_DSN}
       SESSION_SECRET: ${SESSION_SECRET:-}
       COOKIE_SECURE: "false"
       UPLOAD_DIR: /app/uploads

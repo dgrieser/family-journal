@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"io"
 	"log"
 	"mime"
 	"mime/multipart"
@@ -284,7 +285,7 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 		}
 		attachment := models.Attachment{
 			PostID:   int64(postID),
-			FileName: filepath.Base(file.Filename),
+			FileName: fileName,
 			FileType: contentType,
 			FileSize: file.Size,
 			URL:      "/uploads/" + fileName,
@@ -316,7 +317,10 @@ func detectFileType(file *multipart.FileHeader) (string, error) {
 	defer reader.Close()
 
 	buffer := make([]byte, 512)
-	n, _ := reader.Read(buffer)
+	n, err := reader.Read(buffer)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", errors.New("unable to read file")
+	}
 	if n == 0 {
 		return "", errors.New("empty file")
 	}

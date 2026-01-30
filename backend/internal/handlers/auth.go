@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"familyjournal/backend/internal/middleware"
-	"familyjournal/backend/internal/models"
 	"familyjournal/backend/internal/services"
 
 	"github.com/gofiber/fiber/v2"
@@ -90,7 +89,9 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
-	var req models.User
+	var req struct {
+		Email string `json:"email"`
+	}
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}

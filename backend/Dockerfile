@@ -10,7 +10,7 @@ WORKDIR /app
 RUN adduser -D appuser
 COPY --from=build /app/server ./server
 COPY migrations ./migrations
-RUN mkdir -p /app/uploads && chown -R appuser:appuser /app
+RUN mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads
 USER appuser
 EXPOSE 8080
 CMD ["/app/server"]
