@@ -20,9 +20,8 @@ func NewAuthHandler(authService *services.AuthService, store *session.Store) *Au
 }
 
 type RegisterRequest struct {
-	Email    string          `json:"email"`
-	Password string          `json:"password"`
-	Role     models.UserRole `json:"role"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
@@ -31,11 +30,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
 	}
 
-	if req.Role == "" {
-		req.Role = models.RoleUser
-	}
-
-	user, err := h.authService.Register(req.Email, req.Password, req.Role)
+	user, err := h.authService.Register(req.Email, req.Password, models.RoleUser)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}

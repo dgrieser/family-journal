@@ -12,7 +12,7 @@ import api from './api';
 import './i18n';
 
 function App() {
-  const { user, setUser } = useAuthStore();
+  const { user, setUser, initialized, setInitialized } = useAuthStore();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -21,14 +21,21 @@ function App() {
         setUser(response.data);
       } catch (err) {
         setUser(null);
+        setInitialized(true);
       }
     };
     checkAuth();
-  }, [setUser]);
+  }, [setUser, setInitialized]);
 
   const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+    if (!initialized) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+      );
+    }
     if (user === null) {
-      // We might want a loading state here while checkAuth is running
       return <Navigate to="/login" />;
     }
     return <>{children}</>;

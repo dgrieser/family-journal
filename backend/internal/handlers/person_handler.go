@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/user/family-journal/internal/models"
 	"github.com/user/family-journal/internal/repository"
@@ -28,6 +30,7 @@ func (h *PersonHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
 	}
 
+	person.Name = strings.ToLower(person.Name)
 	userID := c.Locals("user_id").(uint)
 	person.CreatedByUserID = userID
 
@@ -45,6 +48,7 @@ func (h *PersonHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
 	}
 
+	person.Name = strings.ToLower(person.Name)
 	person.ID = uint(id)
 	if err := h.repo.Update(&person); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
