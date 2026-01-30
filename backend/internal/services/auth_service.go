@@ -42,12 +42,52 @@ func (s *AuthService) Login(email, password string) (*models.User, error) {
 		return nil, errors.New("invalid credentials")
 	}
 
+	if !user.IsActive {
+		return nil, errors.New("account is deactivated")
+	}
+
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
 		return nil, errors.New("invalid credentials")
 	}
 
 	return user, nil
+}
+
+func (s *AuthService) UpdateProfile(id uint, email, password string) (*models.User, error) {
+	user, err := s.userRepo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if email != "" {
+		user.Email = email
+	}
+
+	if password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		user.PasswordHash = string(hashedPassword)
+	}
+
+	err = s.userRepo.Update(user)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (s *AuthService) SetUserActiveStatus(id uint, active bool) error {
+	user, err := s.userRepo.FindByID(id)
+	if err != nil {
+		return err
+	}
+
+	user.IsActive = active
+	return s.userRepo.Update(user)
 }
 
 func (s *AuthService) GetUserByID(id uint) (*models.User, error) {

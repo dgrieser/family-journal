@@ -31,6 +31,18 @@ const resources = {
       "description": "Description",
       "attachments": "Attachments",
       "upload_files": "Upload Files",
+      "loading": "Loading...",
+      "promote": "Promote",
+      "demote": "Demote",
+      "active": "Active",
+      "inactive": "Inactive",
+      "profile": "Profile",
+      "update": "Update",
+      "leave_blank": "leave blank to leave unchanged",
+      "success": "Success",
+      "error": "Error",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
     }
   },
   de: {
@@ -62,6 +74,18 @@ const resources = {
       "description": "Beschreibung",
       "attachments": "Anhänge",
       "upload_files": "Dateien hochladen",
+      "loading": "Laden...",
+      "promote": "Befördern",
+      "demote": "Herabstufen",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "profile": "Profil",
+      "update": "Aktualisieren",
+      "leave_blank": "leer lassen um nicht zu ändern",
+      "success": "Erfolg",
+      "error": "Fehler",
+      "activate": "Aktivieren",
+      "deactivate": "Deaktivieren",
     }
   }
 };

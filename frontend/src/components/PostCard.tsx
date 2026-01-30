@@ -77,7 +77,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
             {post.attachments.map((a: any) => (
               <a
                 key={a.id}
-                href={`/api/attachments/download?path=${a.storage_path}`}
+                href={`/api/attachments/${a.id}/download`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 text-sm truncate"

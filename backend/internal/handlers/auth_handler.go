@@ -95,3 +95,23 @@ func (h *AuthHandler) Me(c *fiber.Ctx) error {
 	}
 	return c.JSON(user)
 }
+
+type UpdateProfileRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	var req UpdateProfileRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+	}
+
+	user, err := h.authService.UpdateProfile(userID, req.Email, req.Password)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(user)
+}

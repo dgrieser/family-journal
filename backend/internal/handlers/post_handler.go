@@ -169,11 +169,20 @@ func (h *PostHandler) DeleteComment(c *fiber.Ctx) error {
 }
 
 func (h *PostHandler) DownloadAttachment(c *fiber.Ctx) error {
-	path := c.Query("path")
-	if path == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "path is required"})
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
 	}
-	return c.Download(path)
+	attachment, err := h.postService.GetAttachment(uint(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "attachment not found"})
+	}
+	// Extra safety: check if file is within uploads directory
+	cleanPath := filepath.Clean(attachment.StoragePath)
+	if !strings.HasPrefix(cleanPath, "uploads") {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
+	}
+	return c.Download(cleanPath, attachment.FileName)
 }
 
 func (h *PostHandler) GetHashtags(c *fiber.Ctx) error {

@@ -5,6 +5,7 @@ import { Register } from './pages/Register';
 import { Timeline } from './pages/Timeline';
 import { Persons } from './pages/Persons';
 import { Admin } from './pages/Admin';
+import { Profile } from './pages/Profile';
 import { Layout } from './components/Layout';
 import { useAuthStore } from './store';
 import api from './api';
@@ -42,6 +43,7 @@ function App() {
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Timeline />} />
           <Route path="persons" element={<Persons />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="admin" element={user?.role === 'admin' ? <Admin /> : <Navigate to="/" />} />
         </Route>
       </Routes>

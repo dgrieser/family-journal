@@ -29,18 +29,28 @@ export const Admin = () => {
     }
   };
 
+  const handleToggleActive = async (userId: number, isActive: boolean) => {
+    try {
+      await api.put(`/admin/users/${userId}/active`, { is_active: isActive });
+      fetchUsers();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
         <UserCog size={24} /> {t('admin')}
       </h2>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('email')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('role')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('active')}</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
             </tr>
           </thead>
@@ -53,22 +63,35 @@ export const Admin = () => {
                     {u.role === 'admin' ? t('admin_role') : t('user')}
                   </span>
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                   <span className={`px-2 py-1 rounded text-xs font-semibold ${u.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {u.is_active ? t('active') : t('inactive')}
+                  </span>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {u.role === 'admin' ? (
+                  <div className="flex justify-end gap-3">
+                    {u.role === 'admin' ? (
+                      <button
+                        onClick={() => handleRoleChange(u.id, 'user')}
+                        className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                      >
+                        <ShieldAlert size={16} /> {t('demote')}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleRoleChange(u.id, 'admin')}
+                        className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1"
+                      >
+                        <Shield size={16} /> {t('promote')}
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleRoleChange(u.id, 'user')}
-                      className="text-red-600 hover:text-red-900 flex items-center gap-1 ml-auto"
+                      onClick={() => handleToggleActive(u.id, !u.is_active)}
+                      className={`${u.is_active ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'} flex items-center gap-1`}
                     >
-                      <ShieldAlert size={16} /> Demote
+                      {u.is_active ? t('deactivate') : t('activate')}
                     </button>
-                  ) : (
-                    <button
-                      onClick={() => handleRoleChange(u.id, 'admin')}
-                      className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1 ml-auto"
-                    >
-                      <Shield size={16} /> Promote
-                    </button>
-                  )}
+                  </div>
                 </td>
               </tr>
             ))}

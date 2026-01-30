@@ -89,6 +89,15 @@ func (r *PostRepository) CreateAttachment(attachment *models.Attachment) error {
 	return r.db.Create(attachment).Error
 }
 
+func (r *PostRepository) FindAttachmentByID(id uint) (*models.Attachment, error) {
+	var attachment models.Attachment
+	err := r.db.First(&attachment, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &attachment, nil
+}
+
 func (r *PostRepository) GetAllHashtags() ([]models.Hashtag, error) {
 	var hashtags []models.Hashtag
 	err := r.db.Find(&hashtags).Error

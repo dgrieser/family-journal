@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store';
 import api from '../api';
-import { LayoutDashboard, Users, UserCog, LogOut, Languages } from 'lucide-react';
+import { LayoutDashboard, Users, UserCog, User, LogOut, Languages } from 'lucide-react';
 
 export const Layout = () => {
   const { t, i18n } = useTranslation();
@@ -42,6 +42,10 @@ export const Layout = () => {
           <Link to="/persons" className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
             <Users size={20} />
             <span>{t('persons')}</span>
+          </Link>
+          <Link to="/profile" className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
+            <User size={20} />
+            <span>{t('profile')}</span>
           </Link>
           {user?.role === 'admin' && (
             <Link to="/admin" className="flex items-center space-x-2 p-4 hover:bg-indigo-600">

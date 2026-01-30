@@ -45,3 +45,27 @@ func (h *AdminHandler) UpdateUserRole(c *fiber.Ctx) error {
 
 	return c.JSON(user)
 }
+
+type ToggleUserActiveRequest struct {
+	IsActive bool `json:"is_active"`
+}
+
+func (h *AdminHandler) ToggleUserActive(c *fiber.Ctx) error {
+	id, _ := c.ParamsInt("id")
+	var req ToggleUserActiveRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+	}
+
+	user, err := h.userRepo.FindByID(uint(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
+	}
+
+	user.IsActive = req.IsActive
+	if err := h.userRepo.Update(user); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(user)
+}

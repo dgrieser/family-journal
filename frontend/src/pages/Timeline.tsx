@@ -81,7 +81,7 @@ export const Timeline = () => {
       />
 
       {loading ? (
-        <div className="text-center py-10 text-gray-500">Loading...</div>
+        <div className="text-center py-10 text-gray-500">{t('loading')}</div>
       ) : posts.length === 0 ? (
         <div className="text-center py-10 bg-white rounded-lg shadow text-gray-500">
           {t('no_posts')}

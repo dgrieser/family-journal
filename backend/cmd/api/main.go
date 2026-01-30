@@ -109,6 +109,7 @@ func main() {
 	// Protected routes
 	protected := api.Use(middleware.AuthRequired(store))
 	protected.Get("/me", authHandler.Me)
+	protected.Put("/me", authHandler.UpdateProfile)
 
 	// Persons
 	protected.Get("/persons", personHandler.GetAll)
@@ -128,7 +129,7 @@ func main() {
 	protected.Delete("/comments/:id", postHandler.DeleteComment)
 
 	// Attachments
-	protected.Get("/attachments/download", postHandler.DownloadAttachment)
+	protected.Get("/attachments/:id/download", postHandler.DownloadAttachment)
 
 	// Hashtags
 	protected.Get("/hashtags", postHandler.GetHashtags)
@@ -137,6 +138,7 @@ func main() {
 	admin := protected.Use(middleware.AdminRequired())
 	admin.Get("/admin/users", adminHandler.GetAllUsers)
 	admin.Put("/admin/users/:id/role", adminHandler.UpdateUserRole)
+	admin.Put("/admin/users/:id/active", adminHandler.ToggleUserActive)
 
 	// Serve static files for uploads
 	app.Static("/uploads", "./uploads")
