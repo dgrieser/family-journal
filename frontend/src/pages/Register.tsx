@@ -54,7 +54,7 @@ export const Register = () => {
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-600">
-          Already have an account? <Link to="/login" className="text-indigo-600 hover:underline">{t('login')}</Link>
+          {t('already_have_account')} <Link to="/login" className="text-indigo-600 hover:underline">{t('login')}</Link>
         </p>
       </div>
     </div>

@@ -44,6 +44,8 @@ const resources = {
       "activate": "Activate",
       "deactivate": "Deactivate",
       "clear_filters": "Clear all filters",
+      "dont_have_account": "Don't have an account?",
+      "already_have_account": "Already have an account?",
     }
   },
   de: {
@@ -88,6 +90,8 @@ const resources = {
       "activate": "Aktivieren",
       "deactivate": "Deaktivieren",
       "clear_filters": "Alle Filter löschen",
+      "dont_have_account": "Noch kein Konto?",
+      "already_have_account": "Schon ein Konto?",
     }
   }
 };

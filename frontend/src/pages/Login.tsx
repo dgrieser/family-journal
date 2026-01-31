@@ -57,7 +57,7 @@ export const Login = () => {
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-600">
-          Don't have an account? <Link to="/register" className="text-indigo-600 hover:underline">{t('register')}</Link>
+          {t('dont_have_account')} <Link to="/register" className="text-indigo-600 hover:underline">{t('register')}</Link>
         </p>
       </div>
     </div>
