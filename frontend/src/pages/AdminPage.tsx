@@ -27,7 +27,7 @@ const AdminPage = () => {
       method: 'PATCH',
       body: JSON.stringify({ role })
     });
-    await loadUsers();
+    setUsers((current) => current.map((user) => (user.id === id ? { ...user, role } : user)));
   };
 
   const updateActive = async (id: number, active: boolean) => {
@@ -35,7 +35,7 @@ const AdminPage = () => {
       method: 'PATCH',
       body: JSON.stringify({ active })
     });
-    await loadUsers();
+    setUsers((current) => current.map((user) => (user.id === id ? { ...user, active } : user)));
   };
 
   return (

@@ -7,14 +7,20 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func New(dsn string) (*sqlx.DB, error) {
+type Config struct {
+	MaxOpen     int
+	MaxIdle     int
+	MaxLifetime time.Duration
+}
+
+func New(dsn string, cfg Config) (*sqlx.DB, error) {
 	db, err := sqlx.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
 	}
-	db.SetConnMaxLifetime(5 * time.Minute)
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(cfg.MaxLifetime)
+	db.SetMaxOpenConns(cfg.MaxOpen)
+	db.SetMaxIdleConns(cfg.MaxIdle)
 	if err := db.Ping(); err != nil {
 		return nil, err
 	}

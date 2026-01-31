@@ -27,7 +27,7 @@ const App = () => {
 
   useEffect(() => {
     void fetchProfile();
-  }, [fetchProfile]);
+  }, []);
 
   return (
     <Layout>

@@ -32,7 +32,11 @@ func main() {
 	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
 		log.Fatal(err)
 	}
-	database, err := db.New(cfg.DatabaseDSN)
+	database, err := db.New(cfg.DatabaseDSN, db.Config{
+		MaxOpen:     cfg.DBMaxOpen,
+		MaxIdle:     cfg.DBMaxIdle,
+		MaxLifetime: time.Duration(cfg.DBMaxLifetime) * time.Minute,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}

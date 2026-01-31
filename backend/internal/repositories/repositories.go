@@ -15,6 +15,14 @@ type Repository struct {
 	DB *sqlx.DB
 }
 
+func lastInsertID(result sql.Result) (int64, error) {
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
 func New(db *sqlx.DB) *Repository {
 	return &Repository{DB: db}
 }
@@ -26,7 +34,10 @@ func (r *Repository) CreateUser(user *models.User) error {
 	if err != nil {
 		return err
 	}
-	id, _ := res.LastInsertId()
+	id, err := lastInsertID(res)
+	if err != nil {
+		return err
+	}
 	user.ID = id
 	return nil
 }
@@ -80,7 +91,10 @@ func (r *Repository) CreatePerson(person *models.Person) error {
 	if err != nil {
 		return err
 	}
-	id, _ := res.LastInsertId()
+	id, err := lastInsertID(res)
+	if err != nil {
+		return err
+	}
 	person.ID = id
 	return nil
 }
@@ -155,10 +169,13 @@ func (r *Repository) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
 	if err != nil {
 		return nil, err
 	}
-	id, _ := res.LastInsertId()
-	tag.ID = id
-	tag.Name = name
-	tag.CreatedAt = time.Now()
+	id, err := lastInsertID(res)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.DB.Get(&tag, `SELECT id, name, created_at FROM hashtags WHERE id = ?`, id); err != nil {
+		return nil, err
+	}
 	return &tag, nil
 }
 
@@ -175,7 +192,11 @@ func (r *Repository) SavePostWithRelations(userID int64, post *models.Post, tagN
 			_ = tx.Rollback()
 			return execErr
 		}
-		id, _ := res.LastInsertId()
+		id, err := lastInsertID(res)
+		if err != nil {
+			_ = tx.Rollback()
+			return err
+		}
 		post.ID = id
 	} else {
 		if _, execErr := tx.Exec(`UPDATE posts SET text = ?, category = ?, mood = ?, updated_at = NOW() WHERE id = ? AND user_id = ?`,
@@ -228,7 +249,10 @@ func (r *Repository) CreatePost(post *models.Post) error {
 	if err != nil {
 		return err
 	}
-	id, _ := res.LastInsertId()
+	id, err := lastInsertID(res)
+	if err != nil {
+		return err
+	}
 	post.ID = id
 	return nil
 }
@@ -330,7 +354,10 @@ func (r *Repository) CreateComment(comment *models.Comment) error {
 	if err != nil {
 		return err
 	}
-	id, _ := res.LastInsertId()
+	id, err := lastInsertID(res)
+	if err != nil {
+		return err
+	}
 	comment.ID = id
 	return nil
 }
@@ -380,7 +407,10 @@ func (r *Repository) CreateAttachment(att *models.Attachment) error {
 	if err != nil {
 		return err
 	}
-	id, _ := res.LastInsertId()
+	id, err := lastInsertID(res)
+	if err != nil {
+		return err
+	}
 	att.ID = id
 	return nil
 }
@@ -560,10 +590,13 @@ func findOrCreateHashtagTx(tx *sqlx.Tx, name string) (*models.Hashtag, error) {
 	if err != nil {
 		return nil, err
 	}
-	id, _ := res.LastInsertId()
-	tag.ID = id
-	tag.Name = name
-	tag.CreatedAt = time.Now()
+	id, err := lastInsertID(res)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Get(&tag, `SELECT id, name, created_at FROM hashtags WHERE id = ?`, id); err != nil {
+		return nil, err
+	}
 	return &tag, nil
 }
 
@@ -581,10 +614,14 @@ func findOrCreatePersonTx(tx *sqlx.Tx, userID int64, name string) (*models.Perso
 	if err != nil {
 		return nil, err
 	}
-	id, _ := res.LastInsertId()
-	person.ID = id
-	person.CreatedAt = time.Now()
-	person.UpdatedAt = time.Now()
+	id, err := lastInsertID(res)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Get(&person, `SELECT id, name, description, created_by_user_id, created_at, updated_at
+		FROM persons WHERE id = ?`, id); err != nil {
+		return nil, err
+	}
 	return &person, nil
 }
 

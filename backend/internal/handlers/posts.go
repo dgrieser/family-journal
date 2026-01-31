@@ -346,7 +346,6 @@ func detectFileType(file *multipart.FileHeader) (string, error) {
 }
 
 func uniqueFileName(originalName, contentType string) (string, error) {
-	_ = filepath.Base(originalName)
 	ext, err := extensionForType(contentType)
 	if err != nil {
 		log.Printf("warning: could not determine extension for content type %s: %v", contentType, err)

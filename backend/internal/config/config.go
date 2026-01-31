@@ -14,6 +14,9 @@ type Config struct {
 	CookieSecure  bool
 	UploadDir     string
 	MaxUploadMB   int64
+	DBMaxOpen     int
+	DBMaxIdle     int
+	DBMaxLifetime int
 }
 
 func Load() Config {
@@ -25,6 +28,9 @@ func Load() Config {
 		CookieSecure:  getEnv("COOKIE_SECURE", "false") == "true",
 		UploadDir:     getEnv("UPLOAD_DIR", "./uploads"),
 		MaxUploadMB:   getEnvInt("MAX_UPLOAD_MB", 10),
+		DBMaxOpen:     int(getEnvInt("DB_MAX_OPEN", 10)),
+		DBMaxIdle:     int(getEnvInt("DB_MAX_IDLE", 5)),
+		DBMaxLifetime: int(getEnvInt("DB_MAX_LIFETIME_MINUTES", 5)),
 	}
 }
 
