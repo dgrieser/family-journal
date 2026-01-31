@@ -22,7 +22,7 @@ func NewPostService(postRepo *repository.PostRepository, personRepo *repository.
 }
 
 func (s *PostService) CreatePost(userID uint, date time.Time, text string) (*models.Post, error) {
-	hashtags, mentions := s.parseText(text)
+	hashtags, mentions := s.parseText(text, userID)
 
 	post := &models.Post{
 		UserID:   userID,
@@ -46,7 +46,7 @@ func (s *PostService) UpdatePost(postID uint, text string) (*models.Post, error)
 		return nil, err
 	}
 
-	hashtags, mentions := s.parseText(text)
+	hashtags, mentions := s.parseText(text, post.UserID)
 
 	post.Text = text
 	post.Hashtags = hashtags
@@ -60,7 +60,7 @@ func (s *PostService) UpdatePost(postID uint, text string) (*models.Post, error)
 	return post, nil
 }
 
-func (s *PostService) parseText(text string) ([]models.Hashtag, []models.Person) {
+func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []models.Person) {
 	hashtagRegex := regexp.MustCompile(`#(\w+)`)
 	mentionRegex := regexp.MustCompile(`@(\w+)`)
 
@@ -97,7 +97,10 @@ func (s *PostService) parseText(text string) ([]models.Hashtag, []models.Person)
 		person, err := s.personRepo.FindByName(name)
 		if err != nil {
 			// Create new person
-			person = &models.Person{Name: name}
+			person = &models.Person{
+				Name:            name,
+				CreatedByUserID: userID,
+			}
 			// GORM will save it via association
 		}
 		mentions = append(mentions, *person)

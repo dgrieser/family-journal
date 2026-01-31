@@ -81,7 +81,8 @@ func main() {
 		secret = "default-secret-at-least-32-chars-long"
 	}
 	app.Use(encryptcookie.New(encryptcookie.Config{
-		Key: secret,
+		Key:    secret,
+		Except: []string{"csrf_"}, // Allow frontend to read CSRF token
 	}))
 
 	// CSRF Protection
