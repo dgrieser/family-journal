@@ -117,6 +117,9 @@ func (f *fakeRepo) SavePostWithRelations(userID int64, post *models.Post, tagNam
 	}
 	return nil
 }
+func (f *fakeRepo) GetAttachmentByName(userID int64, name string) (*models.Attachment, error) {
+	return nil, sql.ErrNoRows
+}
 
 func TestRegisterLoginSession(t *testing.T) {
 	repo := newFakeRepo()

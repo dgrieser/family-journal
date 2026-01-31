@@ -24,11 +24,7 @@ import (
 func main() {
 	cfg := config.Load()
 	if cfg.SessionSecret == "" {
-		if cfg.Env == "production" {
-			log.Fatal("SESSION_SECRET must be set in production")
-		}
-		log.Println("SESSION_SECRET not set; using insecure development default")
-		cfg.SessionSecret = "dev-secret"
+		log.Fatal("SESSION_SECRET must be set")
 	}
 	if cfg.DatabaseDSN == "" {
 		log.Fatal("MYSQL_DSN must be set")
@@ -63,13 +59,13 @@ func main() {
 		Expiration:     24 * time.Hour,
 	}))
 
-	app.Static("/uploads", cfg.UploadDir)
-
 	api := app.Group("/api/v1")
 	authHandler := &handlers.AuthHandler{Service: service, Store: store}
 	adminHandler := &handlers.AdminHandler{Service: service}
 	postsHandler := &handlers.PostsHandler{Service: service, Store: store, UploadDir: cfg.UploadDir, MaxUploadMB: cfg.MaxUploadMB}
 	personsHandler := &handlers.PersonsHandler{Service: service, Store: store}
+
+	app.Get("/uploads/:name", middleware.RequireAuth(store), postsHandler.DownloadAttachment)
 
 	api.Post("/auth/register", authHandler.Register)
 	api.Post("/auth/login", authHandler.Login)

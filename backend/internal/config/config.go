@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"strconv"
 )
@@ -39,6 +40,7 @@ func getEnvInt(key string, fallback int64) int64 {
 		if parsed, err := strconv.ParseInt(value, 10, 64); err == nil {
 			return parsed
 		}
+		log.Printf("warning: could not parse env var %s=%q as integer, using fallback %d", key, value, fallback)
 	}
 	return fallback
 }

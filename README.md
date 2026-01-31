@@ -28,8 +28,8 @@ Services:
 | Variable | Description | Default |
 | --- | --- | --- |
 | `PORT` | API port | `8080` |
-| `MYSQL_DSN` | MySQL connection string | `root:password@tcp(mysql:3306)/familyjournal?parseTime=true` |
-| `SESSION_SECRET` | Session secret | `super-secret` |
+| `MYSQL_DSN` | MySQL connection string | **required** |
+| `SESSION_SECRET` | Session secret | **required** |
 | `COOKIE_SECURE` | Use secure cookies | `false` |
 | `UPLOAD_DIR` | Uploads directory | `./uploads` |
 | `MAX_UPLOAD_MB` | Maximum upload size | `10` |

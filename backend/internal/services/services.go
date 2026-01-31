@@ -55,6 +55,7 @@ type Repository interface {
 	ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error)
 	SavePostWithRelations(userID int64, post *models.Post, tagNames, personNames []string) error
 	ListHashtagsByUser(userID int64) ([]models.Hashtag, error)
+	GetAttachmentByName(userID int64, name string) (*models.Attachment, error)
 }
 
 type Service struct {
@@ -216,6 +217,10 @@ func (s *Service) DeleteComment(userID, commentID int64) error {
 
 func (s *Service) CreateAttachment(att *models.Attachment) error {
 	return s.Repo.CreateAttachment(att)
+}
+
+func (s *Service) GetAttachmentForUser(userID int64, name string) (*models.Attachment, error) {
+	return s.Repo.GetAttachmentByName(userID, name)
 }
 
 func (s *Service) hydratePosts(posts []models.Post) ([]models.Post, error) {

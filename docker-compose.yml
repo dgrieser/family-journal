@@ -15,7 +15,7 @@ services:
     environment:
       MYSQL_DSN: ${MYSQL_DSN}
       SESSION_SECRET: ${SESSION_SECRET:-}
-      COOKIE_SECURE: "false"
+      COOKIE_SECURE: "true"
       UPLOAD_DIR: /app/uploads
       MAX_UPLOAD_MB: "10"
     depends_on:

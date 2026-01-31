@@ -299,6 +299,24 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(saved)
 }
 
+func (h *PostsHandler) DownloadAttachment(c *fiber.Ctx) error {
+	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+	}
+	name := filepath.Base(c.Params("name"))
+	if name == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid file")
+	}
+	attachment, err := h.Service.GetAttachmentForUser(userID, name)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "not found")
+	}
+	path := filepath.Join(h.UploadDir, attachment.FileName)
+	c.Type(attachment.FileType)
+	return c.SendFile(path)
+}
+
 func isAllowedType(contentType string) bool {
 	allowed := []string{"image/jpeg", "image/png", "application/pdf"}
 	for _, t := range allowed {
@@ -328,12 +346,11 @@ func detectFileType(file *multipart.FileHeader) (string, error) {
 }
 
 func uniqueFileName(originalName, contentType string) (string, error) {
-	base := filepath.Base(originalName)
-	ext := filepath.Ext(base)
-	if ext == "" {
-		if derived, err := extensionForType(contentType); err == nil {
-			ext = derived
-		}
+	_ = filepath.Base(originalName)
+	ext, err := extensionForType(contentType)
+	if err != nil {
+		log.Printf("warning: could not determine extension for content type %s: %v", contentType, err)
+		ext = ""
 	}
 	randomBytes := make([]byte, 16)
 	if _, err := rand.Read(randomBytes); err != nil {
