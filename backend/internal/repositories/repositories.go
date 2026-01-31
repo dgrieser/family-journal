@@ -179,29 +179,40 @@ func (r *Repository) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
 	return &tag, nil
 }
 
-func (r *Repository) SavePostWithRelations(userID int64, post *models.Post, tagNames, personNames []string) error {
+func (r *Repository) SavePostWithRelations(userID int64, post *models.Post, tagNames, personNames []string) (err error) {
 	tx, err := r.DB.Beginx()
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		}
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+		if commitErr := tx.Commit(); commitErr != nil {
+			err = commitErr
+		}
+	}()
+
 	if post.ID == 0 {
 		query := `INSERT INTO posts (user_id, date, text, category, mood, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, NOW(), NOW())`
 		res, execErr := tx.Exec(query, post.UserID, post.Date, post.Text, post.Category, post.Mood)
 		if execErr != nil {
-			_ = tx.Rollback()
 			return execErr
 		}
 		id, err := lastInsertID(res)
 		if err != nil {
-			_ = tx.Rollback()
 			return err
 		}
 		post.ID = id
 	} else {
 		if _, execErr := tx.Exec(`UPDATE posts SET text = ?, category = ?, mood = ?, updated_at = NOW() WHERE id = ? AND user_id = ?`,
 			post.Text, post.Category, post.Mood, post.ID, post.UserID); execErr != nil {
-			_ = tx.Rollback()
 			return execErr
 		}
 	}
@@ -210,7 +221,6 @@ func (r *Repository) SavePostWithRelations(userID int64, post *models.Post, tagN
 	for _, tag := range tagNames {
 		model, execErr := findOrCreateHashtagTx(tx, tag)
 		if execErr != nil {
-			_ = tx.Rollback()
 			return execErr
 		}
 		tagModels = append(tagModels, *model)
@@ -220,23 +230,15 @@ func (r *Repository) SavePostWithRelations(userID int64, post *models.Post, tagN
 	for _, name := range personNames {
 		model, execErr := findOrCreatePersonTx(tx, userID, name)
 		if execErr != nil {
-			_ = tx.Rollback()
 			return execErr
 		}
 		personModels = append(personModels, *model)
 	}
 
 	if execErr := replacePostTagsTx(tx, post.ID, tagModels); execErr != nil {
-		_ = tx.Rollback()
 		return execErr
 	}
 	if execErr := replacePostMentionsTx(tx, post.ID, personModels); execErr != nil {
-		_ = tx.Rollback()
-		return execErr
-	}
-
-	if execErr := tx.Commit(); execErr != nil {
-		_ = tx.Rollback()
 		return execErr
 	}
 	return nil

@@ -19,7 +19,7 @@ var (
 var hashtagRegex = regexp.MustCompile(`#([\pL\d_]+)`)
 var mentionRegex = regexp.MustCompile(`@([\pL\d_]+)`)
 
-type Repository interface {
+type UserRepository interface {
 	CreateUser(user *models.User) error
 	GetUserByEmail(email string) (*models.User, error)
 	GetUserByID(id int64) (*models.User, error)
@@ -27,13 +27,23 @@ type Repository interface {
 	ListUsers() ([]models.User, error)
 	UpdateUserRole(id int64, role string) error
 	UpdateUserActive(id int64, active bool) error
+}
+
+type PersonRepository interface {
 	CreatePerson(person *models.Person) error
 	UpdatePerson(person *models.Person) error
 	DeletePerson(id, userID int64) error
 	ListPersons(userID int64) ([]models.Person, error)
 	FindOrCreatePerson(userID int64, name string) (*models.Person, error)
-	ListHashtags() ([]models.Hashtag, error)
+}
+
+type HashtagRepository interface {
+	ListHashtagsByUser(userID int64) ([]models.Hashtag, error)
 	FindOrCreateHashtag(name string) (*models.Hashtag, error)
+	ListTagsForPosts(postIDs []int64) (map[int64][]models.Hashtag, error)
+}
+
+type PostRepository interface {
 	CreatePost(post *models.Post) error
 	UpdatePost(post *models.Post) error
 	DeletePost(id, userID int64) error
@@ -41,29 +51,41 @@ type Repository interface {
 	ListPosts(userID int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error)
 	ReplacePostTags(postID int64, tags []models.Hashtag) error
 	ReplacePostMentions(postID int64, persons []models.Person) error
-	ListPostComments(postID int64) ([]models.Comment, error)
-	CreateComment(comment *models.Comment) error
-	UpdateComment(comment *models.Comment) error
-	DeleteComment(id, userID int64) error
-	ListPostTags(postID int64) ([]models.Hashtag, error)
-	ListPostPersons(postID int64) ([]models.Person, error)
-	ListPostAttachments(postID int64) ([]models.Attachment, error)
-	CreateAttachment(att *models.Attachment) error
-	ListTagsForPosts(postIDs []int64) (map[int64][]models.Hashtag, error)
 	ListPersonsForPosts(postIDs []int64) (map[int64][]models.Person, error)
 	ListCommentsForPosts(postIDs []int64) (map[int64][]models.Comment, error)
 	ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error)
 	SavePostWithRelations(userID int64, post *models.Post, tagNames, personNames []string) error
-	ListHashtagsByUser(userID int64) ([]models.Hashtag, error)
+}
+
+type CommentRepository interface {
+	CreateComment(comment *models.Comment) error
+	UpdateComment(comment *models.Comment) error
+	DeleteComment(id, userID int64) error
+}
+
+type AttachmentRepository interface {
+	CreateAttachment(att *models.Attachment) error
 	GetAttachmentByName(userID int64, name string) (*models.Attachment, error)
 }
 
 type Service struct {
-	Repo Repository
+	Users       UserRepository
+	Persons     PersonRepository
+	Hashtags    HashtagRepository
+	Posts       PostRepository
+	Comments    CommentRepository
+	Attachments AttachmentRepository
 }
 
-func New(repo Repository) *Service {
-	return &Service{Repo: repo}
+func New(users UserRepository, persons PersonRepository, hashtags HashtagRepository, posts PostRepository, comments CommentRepository, attachments AttachmentRepository) *Service {
+	return &Service{
+		Users:       users,
+		Persons:     persons,
+		Hashtags:    hashtags,
+		Posts:       posts,
+		Comments:    comments,
+		Attachments: attachments,
+	}
 }
 
 func (s *Service) Register(email, password string) (*models.User, error) {
@@ -77,14 +99,14 @@ func (s *Service) Register(email, password string) (*models.User, error) {
 		Role:     models.RoleUser,
 		Active:   true,
 	}
-	if err := s.Repo.CreateUser(user); err != nil {
+	if err := s.Users.CreateUser(user); err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
 func (s *Service) Authenticate(email, password string) (*models.User, error) {
-	user, err := s.Repo.GetUserByEmail(email)
+	user, err := s.Users.GetUserByEmail(email)
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}
@@ -128,11 +150,11 @@ func (s *Service) ParseMentions(text string) []string {
 func (s *Service) CreateOrUpdatePost(userID int64, post *models.Post) error {
 	tags := s.ParseHashtags(post.Text)
 	persons := s.ParseMentions(post.Text)
-	return s.Repo.SavePostWithRelations(userID, post, tags, persons)
+	return s.Posts.SavePostWithRelations(userID, post, tags, persons)
 }
 
 func (s *Service) ListPosts(userID int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error) {
-	posts, err := s.Repo.ListPosts(userID, date, hashtags, persons, search)
+	posts, err := s.Posts.ListPosts(userID, date, hashtags, persons, search)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +162,7 @@ func (s *Service) ListPosts(userID int64, date time.Time, hashtags, persons []st
 }
 
 func (s *Service) GetPost(userID, postID int64) (*models.Post, error) {
-	post, err := s.Repo.GetPost(postID, userID)
+	post, err := s.Posts.GetPost(postID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -155,16 +177,16 @@ func (s *Service) GetPost(userID, postID int64) (*models.Post, error) {
 }
 
 func (s *Service) ListHashtags(userID int64) ([]models.Hashtag, error) {
-	return s.Repo.ListHashtagsByUser(userID)
+	return s.Hashtags.ListHashtagsByUser(userID)
 }
 
 func (s *Service) ListPersons(userID int64) ([]models.Person, error) {
-	return s.Repo.ListPersons(userID)
+	return s.Persons.ListPersons(userID)
 }
 
 func (s *Service) CreatePerson(userID int64, name string, description *string) (*models.Person, error) {
 	person := &models.Person{Name: name, Description: description, CreatedBy: userID}
-	if err := s.Repo.CreatePerson(person); err != nil {
+	if err := s.Persons.CreatePerson(person); err != nil {
 		return nil, err
 	}
 	return person, nil
@@ -172,55 +194,55 @@ func (s *Service) CreatePerson(userID int64, name string, description *string) (
 
 func (s *Service) UpdatePerson(userID int64, person *models.Person) error {
 	person.CreatedBy = userID
-	return s.Repo.UpdatePerson(person)
+	return s.Persons.UpdatePerson(person)
 }
 
 func (s *Service) DeletePerson(userID, personID int64) error {
-	return s.Repo.DeletePerson(personID, userID)
+	return s.Persons.DeletePerson(personID, userID)
 }
 
 func (s *Service) GetUserByID(userID int64) (*models.User, error) {
-	return s.Repo.GetUserByID(userID)
+	return s.Users.GetUserByID(userID)
 }
 
 func (s *Service) UpdateUserProfile(userID int64, email string) error {
-	return s.Repo.UpdateUserProfile(userID, email)
+	return s.Users.UpdateUserProfile(userID, email)
 }
 
 func (s *Service) ListUsers() ([]models.User, error) {
-	return s.Repo.ListUsers()
+	return s.Users.ListUsers()
 }
 
 func (s *Service) UpdateUserRole(userID int64, role string) error {
-	return s.Repo.UpdateUserRole(userID, role)
+	return s.Users.UpdateUserRole(userID, role)
 }
 
 func (s *Service) UpdateUserActive(userID int64, active bool) error {
-	return s.Repo.UpdateUserActive(userID, active)
+	return s.Users.UpdateUserActive(userID, active)
 }
 
 func (s *Service) DeletePost(userID, postID int64) error {
-	return s.Repo.DeletePost(postID, userID)
+	return s.Posts.DeletePost(postID, userID)
 }
 
 func (s *Service) AddComment(comment *models.Comment) error {
-	return s.Repo.CreateComment(comment)
+	return s.Comments.CreateComment(comment)
 }
 
 func (s *Service) UpdateComment(comment *models.Comment) error {
-	return s.Repo.UpdateComment(comment)
+	return s.Comments.UpdateComment(comment)
 }
 
 func (s *Service) DeleteComment(userID, commentID int64) error {
-	return s.Repo.DeleteComment(commentID, userID)
+	return s.Comments.DeleteComment(commentID, userID)
 }
 
 func (s *Service) CreateAttachment(att *models.Attachment) error {
-	return s.Repo.CreateAttachment(att)
+	return s.Attachments.CreateAttachment(att)
 }
 
 func (s *Service) GetAttachmentForUser(userID int64, name string) (*models.Attachment, error) {
-	return s.Repo.GetAttachmentByName(userID, name)
+	return s.Attachments.GetAttachmentByName(userID, name)
 }
 
 func (s *Service) hydratePosts(posts []models.Post) ([]models.Post, error) {
@@ -231,19 +253,19 @@ func (s *Service) hydratePosts(posts []models.Post) ([]models.Post, error) {
 	for _, post := range posts {
 		ids = append(ids, post.ID)
 	}
-	tagsByPost, err := s.Repo.ListTagsForPosts(ids)
+	tagsByPost, err := s.Hashtags.ListTagsForPosts(ids)
 	if err != nil {
 		return nil, err
 	}
-	personsByPost, err := s.Repo.ListPersonsForPosts(ids)
+	personsByPost, err := s.Posts.ListPersonsForPosts(ids)
 	if err != nil {
 		return nil, err
 	}
-	commentsByPost, err := s.Repo.ListCommentsForPosts(ids)
+	commentsByPost, err := s.Posts.ListCommentsForPosts(ids)
 	if err != nil {
 		return nil, err
 	}
-	attachmentsByPost, err := s.Repo.ListAttachmentsForPosts(ids)
+	attachmentsByPost, err := s.Posts.ListAttachmentsForPosts(ids)
 	if err != nil {
 		return nil, err
 	}

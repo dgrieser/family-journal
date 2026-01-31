@@ -123,7 +123,7 @@ func (f *fakeRepo) GetAttachmentByName(userID int64, name string) (*models.Attac
 
 func TestRegisterLoginSession(t *testing.T) {
 	repo := newFakeRepo()
-	service := services.New(repo)
+	service := services.New(repo, repo, repo, repo, repo, repo)
 	store := session.New()
 	app := fiber.New()
 	h := &handlers.AuthHandler{Service: service, Store: store}
@@ -160,7 +160,7 @@ func TestRegisterLoginSession(t *testing.T) {
 
 func TestCreatePostParsesTagsAndPersons(t *testing.T) {
 	repo := newFakeRepo()
-	service := services.New(repo)
+	service := services.New(repo, repo, repo, repo, repo, repo)
 	post := &models.Post{UserID: 1, Date: time.Now(), Text: "Today #Care with @Lena"}
 	if err := service.CreateOrUpdatePost(1, post); err != nil {
 		t.Fatalf("create post: %v", err)
@@ -175,7 +175,7 @@ func TestCreatePostParsesTagsAndPersons(t *testing.T) {
 
 func TestListPostsFilters(t *testing.T) {
 	repo := newFakeRepo()
-	service := services.New(repo)
+	service := services.New(repo, repo, repo, repo, repo, repo)
 	store := session.New()
 	app := fiber.New()
 	postsHandler := &handlers.PostsHandler{Service: service, Store: store}

@@ -41,7 +41,7 @@ func main() {
 		log.Fatal(err)
 	}
 	repo := repositories.New(database)
-	service := services.New(repo)
+	service := services.New(repo, repo, repo, repo, repo, repo)
 
 	store := session.New(session.Config{
 		CookieHTTPOnly: true,
@@ -66,7 +66,13 @@ func main() {
 	api := app.Group("/api/v1")
 	authHandler := &handlers.AuthHandler{Service: service, Store: store}
 	adminHandler := &handlers.AdminHandler{Service: service}
-	postsHandler := &handlers.PostsHandler{Service: service, Store: store, UploadDir: cfg.UploadDir, MaxUploadMB: cfg.MaxUploadMB}
+	postsHandler := &handlers.PostsHandler{
+		Service:      service,
+		Store:        store,
+		UploadDir:    cfg.UploadDir,
+		MaxUploadMB:  cfg.MaxUploadMB,
+		AllowedTypes: cfg.AllowedTypes,
+	}
 	personsHandler := &handlers.PersonsHandler{Service: service, Store: store}
 
 	app.Get("/uploads/:name", middleware.RequireAuth(store), postsHandler.DownloadAttachment)

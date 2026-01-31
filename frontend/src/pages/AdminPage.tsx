@@ -12,10 +12,15 @@ interface User {
 const AdminPage = () => {
   const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
+  const [error, setError] = useState('');
 
   const loadUsers = async () => {
-    const data = await apiFetch('/admin/users');
-    setUsers(data);
+    try {
+      const data = await apiFetch('/admin/users');
+      setUsers(data);
+    } catch (err) {
+      setError(String(err));
+    }
   };
 
   useEffect(() => {
@@ -23,24 +28,35 @@ const AdminPage = () => {
   }, []);
 
   const updateRole = async (id: number, role: string) => {
-    await apiFetch(`/admin/users/${id}/role`, {
-      method: 'PATCH',
-      body: JSON.stringify({ role })
-    });
-    setUsers((current) => current.map((user) => (user.id === id ? { ...user, role } : user)));
+    try {
+      await apiFetch(`/admin/users/${id}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role })
+      });
+      setUsers((current) => current.map((user) => (user.id === id ? { ...user, role } : user)));
+      setError('');
+    } catch (err) {
+      setError(String(err));
+    }
   };
 
   const updateActive = async (id: number, active: boolean) => {
-    await apiFetch(`/admin/users/${id}/active`, {
-      method: 'PATCH',
-      body: JSON.stringify({ active })
-    });
-    setUsers((current) => current.map((user) => (user.id === id ? { ...user, active } : user)));
+    try {
+      await apiFetch(`/admin/users/${id}/active`, {
+        method: 'PATCH',
+        body: JSON.stringify({ active })
+      });
+      setUsers((current) => current.map((user) => (user.id === id ? { ...user, active } : user)));
+      setError('');
+    } catch (err) {
+      setError(String(err));
+    }
   };
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4">
       <h2 className="text-2xl font-semibold">{t('admin.title')}</h2>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="space-y-3">
         {users.map((user) => (
           <div key={user.id} className="bg-white p-4 rounded shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">

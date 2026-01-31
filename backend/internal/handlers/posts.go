@@ -22,10 +22,11 @@ import (
 )
 
 type PostsHandler struct {
-	Service     *services.Service
-	Store       *session.Store
-	UploadDir   string
-	MaxUploadMB int64
+	Service      *services.Service
+	Store        *session.Store
+	UploadDir    string
+	MaxUploadMB  int64
+	AllowedTypes []string
 }
 
 type postRequest struct {
@@ -272,7 +273,7 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 		if err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
-		if !isAllowedType(contentType) {
+		if !isAllowedType(contentType, h.AllowedTypes) {
 			return fiber.NewError(fiber.StatusBadRequest, "invalid file type")
 		}
 		fileName, err := uniqueFileName(file.Filename, contentType)
@@ -317,8 +318,7 @@ func (h *PostsHandler) DownloadAttachment(c *fiber.Ctx) error {
 	return c.SendFile(path)
 }
 
-func isAllowedType(contentType string) bool {
-	allowed := []string{"image/jpeg", "image/png", "application/pdf"}
+func isAllowedType(contentType string, allowed []string) bool {
 	for _, t := range allowed {
 		if t == contentType {
 			return true
@@ -361,16 +361,7 @@ func uniqueFileName(originalName, contentType string) (string, error) {
 func extensionForType(contentType string) (string, error) {
 	extensions, err := mime.ExtensionsByType(contentType)
 	if err != nil || len(extensions) == 0 {
-		switch contentType {
-		case "image/jpeg":
-			return ".jpg", nil
-		case "image/png":
-			return ".png", nil
-		case "application/pdf":
-			return ".pdf", nil
-		default:
-			return "", errors.New("unsupported content type")
-		}
+		return "", errors.New("unsupported content type")
 	}
 	return extensions[0], nil
 }

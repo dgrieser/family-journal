@@ -33,6 +33,7 @@ Services:
 | `COOKIE_SECURE` | Use secure cookies | `false` |
 | `UPLOAD_DIR` | Uploads directory | `./uploads` |
 | `MAX_UPLOAD_MB` | Maximum upload size | `10` |
+| `ALLOWED_UPLOAD_TYPES` | Comma-separated allowed MIME types | `image/jpeg,image/png,application/pdf` |
 | `DB_MAX_OPEN` | Max open DB connections | `10` |
 | `DB_MAX_IDLE` | Max idle DB connections | `5` |
 | `DB_MAX_LIFETIME_MINUTES` | Max connection lifetime (minutes) | `5` |
