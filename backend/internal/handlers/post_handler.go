@@ -73,9 +73,9 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
 	}
 
-	var req CreatePostRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+	req := CreatePostRequest{
+		Text: c.FormValue("text"),
+		Date: c.FormValue("date"),
 	}
 
 	date, err := time.Parse("2006-01-02", req.Date)
