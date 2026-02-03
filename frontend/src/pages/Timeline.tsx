@@ -4,10 +4,11 @@ import api from '../api';
 import { PostForm } from '../components/PostForm';
 import { PostCard } from '../components/PostCard';
 import { Calendar, ChevronLeft, ChevronRight, Search, Filter, X } from 'lucide-react';
+import type { Post } from '../types';
 
 export const Timeline = () => {
   const { t } = useTranslation();
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [search, setSearch] = useState('');
   const [selectedHashtags, setSelectedHashtags] = useState<string[]>([]);
@@ -15,7 +16,7 @@ export const Timeline = () => {
   const [allHashtags, setAllHashtags] = useState<string[]>([]);
   const [allPersons, setAllPersons] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [editingPost, setEditingPost] = useState<any>(null);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(false);
 
   const fetchPosts = useCallback(async () => {
@@ -170,7 +171,7 @@ export const Timeline = () => {
               post={post}
               onUpdate={fetchPosts}
               onEdit={(p) => {
-                setEditingPost({ id: p.id, text: p.text, date: p.date.split('T')[0] });
+                setEditingPost(p);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
             />

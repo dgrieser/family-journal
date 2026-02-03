@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { UserCog, Shield, ShieldAlert } from 'lucide-react';
+import type { User } from '../types';
 
 export const Admin = () => {
   const { t } = useTranslation();
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   const fetchUsers = async () => {
     try {

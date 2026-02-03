@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { Send, Paperclip, X } from 'lucide-react';
+import type { Post } from '../types';
 
 interface PostFormProps {
   onSuccess: () => void;
-  initialData?: { id: number; text: string; date: string };
+  initialData?: Post | null;
 }
 
 export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
@@ -20,6 +21,16 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
   const [allPersons, setAllPersons] = useState<string[]>([]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (initialData) {
+      setText(initialData.text);
+      setDate(initialData.date.split('T')[0]);
+    } else {
+      setText('');
+      setDate(new Date().toISOString().split('T')[0]);
+    }
+  }, [initialData]);
 
   useEffect(() => {
     // Fetch hashtags and persons for autocomplete
@@ -87,7 +98,9 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
 
     try {
       if (initialData) {
-        await api.put(`/posts/${initialData.id}`, { text, date });
+        await api.put(`/posts/${initialData.id}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
       } else {
         await api.post('/posts', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }

@@ -37,10 +37,10 @@ func (s *PostService) CreatePost(userID uint, date time.Time, text string) (*mod
 		return nil, err
 	}
 
-	return post, nil
+	return s.postRepo.FindByID(post.ID)
 }
 
-func (s *PostService) UpdatePost(postID uint, text string) (*models.Post, error) {
+func (s *PostService) UpdatePost(postID uint, text string, date *time.Time) (*models.Post, error) {
 	post, err := s.postRepo.FindByID(postID)
 	if err != nil {
 		return nil, err
@@ -49,6 +49,9 @@ func (s *PostService) UpdatePost(postID uint, text string) (*models.Post, error)
 	hashtags, mentions := s.parseText(text, post.UserID)
 
 	post.Text = text
+	if date != nil {
+		post.Date = *date
+	}
 	post.Hashtags = hashtags
 	post.Mentions = mentions
 
@@ -57,7 +60,7 @@ func (s *PostService) UpdatePost(postID uint, text string) (*models.Post, error)
 		return nil, err
 	}
 
-	return post, nil
+	return s.postRepo.FindByID(post.ID)
 }
 
 func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []models.Person) {

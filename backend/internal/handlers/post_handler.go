@@ -124,9 +124,48 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
 	}
 
-	post, err := h.postService.UpdatePost(uint(id), req.Text)
+	var postDate *time.Time
+	if req.Date != "" {
+		d, err := time.Parse("2006-01-02", req.Date)
+		if err == nil {
+			postDate = &d
+		}
+	}
+
+	post, err := h.postService.UpdatePost(uint(id), req.Text, postDate)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Handle file uploads during update
+	form, err := c.MultipartForm()
+	if err == nil {
+		files := form.File["attachments"]
+		for _, file := range files {
+			contentType := file.Header.Get("Content-Type")
+			allowedTypes := map[string]bool{
+				"image/jpeg":      true,
+				"image/png":       true,
+				"application/pdf": true,
+			}
+			if !allowedTypes[contentType] {
+				continue
+			}
+
+			if file.Size > 5*1024*1024 {
+				continue
+			}
+
+			ext := filepath.Ext(file.Filename)
+			newFileName := uuid.New().String() + ext
+			storagePath := filepath.Join("uploads", newFileName)
+
+			if err := c.SaveFile(file, storagePath); err != nil {
+				continue
+			}
+
+			h.postService.AddAttachment(post.ID, file.Filename, file.Header.Get("Content-Type"), file.Size, storagePath)
+		}
 	}
 
 	return c.JSON(post)

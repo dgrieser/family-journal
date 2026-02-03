@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { User, Plus, Trash2, Edit2, Check } from 'lucide-react';
+import type { Person } from '../types';
 
 export const Persons = () => {
   const { t } = useTranslation();
-  const [persons, setPersons] = useState([]);
+  const [persons, setPersons] = useState<Person[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);

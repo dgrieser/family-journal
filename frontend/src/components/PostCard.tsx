@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { MessageSquare, Trash2, Edit2, Download, User as UserIcon, Tag, Send } from 'lucide-react';
 import { useAuthStore } from '../store';
+import type { Post } from '../types';
 
 interface PostCardProps {
-  post: any;
+  post: Post;
   onUpdate: () => void;
-  onEdit: (post: any) => void;
+  onEdit: (post: Post) => void;
 }
 
 export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
