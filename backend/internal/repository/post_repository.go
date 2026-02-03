@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"strings"
 	"time"
 
 	"github.com/user/family-journal/internal/models"
@@ -69,7 +70,11 @@ func (r *PostRepository) GetFiltered(date *time.Time, hashtags []string, persons
 	}
 
 	if search != "" {
-		query = query.Where("text LIKE ?", "%"+search+"%")
+		// Escape special characters for LIKE query
+		searchStr := strings.ReplaceAll(search, "\\", "\\\\")
+		searchStr = strings.ReplaceAll(searchStr, "%", "\\%")
+		searchStr = strings.ReplaceAll(searchStr, "_", "\\_")
+		query = query.Where("text LIKE ?", "%"+searchStr+"%")
 	}
 
 	var posts []models.Post

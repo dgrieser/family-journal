@@ -51,7 +51,10 @@ func (h *PostHandler) GetPosts(c *fiber.Ctx) error {
 }
 
 func (h *PostHandler) GetPost(c *fiber.Ctx) error {
-	id, _ := c.ParamsInt("id")
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
+	}
 	post, err := h.postService.GetPost(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
@@ -65,6 +68,11 @@ type CreatePostRequest struct {
 }
 
 func (h *PostHandler) Create(c *fiber.Ctx) error {
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+
 	var req CreatePostRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
@@ -75,7 +83,6 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 		date = time.Now()
 	}
 
-	userID := c.Locals("user_id").(uint)
 	post, err := h.postService.CreatePost(userID, date, req.Text)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
@@ -86,6 +93,18 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 	if err == nil {
 		files := form.File["attachments"]
 		for _, file := range files {
+			// Validate file extension
+			ext := strings.ToLower(filepath.Ext(file.Filename))
+			allowedExts := map[string]bool{
+				".jpg":  true,
+				".jpeg": true,
+				".png":  true,
+				".pdf":  true,
+			}
+			if !allowedExts[ext] {
+				continue
+			}
+
 			// Validate file type
 			contentType := file.Header.Get("Content-Type")
 			allowedTypes := map[string]bool{
@@ -118,7 +137,10 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 }
 
 func (h *PostHandler) Update(c *fiber.Ctx) error {
-	id, _ := c.ParamsInt("id")
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
+	}
 	var req CreatePostRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
@@ -142,6 +164,18 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 	if err == nil {
 		files := form.File["attachments"]
 		for _, file := range files {
+			// Validate file extension
+			ext := strings.ToLower(filepath.Ext(file.Filename))
+			allowedExts := map[string]bool{
+				".jpg":  true,
+				".jpeg": true,
+				".png":  true,
+				".pdf":  true,
+			}
+			if !allowedExts[ext] {
+				continue
+			}
+
 			contentType := file.Header.Get("Content-Type")
 			allowedTypes := map[string]bool{
 				"image/jpeg":      true,
@@ -172,7 +206,10 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 }
 
 func (h *PostHandler) Delete(c *fiber.Ctx) error {
-	id, _ := c.ParamsInt("id")
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
+	}
 	if err := h.postService.DeletePost(uint(id)); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -184,13 +221,20 @@ type CommentRequest struct {
 }
 
 func (h *PostHandler) AddComment(c *fiber.Ctx) error {
-	postID, _ := c.ParamsInt("id")
+	postID, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
+	}
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+
 	var req CommentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
 	}
 
-	userID := c.Locals("user_id").(uint)
 	comment, err := h.postService.AddComment(uint(postID), userID, req.Text)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
@@ -200,7 +244,10 @@ func (h *PostHandler) AddComment(c *fiber.Ctx) error {
 }
 
 func (h *PostHandler) DeleteComment(c *fiber.Ctx) error {
-	id, _ := c.ParamsInt("id") // this would be comment id
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
+	}
 	if err := h.postService.DeleteComment(uint(id)); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}

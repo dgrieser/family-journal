@@ -78,7 +78,7 @@ func main() {
 	// Encrypt Cookies
 	secret := os.Getenv("SESSION_SECRET")
 	if secret == "" {
-		secret = "default-secret-at-least-32-chars-long"
+		log.Fatal("SESSION_SECRET environment variable is required")
 	}
 	app.Use(encryptcookie.New(encryptcookie.Config{
 		Key:    secret,

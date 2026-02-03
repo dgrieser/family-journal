@@ -54,7 +54,8 @@ func TestPostCreationWithHashtagsAndMentions(t *testing.T) {
 	authService := NewAuthService(userRepo)
 	postService := NewPostService(postRepo, personRepo)
 
-	user, _ := authService.Register("test@example.com", "password", models.RoleUser)
+	user, err := authService.Register("test@example.com", "password", models.RoleUser)
+	assert.NoError(t, err)
 
 	text := "Care for @Child1 today. He is doing well #care #health"
 	post, err := postService.CreatePost(user.ID, time.Now(), text)
@@ -71,27 +72,33 @@ func TestFiltering(t *testing.T) {
 	postRepo := repository.NewPostRepository(db)
 	postService := NewPostService(postRepo, personRepo)
 
-	user, _ := userRepo.FindByEmail("test@example.com") // setupTestDB doesn't persist across tests
-	if user == nil {
+	user, err := userRepo.FindByEmail("test@example.com") // setupTestDB doesn't persist across tests
+	if err != nil {
 		user = &models.User{Email: "test@example.com"}
-		userRepo.Create(user)
+		err = userRepo.Create(user)
+		assert.NoError(t, err)
 	}
 
 	today := time.Now()
-	postService.CreatePost(user.ID, today, "Post 1 #tag1 @person1")
-	postService.CreatePost(user.ID, today, "Post 2 #tag2 @person2")
+	_, err = postService.CreatePost(user.ID, today, "Post 1 #tag1 @person1")
+	assert.NoError(t, err)
+	_, err = postService.CreatePost(user.ID, today, "Post 2 #tag2 @person2")
+	assert.NoError(t, err)
 
 	// Filter by hashtag
-	posts, _ := postService.GetPosts(nil, []string{"tag1"}, nil, "")
+	posts, err := postService.GetPosts(nil, []string{"tag1"}, nil, "")
+	assert.NoError(t, err)
 	assert.Len(t, posts, 1)
 	assert.Contains(t, posts[0].Text, "Post 1")
 
 	// Filter by person
-	posts, _ = postService.GetPosts(nil, nil, []string{"person2"}, "")
+	posts, err = postService.GetPosts(nil, nil, []string{"person2"}, "")
+	assert.NoError(t, err)
 	assert.Len(t, posts, 1)
 	assert.Contains(t, posts[0].Text, "Post 2")
 
 	// Filter by search
-	posts, _ = postService.GetPosts(nil, nil, nil, "Post 1")
+	posts, err = postService.GetPosts(nil, nil, nil, "Post 1")
+	assert.NoError(t, err)
 	assert.Len(t, posts, 1)
 }

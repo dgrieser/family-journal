@@ -28,12 +28,17 @@ A full-stack web application to document daily care activities for children.
 ### Running the Application
 
 1. Clone the repository.
-2. Run the following command:
+2. Create a `.env` file from the example:
+   ```bash
+   cp .env.example .env
+   ```
+   Ensure you set a secure `SESSION_SECRET` (at least 32 characters).
+3. Run the following command:
    ```bash
    docker-compose up --build
    ```
-3. The application will be available at `http://localhost:3000`.
-4. The backend API is at `http://localhost:8080/api`.
+4. The application will be available at `http://localhost:3000`.
+5. The backend API is at `http://localhost:8080/api`.
 
 ### Environment Variables
 
@@ -52,8 +57,12 @@ The application uses the following environment variables (configured in `docker-
 ### Backend
 
 To run the backend locally:
+1. Ensure you have a MySQL instance running or update `.env` to point to a local database.
+2. Set up your environment variables in `.env`.
+3. Run the backend:
 ```bash
 cd backend
+# The backend uses godotenv to load .env from the root or the backend folder
 go run cmd/api/main.go
 ```
 
