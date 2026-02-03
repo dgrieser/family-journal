@@ -86,6 +86,15 @@ func (r *PostRepository) AddComment(comment *models.Comment) error {
 	return r.db.Create(comment).Error
 }
 
+func (r *PostRepository) FindCommentByID(id uint) (*models.Comment, error) {
+	var comment models.Comment
+	err := r.db.First(&comment, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &comment, nil
+}
+
 func (r *PostRepository) DeleteComment(id uint) error {
 	return r.db.Delete(&models.Comment{}, id).Error
 }

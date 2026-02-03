@@ -124,6 +124,10 @@ func (s *PostService) DeletePost(id uint) error {
 	return s.postRepo.Delete(id)
 }
 
+func (s *PostService) GetComment(id uint) (*models.Comment, error) {
+	return s.postRepo.FindCommentByID(id)
+}
+
 func (s *PostService) AddComment(postID uint, userID uint, text string) (*models.Comment, error) {
 	comment := &models.Comment{
 		PostID: postID,

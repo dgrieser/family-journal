@@ -67,15 +67,63 @@ type CreatePostRequest struct {
 	Text string `json:"text"`
 }
 
+func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) error {
+	form, err := c.MultipartForm()
+	if err != nil {
+		return nil // No files to upload
+	}
+
+	files := form.File["attachments"]
+	for _, file := range files {
+		// Validate file extension
+		ext := strings.ToLower(filepath.Ext(file.Filename))
+		allowedExts := map[string]bool{
+			".jpg":  true,
+			".jpeg": true,
+			".png":  true,
+			".pdf":  true,
+		}
+		if !allowedExts[ext] {
+			continue
+		}
+
+		// Validate file type
+		contentType := file.Header.Get("Content-Type")
+		allowedTypes := map[string]bool{
+			"image/jpeg":      true,
+			"image/png":       true,
+			"application/pdf": true,
+		}
+		if !allowedTypes[contentType] {
+			continue
+		}
+
+		// Validate file size (e.g. 5MB)
+		if file.Size > 5*1024*1024 {
+			continue
+		}
+
+		newFileName := uuid.New().String() + ext
+		storagePath := filepath.Join("uploads", newFileName)
+
+		if err := c.SaveFile(file, storagePath); err != nil {
+			continue
+		}
+
+		h.postService.AddAttachment(postID, file.Filename, contentType, file.Size, storagePath)
+	}
+	return nil
+}
+
 func (h *PostHandler) Create(c *fiber.Ctx) error {
 	userID, ok := c.Locals("user_id").(uint)
 	if !ok {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
 	}
 
-	req := CreatePostRequest{
-		Text: c.FormValue("text"),
-		Date: c.FormValue("date"),
+	var req CreatePostRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
 	}
 
 	date, err := time.Parse("2006-01-02", req.Date)
@@ -88,50 +136,7 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Handle file uploads
-	form, err := c.MultipartForm()
-	if err == nil {
-		files := form.File["attachments"]
-		for _, file := range files {
-			// Validate file extension
-			ext := strings.ToLower(filepath.Ext(file.Filename))
-			allowedExts := map[string]bool{
-				".jpg":  true,
-				".jpeg": true,
-				".png":  true,
-				".pdf":  true,
-			}
-			if !allowedExts[ext] {
-				continue
-			}
-
-			// Validate file type
-			contentType := file.Header.Get("Content-Type")
-			allowedTypes := map[string]bool{
-				"image/jpeg":      true,
-				"image/png":       true,
-				"application/pdf": true,
-			}
-			if !allowedTypes[contentType] {
-				continue
-			}
-
-			// Validate file size (e.g. 5MB)
-			if file.Size > 5*1024*1024 {
-				continue
-			}
-
-			ext := filepath.Ext(file.Filename)
-			newFileName := uuid.New().String() + ext
-			storagePath := filepath.Join("uploads", newFileName)
-
-			if err := c.SaveFile(file, storagePath); err != nil {
-				continue
-			}
-
-			h.postService.AddAttachment(post.ID, file.Filename, file.Header.Get("Content-Type"), file.Size, storagePath)
-		}
-	}
+	h.handleFileUploads(c, post.ID)
 
 	return c.Status(fiber.StatusCreated).JSON(post)
 }
@@ -141,6 +146,21 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
 	}
+
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+
+	existingPost, err := h.postService.GetPost(uint(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
+	}
+
+	if existingPost.UserID != userID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
 	var req CreatePostRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
@@ -159,48 +179,7 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Handle file uploads during update
-	form, err := c.MultipartForm()
-	if err == nil {
-		files := form.File["attachments"]
-		for _, file := range files {
-			// Validate file extension
-			ext := strings.ToLower(filepath.Ext(file.Filename))
-			allowedExts := map[string]bool{
-				".jpg":  true,
-				".jpeg": true,
-				".png":  true,
-				".pdf":  true,
-			}
-			if !allowedExts[ext] {
-				continue
-			}
-
-			contentType := file.Header.Get("Content-Type")
-			allowedTypes := map[string]bool{
-				"image/jpeg":      true,
-				"image/png":       true,
-				"application/pdf": true,
-			}
-			if !allowedTypes[contentType] {
-				continue
-			}
-
-			if file.Size > 5*1024*1024 {
-				continue
-			}
-
-			ext := filepath.Ext(file.Filename)
-			newFileName := uuid.New().String() + ext
-			storagePath := filepath.Join("uploads", newFileName)
-
-			if err := c.SaveFile(file, storagePath); err != nil {
-				continue
-			}
-
-			h.postService.AddAttachment(post.ID, file.Filename, file.Header.Get("Content-Type"), file.Size, storagePath)
-		}
-	}
+	h.handleFileUploads(c, post.ID)
 
 	return c.JSON(post)
 }
@@ -210,6 +189,21 @@ func (h *PostHandler) Delete(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
 	}
+
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+
+	existingPost, err := h.postService.GetPost(uint(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
+	}
+
+	if existingPost.UserID != userID && c.Locals("role").(string) != "admin" {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
 	if err := h.postService.DeletePost(uint(id)); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -248,6 +242,21 @@ func (h *PostHandler) DeleteComment(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
 	}
+
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+
+	existingComment, err := h.postService.GetComment(uint(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "comment not found"})
+	}
+
+	if existingComment.UserID != userID && c.Locals("role").(string) != "admin" {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
 	if err := h.postService.DeleteComment(uint(id)); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}

@@ -24,7 +24,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
     }
   };
 
-  const handleAddComment = async (e: React.FormEvent) => {
+  const handleAddComment = async (e: any) => {
     e.preventDefault();
     if (!commentText.trim()) return;
     await api.post(`/posts/${post.id}/comments`, { text: commentText });
@@ -59,7 +59,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
       <p className="text-gray-700 whitespace-pre-wrap mb-4">{post.text}</p>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        {post.hashtags?.map((h: Hashtag) => (
+        {post.hashtags?.map((h: any) => (
           <span key={h.id} className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs flex items-center">
             <Tag size={12} className="mr-1" /> {h.name}
           </span>

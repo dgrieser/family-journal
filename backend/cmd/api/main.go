@@ -70,15 +70,18 @@ func main() {
 	})
 
 	app.Use(logger.New())
-app.Use(cors.New(cors.Config{
-	AllowOrigins:     os.Getenv("CORS_ALLOW_ORIGINS"),
-	AllowCredentials: true,
-}))
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:3000",
+		AllowCredentials: true,
+	}))
 
 	// Encrypt Cookies
 	secret := os.Getenv("SESSION_SECRET")
 	if secret == "" {
 		log.Fatal("SESSION_SECRET environment variable is required")
+	}
+	if len(secret) != 32 {
+		log.Fatal("SESSION_SECRET environment variable must be 32 characters long")
 	}
 	app.Use(encryptcookie.New(encryptcookie.Config{
 		Key:    secret,
@@ -118,7 +121,7 @@ app.Use(cors.New(cors.Config{
 	api.Post("/logout", authHandler.Logout)
 
 	// Protected routes
-	protected := api.Use(middleware.AuthRequired(store))
+	protected := api.Use(middleware.AuthRequired(store, authService))
 	protected.Get("/me", authHandler.Me)
 	protected.Put("/me", authHandler.UpdateProfile)
 
