@@ -49,7 +49,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     fetchData();
   }, []);
 
-  const handleTextChange = (e: any) => {
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setText(value);
 
