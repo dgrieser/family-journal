@@ -24,7 +24,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
     }
   };
 
-  const handleAddComment = async (e: any) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
     await api.post(`/posts/${post.id}/comments`, { text: commentText });
