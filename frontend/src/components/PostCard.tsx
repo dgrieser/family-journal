@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
-import { MessageSquare, Trash2, Edit2, Download, User as UserIcon, Tag, Send } from 'lucide-react';
+import { MessageSquare, Trash2, Edit2, Download, User as UserIcon, Tag, Send, Paperclip } from 'lucide-react';
 import { useAuthStore } from '../store';
-import type { Post } from '../types';
+import type { Post, Hashtag, Person, Attachment, Comment } from '../types';
 
 interface PostCardProps {
   post: Post;
@@ -59,12 +59,12 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
       <p className="text-gray-700 whitespace-pre-wrap mb-4">{post.text}</p>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        {post.hashtags?.map((h: any) => (
+        {post.hashtags?.map((h: Hashtag) => (
           <span key={h.id} className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs flex items-center">
             <Tag size={12} className="mr-1" /> {h.name}
           </span>
         ))}
-        {post.mentions?.map((p: any) => (
+        {post.mentions?.map((p: Person) => (
           <span key={p.id} className="bg-green-50 text-green-700 px-2 py-0.5 rounded text-xs flex items-center">
             <UserIcon size={12} className="mr-1" /> {p.name}
           </span>
@@ -75,17 +75,29 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
         <div className="border-t pt-3 mb-4">
           <h4 className="text-xs font-semibold text-gray-500 mb-2">{t('attachments')}</h4>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {post.attachments.map((a: any) => (
-              <a
-                key={a.id}
-                href={`/api/attachments/${a.id}/download`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 text-sm truncate"
-              >
-                <span className="truncate">{a.file_name}</span>
-                <Download size={14} className="flex-shrink-0 ml-1" />
-              </a>
+            {post.attachments.map((a: Attachment) => (
+              <div key={a.id} className="space-y-1">
+                {a.file_type.startsWith('image/') ? (
+                   <img
+                     src={`/api/attachments/${a.id}/download`}
+                     alt={a.file_name}
+                     className="w-full h-32 object-cover rounded border"
+                   />
+                ) : (
+                   <div className="w-full h-32 bg-gray-100 rounded border flex items-center justify-center text-gray-400">
+                      <Paperclip size={24} />
+                   </div>
+                )}
+                <a
+                  href={`/api/attachments/${a.id}/download`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 text-sm truncate"
+                >
+                  <span className="truncate">{a.file_name}</span>
+                  <Download size={14} className="flex-shrink-0 ml-1" />
+                </a>
+              </div>
             ))}
           </div>
         </div>
@@ -103,7 +115,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
 
       {showComments && (
         <div className="mt-4 space-y-3">
-          {post.comments?.map((c: any) => (
+          {post.comments?.map((c: Comment) => (
             <div key={c.id} className="bg-gray-50 p-2 rounded text-sm group relative">
               <div className="font-semibold text-xs mb-1">{c.user?.email}</div>
               <div>{c.text}</div>

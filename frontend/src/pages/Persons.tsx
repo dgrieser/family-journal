@@ -106,7 +106,7 @@ export const Persons = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {persons.map((p: any) => (
+            {persons.map((p: Person) => (
               <tr key={p.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{p.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.description}</td>

@@ -70,50 +70,68 @@ func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []m
 	hashtagMatches := hashtagRegex.FindAllStringSubmatch(text, -1)
 	mentionMatches := mentionRegex.FindAllStringSubmatch(text, -1)
 
-	var hashtags []models.Hashtag
+	var uniqueHashtagNames []string
 	hashtagMap := make(map[string]bool)
 	for _, match := range hashtagMatches {
 		name := strings.ToLower(match[1])
-		if hashtagMap[name] {
-			continue
+		if !hashtagMap[name] {
+			hashtagMap[name] = true
+			uniqueHashtagNames = append(uniqueHashtagNames, name)
 		}
-		hashtagMap[name] = true
-
-		hashtag, err := s.postRepo.FindHashtagByName(name)
-		if err != nil {
-			// Create new hashtag
-			hashtag = &models.Hashtag{Name: name}
-			// We don't save it yet, GORM will save it via association
-		}
-		hashtags = append(hashtags, *hashtag)
 	}
 
-	var mentions []models.Person
+	var uniqueMentionNames []string
 	mentionMap := make(map[string]bool)
 	for _, match := range mentionMatches {
 		name := strings.ToLower(match[1])
-		if mentionMap[name] {
-			continue
+		if !mentionMap[name] {
+			mentionMap[name] = true
+			uniqueMentionNames = append(uniqueMentionNames, name)
 		}
-		mentionMap[name] = true
+	}
 
-		person, err := s.personRepo.FindByName(name)
-		if err != nil {
-			// Create new person
-			person = &models.Person{
-				Name:            name,
-				CreatedByUserID: userID,
-			}
-			// GORM will save it via association
+	var hashtags []models.Hashtag
+	if len(uniqueHashtagNames) > 0 {
+		existingHashtags, _ := s.postRepo.FindHashtagsByNames(uniqueHashtagNames)
+		existingMap := make(map[string]models.Hashtag)
+		for _, h := range existingHashtags {
+			existingMap[h.Name] = h
 		}
-		mentions = append(mentions, *person)
+
+		for _, name := range uniqueHashtagNames {
+			if h, ok := existingMap[name]; ok {
+				hashtags = append(hashtags, h)
+			} else {
+				hashtags = append(hashtags, models.Hashtag{Name: name})
+			}
+		}
+	}
+
+	var mentions []models.Person
+	if len(uniqueMentionNames) > 0 {
+		existingPersons, _ := s.personRepo.FindByNames(uniqueMentionNames)
+		existingMap := make(map[string]models.Person)
+		for _, p := range existingPersons {
+			existingMap[p.Name] = p
+		}
+
+		for _, name := range uniqueMentionNames {
+			if p, ok := existingMap[name]; ok {
+				mentions = append(mentions, p)
+			} else {
+				mentions = append(mentions, models.Person{
+					Name:            name,
+					CreatedByUserID: userID,
+				})
+			}
+		}
 	}
 
 	return hashtags, mentions
 }
 
-func (s *PostService) GetPosts(date *time.Time, hashtags []string, persons []string, search string) ([]models.Post, error) {
-	return s.postRepo.GetFiltered(date, hashtags, persons, search)
+func (s *PostService) GetPosts(userID uint, date *time.Time, hashtags []string, persons []string, search string) ([]models.Post, error) {
+	return s.postRepo.GetFiltered(userID, date, hashtags, persons, search)
 }
 
 func (s *PostService) GetPost(id uint) (*models.Post, error) {

@@ -43,8 +43,12 @@ func main() {
 		log.Fatal("Failed to migrate database:", err)
 	}
 
-	dbPort, _ := strconv.Atoi(os.Getenv("DB_PORT"))
-	if dbPort == 0 {
+	dbPortStr := os.Getenv("DB_PORT")
+	dbPort, err := strconv.Atoi(dbPortStr)
+	if err != nil {
+		if dbPortStr != "" {
+			log.Printf("Warning: Invalid DB_PORT '%s', using default 3306", dbPortStr)
+		}
 		dbPort = 3306
 	}
 
@@ -70,8 +74,12 @@ func main() {
 	})
 
 	app.Use(logger.New())
+	allowOrigins := os.Getenv("CORS_ALLOW_ORIGIN")
+	if allowOrigins == "" {
+		allowOrigins = "http://localhost:3000"
+	}
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000",
+		AllowOrigins:     allowOrigins,
 		AllowCredentials: true,
 	}))
 
@@ -154,8 +162,7 @@ func main() {
 	admin.Put("/admin/users/:id/role", adminHandler.UpdateUserRole)
 	admin.Put("/admin/users/:id/active", adminHandler.ToggleUserActive)
 
-	// Serve static files for uploads
-	app.Static("/uploads", "./uploads")
+	// Note: Uploads are served via protected /attachments/:id/download endpoint
 
 	port := os.Getenv("PORT")
 	if port == "" {

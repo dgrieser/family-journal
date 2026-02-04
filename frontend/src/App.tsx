@@ -21,6 +21,7 @@ function App() {
         setUser(response.data);
       } catch (err) {
         setUser(null);
+      } finally {
         setInitialized(true);
       }
     };

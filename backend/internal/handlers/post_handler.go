@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"path/filepath"
 	"strings"
 	"time"
@@ -19,6 +20,11 @@ func NewPostHandler(postService *services.PostService) *PostHandler {
 }
 
 func (h *PostHandler) GetPosts(c *fiber.Ctx) error {
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+
 	dateStr := c.Query("date")
 	hashtags := c.Query("hashtags")
 	persons := c.Query("persons")
@@ -42,7 +48,7 @@ func (h *PostHandler) GetPosts(c *fiber.Ctx) error {
 		pNames = strings.Split(persons, ",")
 	}
 
-	posts, err := h.postService.GetPosts(date, hTags, pNames, search)
+	posts, err := h.postService.GetPosts(userID, date, hTags, pNames, search)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -55,10 +61,21 @@ func (h *PostHandler) GetPost(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
 	}
+
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+
 	post, err := h.postService.GetPost(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
+
+	if post.UserID != userID && c.Locals("role").(string) != "admin" {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
 	return c.JSON(post)
 }
 
@@ -107,6 +124,7 @@ func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) error {
 		storagePath := filepath.Join("uploads", newFileName)
 
 		if err := c.SaveFile(file, storagePath); err != nil {
+			log.Printf("Error saving file %s: %v", file.Filename, err)
 			continue
 		}
 
@@ -128,7 +146,7 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 
 	date, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
-		date = time.Now()
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid date format, please use YYYY-MM-DD"})
 	}
 
 	post, err := h.postService.CreatePost(userID, date, req.Text)
@@ -169,9 +187,10 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 	var postDate *time.Time
 	if req.Date != "" {
 		d, err := time.Parse("2006-01-02", req.Date)
-		if err == nil {
-			postDate = &d
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid date format, please use YYYY-MM-DD"})
 		}
+		postDate = &d
 	}
 
 	post, err := h.postService.UpdatePost(uint(id), req.Text, postDate)
@@ -224,6 +243,15 @@ func (h *PostHandler) AddComment(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
 	}
 
+	post, err := h.postService.GetPost(uint(postID))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
+	}
+
+	if post.UserID != userID && c.Locals("role").(string) != "admin" {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
 	var req CommentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
@@ -268,16 +296,32 @@ func (h *PostHandler) DownloadAttachment(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
 	}
+
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+
 	attachment, err := h.postService.GetAttachment(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "attachment not found"})
 	}
+
+	post, err := h.postService.GetPost(attachment.PostID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "associated post not found"})
+	}
+
+	if post.UserID != userID && c.Locals("role").(string) != "admin" {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
 	// Extra safety: check if file is within uploads directory
 	cleanPath := filepath.Clean(attachment.StoragePath)
 	if !strings.HasPrefix(cleanPath, "uploads") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
 	}
-	return c.Download(cleanPath, attachment.FileName)
+	return c.SendFile(cleanPath)
 }
 
 func (h *PostHandler) GetHashtags(c *fiber.Ctx) error {

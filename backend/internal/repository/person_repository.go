@@ -17,18 +17,15 @@ func (r *PersonRepository) Create(person *models.Person) error {
 	return r.db.Create(person).Error
 }
 
-func (r *PersonRepository) FindByName(name string) (*models.Person, error) {
-	var person models.Person
-	err := r.db.Where("name = ?", name).First(&person).Error
-	if err != nil {
-		return nil, err
-	}
-	return &person, nil
+func (r *PersonRepository) FindByNames(names []string) ([]models.Person, error) {
+	var persons []models.Person
+	err := r.db.Where("name IN ?", names).Find(&persons).Error
+	return persons, err
 }
 
-func (r *PersonRepository) GetAll() ([]models.Person, error) {
+func (r *PersonRepository) GetAll(userID uint) ([]models.Person, error) {
 	var persons []models.Person
-	err := r.db.Find(&persons).Error
+	err := r.db.Where("created_by_user_id = ?", userID).Find(&persons).Error
 	return persons, err
 }
 

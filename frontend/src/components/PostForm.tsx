@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { Send, Paperclip, X } from 'lucide-react';
-import type { Post } from '../types';
+import type { Post, Hashtag, Person } from '../types';
 
 interface PostFormProps {
   onSuccess: () => void;
@@ -40,8 +40,8 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
            api.get('/hashtags'),
            api.get('/persons')
          ]);
-         setAllHashtags(hRes.data.map((h: any) => h.name));
-         setAllPersons(pRes.data.map((p: any) => p.name));
+         setAllHashtags(hRes.data.map((h: Hashtag) => h.name));
+         setAllPersons(pRes.data.map((p: Person) => p.name));
        } catch (err) {
          console.error(err);
        }
@@ -49,7 +49,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     fetchData();
   }, []);
 
-  const handleTextChange = (e: any) => {
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setText(value);
 
@@ -83,13 +83,13 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     textareaRef.current?.focus();
   };
 
-  const handleFileChange = (e: any) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles(Array.from(e.target.files));
     }
   };
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData();
     formData.append('text', text);

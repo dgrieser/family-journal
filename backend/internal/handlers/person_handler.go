@@ -17,7 +17,12 @@ func NewPersonHandler(repo *repository.PersonRepository) *PersonHandler {
 }
 
 func (h *PersonHandler) GetAll(c *fiber.Ctx) error {
-	persons, err := h.repo.GetAll()
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+
+	persons, err := h.repo.GetAll(userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}

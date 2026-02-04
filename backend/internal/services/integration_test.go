@@ -86,19 +86,19 @@ func TestFiltering(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Filter by hashtag
-	posts, err := postService.GetPosts(nil, []string{"tag1"}, nil, "")
+	posts, err := postService.GetPosts(user.ID, nil, []string{"tag1"}, nil, "")
 	assert.NoError(t, err)
 	assert.Len(t, posts, 1)
 	assert.Contains(t, posts[0].Text, "Post 1")
 
 	// Filter by person
-	posts, err = postService.GetPosts(nil, nil, []string{"person2"}, "")
+	posts, err = postService.GetPosts(user.ID, nil, nil, []string{"person2"}, "")
 	assert.NoError(t, err)
 	assert.Len(t, posts, 1)
 	assert.Contains(t, posts[0].Text, "Post 2")
 
 	// Filter by search
-	posts, err = postService.GetPosts(nil, nil, nil, "Post 1")
+	posts, err = postService.GetPosts(user.ID, nil, nil, nil, "Post 1")
 	assert.NoError(t, err)
 	assert.Len(t, posts, 1)
 }

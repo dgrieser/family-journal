@@ -4,7 +4,7 @@ import api from '../api';
 import { PostForm } from '../components/PostForm';
 import { PostCard } from '../components/PostCard';
 import { Calendar, ChevronLeft, ChevronRight, Search, Filter, X } from 'lucide-react';
-import type { Post } from '../types';
+import type { Post, Hashtag, Person } from '../types';
 
 export const Timeline = () => {
   const { t } = useTranslation();
@@ -49,8 +49,8 @@ export const Timeline = () => {
           api.get('/hashtags'),
           api.get('/persons')
         ]);
-        setAllHashtags(hRes.data.map((h: any) => h.name));
-        setAllPersons(pRes.data.map((p: any) => p.name));
+        setAllHashtags(hRes.data.map((h: Hashtag) => h.name));
+        setAllPersons(pRes.data.map((p: Person) => p.name));
       } catch (err) {
         console.error(err);
       }
@@ -165,7 +165,7 @@ export const Timeline = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {posts.map((post: any) => (
+          {posts.map((post: Post) => (
             <PostCard
               key={post.id}
               post={post}

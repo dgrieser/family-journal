@@ -37,21 +37,20 @@ func (r *PostRepository) FindByID(id uint) (*models.Post, error) {
 	return &post, nil
 }
 
-func (r *PostRepository) FindHashtagByName(name string) (*models.Hashtag, error) {
-	var hashtag models.Hashtag
-	err := r.db.Where("name = ?", name).First(&hashtag).Error
-	if err != nil {
-		return nil, err
-	}
-	return &hashtag, nil
+func (r *PostRepository) FindHashtagsByNames(names []string) ([]models.Hashtag, error) {
+	var hashtags []models.Hashtag
+	err := r.db.Where("name IN ?", names).Find(&hashtags).Error
+	return hashtags, err
 }
 
 func (r *PostRepository) CreateHashtag(hashtag *models.Hashtag) error {
 	return r.db.Create(hashtag).Error
 }
 
-func (r *PostRepository) GetFiltered(date *time.Time, hashtags []string, persons []string, search string) ([]models.Post, error) {
+func (r *PostRepository) GetFiltered(userID uint, date *time.Time, hashtags []string, persons []string, search string) ([]models.Post, error) {
 	query := r.db.Preload("User").Preload("Hashtags").Preload("Mentions").Preload("Attachments").Preload("Comments.User")
+
+	query = query.Where("posts.user_id = ?", userID)
 
 	if date != nil {
 		query = query.Where("date = ?", date.Format("2006-01-02"))
