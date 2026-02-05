@@ -5,8 +5,8 @@ import (
 )
 
 type Post struct {
-	ID          uint         `gorm:"primaryKey" json:"id"`
-	UserID      uint         `gorm:"not null" json:"user_id"`
+	ID          uint         `gorm:"primaryKey;autoIncrement;type:int" json:"id"`
+	UserID      uint         `gorm:"type:int;not null" json:"user_id"`
 	User        User         `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Date        time.Time    `gorm:"type:date;not null;index" json:"date"`
 	Text        string       `gorm:"type:text;not null" json:"text"`
@@ -19,14 +19,14 @@ type Post struct {
 }
 
 type Hashtag struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
+	ID        uint      `gorm:"primaryKey;autoIncrement;type:int" json:"id"`
 	Name      string    `gorm:"type:varchar(255);uniqueIndex;not null" json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 type Attachment struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	PostID      uint      `gorm:"not null" json:"post_id"`
+	ID          uint      `gorm:"primaryKey;autoIncrement;type:int" json:"id"`
+	PostID      uint      `gorm:"type:int;not null" json:"post_id"`
 	FileName    string    `gorm:"not null" json:"file_name"`
 	FileType    string    `gorm:"not null" json:"file_type"`
 	FileSize    int64     `gorm:"not null" json:"file_size"`

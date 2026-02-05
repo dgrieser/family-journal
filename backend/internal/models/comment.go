@@ -5,9 +5,9 @@ import (
 )
 
 type Comment struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	PostID    uint      `gorm:"not null" json:"post_id"`
-	UserID    uint      `gorm:"not null" json:"user_id"`
+	ID        uint      `gorm:"primaryKey;autoIncrement;type:int" json:"id"`
+	PostID    uint      `gorm:"type:int;not null" json:"post_id"`
+	UserID    uint      `gorm:"type:int;not null" json:"user_id"`
 	User      User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Text      string    `gorm:"type:text;not null" json:"text"`
 	CreatedAt time.Time `json:"created_at"`
