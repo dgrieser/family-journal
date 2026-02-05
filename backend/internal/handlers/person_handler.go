@@ -48,7 +48,7 @@ func (h *PersonHandler) Create(c *fiber.Ctx) error {
 	person := models.Person{
 		Name:            strings.ToLower(req.Name),
 		Description:     req.Description,
-		CreatedByUserID: userID,
+		CreatedByUserID: &userID,
 	}
 
 	if err := h.repo.Create(&person); err != nil {
@@ -74,7 +74,7 @@ func (h *PersonHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "person not found"})
 	}
 
-	if existing.CreatedByUserID != userID && c.Locals("role") != "admin" {
+	if (existing.CreatedByUserID == nil || *existing.CreatedByUserID != userID) && c.Locals("role") != "admin" {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -109,7 +109,7 @@ func (h *PersonHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "person not found"})
 	}
 
-	if existing.CreatedByUserID != userID && c.Locals("role") != "admin" {
+	if (existing.CreatedByUserID == nil || *existing.CreatedByUserID != userID) && c.Locals("role") != "admin" {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 

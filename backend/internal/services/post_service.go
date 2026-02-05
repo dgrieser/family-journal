@@ -91,12 +91,9 @@ func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []m
 	var uniqueMentionNames []string
 	mentionMap := make(map[string]bool)
 	for _, match := range mentionMatches {
-		name := match[1] // Keep case for display name but maybe lowercase for map lookup?
-		// Requirements say: "resolve or create persons... keep it consistent"
-		// I'll lowercase for comparison to avoid duplicates like @Child and @child
-		lookupName := strings.ToLower(name)
-		if !mentionMap[lookupName] {
-			mentionMap[lookupName] = true
+		name := strings.ToLower(match[1])
+		if !mentionMap[name] {
+			mentionMap[name] = true
 			uniqueMentionNames = append(uniqueMentionNames, name)
 		}
 	}
@@ -139,7 +136,7 @@ func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []m
 			} else {
 				mentions = append(mentions, models.Person{
 					Name:            name,
-					CreatedByUserID: userID,
+					CreatedByUserID: &userID,
 				})
 			}
 		}
