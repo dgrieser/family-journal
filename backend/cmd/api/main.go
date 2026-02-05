@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"log"
 	"os"
 	"os/signal"
@@ -97,11 +99,13 @@ func main() {
 	if secret == "" {
 		log.Fatal("SESSION_SECRET environment variable is required")
 	}
-	if len(secret) != 32 {
-		log.Fatal("SESSION_SECRET environment variable must be 32 characters long")
+	if len(secret) < 32 {
+		log.Fatal("SESSION_SECRET environment variable must be at least 32 characters long")
 	}
+	secretHash := sha256.Sum256([]byte(secret))
+	cookieKey := base64.StdEncoding.EncodeToString(secretHash[:])
 	app.Use(encryptcookie.New(encryptcookie.Config{
-		Key:    secret,
+		Key:    cookieKey,
 		Except: []string{"csrf_"}, // Allow frontend to read CSRF token
 	}))
 
