@@ -24,12 +24,16 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
     }
   };
 
-  const handleAddComment = async (e: any) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
-    await api.post(`/posts/${post.id}/comments`, { text: commentText });
-    setCommentText('');
-    onUpdate();
+    try {
+      await api.post(`/posts/${post.id}/comments`, { text: commentText });
+      setCommentText('');
+      onUpdate();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleDeleteComment = async (commentId: number) => {

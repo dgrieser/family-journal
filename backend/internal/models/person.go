@@ -6,9 +6,9 @@ import (
 
 type Person struct {
 	ID                uint      `gorm:"primaryKey" json:"id"`
-	Name              string    `gorm:"uniqueIndex;not null" json:"name"`
+	Name              string    `gorm:"index:idx_name_user,unique;not null" json:"name"`
 	Description       string    `json:"description"`
-	CreatedByUserID   uint      `json:"created_by_user_id"`
+	CreatedByUserID   uint      `gorm:"index:idx_name_user,unique;not null" json:"created_by_user_id"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }

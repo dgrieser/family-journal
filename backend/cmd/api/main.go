@@ -3,13 +3,16 @@ package main
 import (
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/middleware/encryptcookie"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/gofiber/storage/mysql/v2"
@@ -63,9 +66,12 @@ func main() {
 		GCInterval: 10 * time.Second,
 	})
 
+	isSecure := os.Getenv("COOKIE_SECURE") == "true"
 	store := session.New(session.Config{
 		Storage:        storage,
 		CookieHTTPOnly: true,
+		CookieSecure:   isSecure,
+		CookieSameSite: "Lax",
 		Expiration:     24 * time.Hour,
 	})
 
@@ -102,6 +108,7 @@ func main() {
 		CookieName:     "csrf_",
 		CookieHTTPOnly: false,
 		CookieSameSite: "Lax",
+		CookieSecure:   isSecure,
 		Expiration:     1 * time.Hour,
 		ContextKey:     "csrf",
 	}))
@@ -123,9 +130,18 @@ func main() {
 
 	api := app.Group("/api")
 
+	// Auth rate limiting
+	authLimiter := limiter.New(limiter.Config{
+		Max:        20,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+	})
+
 	// Public routes
-	api.Post("/register", authHandler.Register)
-	api.Post("/login", authHandler.Login)
+	api.Post("/register", authLimiter, authHandler.Register)
+	api.Post("/login", authLimiter, authHandler.Login)
 	api.Post("/logout", authHandler.Logout)
 
 	// Protected routes
@@ -168,5 +184,21 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	log.Fatal(app.Listen(":" + port))
+
+	// Listen from a different goroutine
+	go func() {
+		if err := app.Listen(":" + port); err != nil {
+			log.Panic(err)
+		}
+	}()
+
+	// Create channel for idle connections.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	<-c // This blocks the main thread until an interrupt is received
+	log.Println("Gracefully shutting down...")
+	_ = app.Shutdown()
+
+	log.Println("Fiber was successful shutdown.")
 }

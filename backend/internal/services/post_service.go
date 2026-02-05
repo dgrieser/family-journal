@@ -1,6 +1,7 @@
 package services
 
 import (
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -22,7 +23,10 @@ func NewPostService(postRepo *repository.PostRepository, personRepo *repository.
 }
 
 func (s *PostService) CreatePost(userID uint, date time.Time, text string) (*models.Post, error) {
-	hashtags, mentions := s.parseText(text, userID)
+	hashtags, mentions, err := s.parseText(text, userID)
+	if err != nil {
+		return nil, err
+	}
 
 	post := &models.Post{
 		UserID:   userID,
@@ -46,7 +50,10 @@ func (s *PostService) UpdatePost(postID uint, text string, date *time.Time) (*mo
 		return nil, err
 	}
 
-	hashtags, mentions := s.parseText(text, post.UserID)
+	hashtags, mentions, err := s.parseText(text, post.UserID)
+	if err != nil {
+		return nil, err
+	}
 
 	post.Text = text
 	if date != nil {
@@ -63,7 +70,7 @@ func (s *PostService) UpdatePost(postID uint, text string, date *time.Time) (*mo
 	return s.postRepo.FindByID(post.ID)
 }
 
-func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []models.Person) {
+func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []models.Person, error) {
 	hashtagRegex := regexp.MustCompile(`#(\w+)`)
 	mentionRegex := regexp.MustCompile(`@(\w+)`)
 
@@ -83,16 +90,22 @@ func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []m
 	var uniqueMentionNames []string
 	mentionMap := make(map[string]bool)
 	for _, match := range mentionMatches {
-		name := strings.ToLower(match[1])
-		if !mentionMap[name] {
-			mentionMap[name] = true
+		name := match[1] // Keep case for display name but maybe lowercase for map lookup?
+		// Requirements say: "resolve or create persons... keep it consistent"
+		// I'll lowercase for comparison to avoid duplicates like @Child and @child
+		lookupName := strings.ToLower(name)
+		if !mentionMap[lookupName] {
+			mentionMap[lookupName] = true
 			uniqueMentionNames = append(uniqueMentionNames, name)
 		}
 	}
 
 	var hashtags []models.Hashtag
 	if len(uniqueHashtagNames) > 0 {
-		existingHashtags, _ := s.postRepo.FindHashtagsByNames(uniqueHashtagNames)
+		existingHashtags, err := s.postRepo.FindHashtagsByNames(uniqueHashtagNames)
+		if err != nil {
+			return nil, nil, err
+		}
 		existingMap := make(map[string]models.Hashtag)
 		for _, h := range existingHashtags {
 			existingMap[h.Name] = h
@@ -109,14 +122,18 @@ func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []m
 
 	var mentions []models.Person
 	if len(uniqueMentionNames) > 0 {
-		existingPersons, _ := s.personRepo.FindByNames(uniqueMentionNames)
+		// Security: Only find persons created by THIS user to avoid information leak
+		existingPersons, err := s.personRepo.FindByNames(userID, uniqueMentionNames)
+		if err != nil {
+			return nil, nil, err
+		}
 		existingMap := make(map[string]models.Person)
 		for _, p := range existingPersons {
-			existingMap[p.Name] = p
+			existingMap[strings.ToLower(p.Name)] = p
 		}
 
 		for _, name := range uniqueMentionNames {
-			if p, ok := existingMap[name]; ok {
+			if p, ok := existingMap[strings.ToLower(name)]; ok {
 				mentions = append(mentions, p)
 			} else {
 				mentions = append(mentions, models.Person{
@@ -127,7 +144,7 @@ func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []m
 		}
 	}
 
-	return hashtags, mentions
+	return hashtags, mentions, nil
 }
 
 func (s *PostService) GetPosts(userID uint, date *time.Time, hashtags []string, persons []string, search string) ([]models.Post, error) {
@@ -139,6 +156,16 @@ func (s *PostService) GetPost(id uint) (*models.Post, error) {
 }
 
 func (s *PostService) DeletePost(id uint) error {
+	post, err := s.postRepo.FindByID(id)
+	if err != nil {
+		return err
+	}
+
+	// Delete physical files
+	for _, a := range post.Attachments {
+		_ = os.Remove(a.StoragePath)
+	}
+
 	return s.postRepo.Delete(id)
 }
 

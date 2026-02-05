@@ -13,9 +13,15 @@ FROM alpine:latest
 
 WORKDIR /app
 
-RUN mkdir -p uploads
+# Create a non-root user and group
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-COPY --from=builder /app/main .
+RUN mkdir -p uploads && chown -R appuser:appgroup /app
+
+COPY --from=builder --chown=appuser:appgroup /app/main .
+
+# Switch to the non-root user
+USER appuser
 
 EXPOSE 8080
 

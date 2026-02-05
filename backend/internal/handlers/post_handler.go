@@ -139,9 +139,18 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
 	}
 
-	var req CreatePostRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+	req := CreatePostRequest{
+		Text: c.FormValue("text"),
+		Date: c.FormValue("date"),
+	}
+
+	if req.Text == "" || req.Date == "" {
+		// Fallback to JSON if form values are empty (for backward compatibility or direct API usage)
+		_ = c.BodyParser(&req)
+	}
+
+	if req.Text == "" || req.Date == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "text and date are required"})
 	}
 
 	date, err := time.Parse("2006-01-02", req.Date)
@@ -175,13 +184,17 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if existingPost.UserID != userID {
+	if existingPost.UserID != userID && c.Locals("role").(string) != "admin" {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
-	var req CreatePostRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+	req := CreatePostRequest{
+		Text: c.FormValue("text"),
+		Date: c.FormValue("date"),
+	}
+
+	if req.Text == "" && req.Date == "" {
+		_ = c.BodyParser(&req)
 	}
 
 	var postDate *time.Time
@@ -248,6 +261,7 @@ func (h *PostHandler) AddComment(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
+	// Verify post ownership or admin role
 	if post.UserID != userID && c.Locals("role").(string) != "admin" {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}

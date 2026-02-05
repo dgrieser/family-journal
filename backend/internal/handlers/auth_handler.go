@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"strings"
+	"errors"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/user/family-journal/internal/models"
@@ -34,7 +35,8 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	user, err := h.authService.Register(req.Email, req.Password, models.RoleUser)
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(strings.ToLower(err.Error()), "unique") {
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "email already registered"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})

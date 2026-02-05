@@ -69,11 +69,11 @@ func (r *PostRepository) GetFiltered(userID uint, date *time.Time, hashtags []st
 	}
 
 	if search != "" {
-		// Escape special characters for LIKE query
-		searchStr := strings.ReplaceAll(search, "\\", "\\\\")
-		searchStr = strings.ReplaceAll(searchStr, "%", "\\%")
-		searchStr = strings.ReplaceAll(searchStr, "_", "\\_")
-		query = query.Where("text LIKE ?", "%"+searchStr+"%")
+		// Escape wildcards for LIKE query to treat them as literal characters
+		escapedSearch := strings.ReplaceAll(search, "\\", "\\\\")
+		escapedSearch = strings.ReplaceAll(escapedSearch, "%", "\\%")
+		escapedSearch = strings.ReplaceAll(escapedSearch, "_", "\\_")
+		query = query.Where("text LIKE ?", "%"+escapedSearch+"%")
 	}
 
 	var posts []models.Post

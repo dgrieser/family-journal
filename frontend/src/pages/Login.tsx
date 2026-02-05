@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import api from '../api';
 import { useAuthStore } from '../store';
 
@@ -12,14 +13,18 @@ export const Login = () => {
   const { t } = useTranslation();
   const setUser = useAuthStore((state) => state.setUser);
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
       const response = await api.post('/login', { email, password });
       setUser(response.data);
       navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.error || 'Login failed');
+      } else {
+        setError('An unexpected error occurred');
+      }
     }
   };
 

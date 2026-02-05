@@ -17,9 +17,9 @@ func (r *PersonRepository) Create(person *models.Person) error {
 	return r.db.Create(person).Error
 }
 
-func (r *PersonRepository) FindByNames(names []string) ([]models.Person, error) {
+func (r *PersonRepository) FindByNames(userID uint, names []string) ([]models.Person, error) {
 	var persons []models.Person
-	err := r.db.Where("name IN ?", names).Find(&persons).Error
+	err := r.db.Where("created_by_user_id = ? AND name IN ?", userID, names).Find(&persons).Error
 	return persons, err
 }
 

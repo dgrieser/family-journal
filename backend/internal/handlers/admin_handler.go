@@ -41,6 +41,10 @@ func (h *AdminHandler) UpdateUserRole(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	}
 
+	if req.Role != models.RoleAdmin && req.Role != models.RoleUser {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid role specified"})
+	}
+
 	user.Role = req.Role
 	if err := h.userRepo.Update(user); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})

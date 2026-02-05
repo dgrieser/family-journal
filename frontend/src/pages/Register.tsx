@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import api from '../api';
 
 export const Register = () => {
@@ -10,13 +11,17 @@ export const Register = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
       await api.post('/register', { email, password });
       navigate('/login');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Registration failed');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.error || 'Registration failed');
+      } else {
+        setError('An unexpected error occurred');
+      }
     }
   };
 

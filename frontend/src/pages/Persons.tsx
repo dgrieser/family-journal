@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { User, Plus, Trash2, Edit2, Check } from 'lucide-react';
@@ -20,7 +20,7 @@ export const Persons = () => {
     fetchPersons();
   }, []);
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (editingId) {
       await api.put(`/persons/${editingId}`, { name, description });
@@ -33,10 +33,10 @@ export const Persons = () => {
     fetchPersons();
   };
 
-  const handleEdit = (p: any) => {
+  const handleEdit = (p: Person) => {
     setEditingId(p.id);
     setName(p.name);
-    setDescription(p.description);
+    setDescription(p.description || '');
   };
 
   const handleDelete = async (id: number) => {

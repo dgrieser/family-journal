@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import api from '../api';
 import { useAuthStore } from '../store';
 import { User, Save, CheckCircle, AlertCircle } from 'lucide-react';
@@ -18,8 +19,12 @@ export const Profile = () => {
       setUser(res.data);
       setMessage({ type: 'success', text: t('success') });
       setPassword('');
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.error || t('error') });
+    } catch (err: unknown) {
+      let errorMsg = t('error');
+      if (axios.isAxiosError(err)) {
+        errorMsg = err.response?.data?.error || t('error');
+      }
+      setMessage({ type: 'error', text: errorMsg });
     }
   };
 
