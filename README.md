@@ -11,6 +11,14 @@ FamilyJournal is a full-stack application for documenting daily care activities 
 
 ## Quick start (Docker)
 
+Create a local env file first:
+
+```bash
+cp .env.example .env
+```
+
+Then start the stack:
+
 ```bash
 docker compose up --build
 ```
