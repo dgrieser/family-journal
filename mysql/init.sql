@@ -76,10 +76,3 @@ CREATE TABLE IF NOT EXISTS attachments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
 );
-
--- Sessions table for Fiber session storage (optional if using DB storage)
-CREATE TABLE IF NOT EXISTS sessions (
-    id VARCHAR(255) PRIMARY KEY,
-    data BLOB NOT NULL,
-    expires TIMESTAMP NOT NULL
-);
