@@ -33,17 +33,20 @@ func main() {
 	}
 
 	// Auto Migration
-	log.Println("Running database migrations...")
-	err = db.AutoMigrate(
-		&models.User{},
-		&models.Person{},
-		&models.Post{},
-		&models.Comment{},
-		&models.Hashtag{},
-		&models.Attachment{},
-	)
-	if err != nil {
-		log.Fatal("Failed to migrate database:", err)
+	if os.Getenv("AUTO_MIGRATE") == "true" {
+		log.Println("Running database migrations...")
+		err = db.AutoMigrate(
+			&models.User{},
+			&models.Post{},
+			&models.Comment{},
+			&models.Hashtag{},
+			&models.Attachment{},
+		)
+		if err != nil {
+			log.Fatal("Failed to migrate database:", err)
+		}
+	} else {
+		log.Println("Skipping database migrations (set AUTO_MIGRATE=true to enable)")
 	}
 
 	dbPortStr := os.Getenv("DB_PORT")
