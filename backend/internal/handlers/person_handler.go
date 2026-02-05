@@ -48,7 +48,7 @@ func (h *PersonHandler) Create(c *fiber.Ctx) error {
 	person := models.Person{
 		Name:            strings.ToLower(req.Name),
 		Description:     req.Description,
-		CreatedByUserID: &userID,
+		CreatedByUserID: ptrInt(int(userID)),
 	}
 
 	if err := h.repo.Create(&person); err != nil {
@@ -74,7 +74,7 @@ func (h *PersonHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "person not found"})
 	}
 
-	if (existing.CreatedByUserID == nil || *existing.CreatedByUserID != userID) && c.Locals("role") != "admin" {
+	if (existing.CreatedByUserID == nil || *existing.CreatedByUserID != int(userID)) && c.Locals("role") != "admin" {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -109,7 +109,7 @@ func (h *PersonHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "person not found"})
 	}
 
-	if (existing.CreatedByUserID == nil || *existing.CreatedByUserID != userID) && c.Locals("role") != "admin" {
+	if (existing.CreatedByUserID == nil || *existing.CreatedByUserID != int(userID)) && c.Locals("role") != "admin" {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -117,4 +117,8 @@ func (h *PersonHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func ptrInt(v int) *int {
+	return &v
 }

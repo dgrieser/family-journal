@@ -136,7 +136,7 @@ func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []m
 			} else {
 				mentions = append(mentions, models.Person{
 					Name:            name,
-					CreatedByUserID: &userID,
+					CreatedByUserID: ptrInt(int(userID)),
 				})
 			}
 		}
@@ -205,4 +205,8 @@ func (s *PostService) AddAttachment(postID uint, fileName, fileType string, file
 	// For now, let's just use DB directly or add to post repo.
 	err := s.postRepo.CreateAttachment(attachment)
 	return attachment, err
+}
+
+func ptrInt(v int) *int {
+	return &v
 }
