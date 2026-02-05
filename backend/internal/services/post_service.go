@@ -36,7 +36,7 @@ func (s *PostService) CreatePost(userID uint, date time.Time, text string) (*mod
 		Mentions: mentions,
 	}
 
-	err := s.postRepo.Create(post)
+	err = s.postRepo.Create(post)
 	if err != nil {
 		return nil, err
 	}
