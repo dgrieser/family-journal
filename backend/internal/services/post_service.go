@@ -50,17 +50,18 @@ func (s *PostService) UpdatePost(postID uint, text string, date *time.Time) (*mo
 		return nil, err
 	}
 
-	hashtags, mentions, err := s.parseText(text, post.UserID)
-	if err != nil {
-		return nil, err
+	if strings.TrimSpace(text) != "" {
+		hashtags, mentions, err := s.parseText(text, post.UserID)
+		if err != nil {
+			return nil, err
+		}
+		post.Text = text
+		post.Hashtags = hashtags
+		post.Mentions = mentions
 	}
-
-	post.Text = text
 	if date != nil {
 		post.Date = *date
 	}
-	post.Hashtags = hashtags
-	post.Mentions = mentions
 
 	err = s.postRepo.Update(post)
 	if err != nil {
