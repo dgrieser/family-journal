@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -85,7 +86,7 @@ func (f *fakeRepo) ListPosts(userID int64, date time.Time, hashtags, persons []s
 	f.listPostsArgs.hashtags = hashtags
 	f.listPostsArgs.persons = persons
 	f.listPostsArgs.search = search
-	return []models.Post{}, nil
+	return nil, nil
 }
 func (f *fakeRepo) ReplacePostTags(postID int64, tags []models.Hashtag) error       { return nil }
 func (f *fakeRepo) ReplacePostMentions(postID int64, persons []models.Person) error { return nil }
@@ -204,6 +205,13 @@ func TestListPostsFilters(t *testing.T) {
 	if err != nil || resp.StatusCode != http.StatusOK {
 		t.Fatalf("list posts failed: %v", err)
 	}
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		t.Fatalf("read list posts response: %v", readErr)
+	}
+	if string(body) != "[]" {
+		t.Fatalf("expected empty array response, got %s", string(body))
+	}
 	if repo.listPostsArgs.search != "note" {
 		t.Fatalf("expected search param")
 	}
@@ -212,5 +220,50 @@ func TestListPostsFilters(t *testing.T) {
 	}
 	if len(repo.listPostsArgs.persons) != 1 {
 		t.Fatalf("expected persons")
+	}
+}
+
+func TestServiceNormalizesNilSlices(t *testing.T) {
+	repo := newFakeRepo()
+	service := services.New(repo, repo, repo, repo, repo, repo)
+
+	users, err := service.ListUsers()
+	if err != nil {
+		t.Fatalf("list users: %v", err)
+	}
+	if users == nil {
+		t.Fatalf("expected users slice to be non-nil")
+	}
+
+	persons, err := service.ListPersons(1)
+	if err != nil {
+		t.Fatalf("list persons: %v", err)
+	}
+	if persons == nil {
+		t.Fatalf("expected persons slice to be non-nil")
+	}
+
+	tags, err := service.ListHashtags(1)
+	if err != nil {
+		t.Fatalf("list hashtags: %v", err)
+	}
+	if tags == nil {
+		t.Fatalf("expected hashtags slice to be non-nil")
+	}
+
+	posts, err := service.ListPosts(1, time.Now(), nil, nil, "")
+	if err != nil {
+		t.Fatalf("list posts: %v", err)
+	}
+	if posts == nil {
+		t.Fatalf("expected posts slice to be non-nil")
+	}
+
+	post, err := service.GetPost(1, 1)
+	if err != nil {
+		t.Fatalf("get post: %v", err)
+	}
+	if post.Hashtags == nil || post.Persons == nil || post.Comments == nil || post.Attachments == nil {
+		t.Fatalf("expected hydrated post collections to be non-nil")
 	}
 }

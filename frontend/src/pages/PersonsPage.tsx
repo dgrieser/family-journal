@@ -8,6 +8,8 @@ interface Person {
   description?: string;
 }
 
+const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+
 const PersonsPage = () => {
   const { t } = useTranslation();
   const [persons, setPersons] = useState<Person[]>([]);
@@ -19,7 +21,7 @@ const PersonsPage = () => {
 
   const loadPersons = async () => {
     const data = await apiFetch('/persons');
-    setPersons(data);
+    setPersons(asArray<Person>(data));
   };
 
   useEffect(() => {

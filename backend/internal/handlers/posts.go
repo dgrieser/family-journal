@@ -36,6 +36,20 @@ type postRequest struct {
 	Mood     *string `json:"mood"`
 }
 
+func ensureSlice[T any](items []T) []T {
+	if items == nil {
+		return []T{}
+	}
+	return items
+}
+
+func normalizePostCollections(post *models.Post) {
+	post.Hashtags = ensureSlice(post.Hashtags)
+	post.Persons = ensureSlice(post.Persons)
+	post.Comments = ensureSlice(post.Comments)
+	post.Attachments = ensureSlice(post.Attachments)
+}
+
 func (h *PostsHandler) List(c *fiber.Ctx) error {
 	userID, _, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
@@ -99,6 +113,7 @@ func (h *PostsHandler) Create(c *fiber.Ctx) error {
 		log.Printf("create post error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to save post")
 	}
+	normalizePostCollections(post)
 	return c.Status(fiber.StatusCreated).JSON(post)
 }
 
@@ -131,6 +146,7 @@ func (h *PostsHandler) Update(c *fiber.Ctx) error {
 		log.Printf("update post error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update post")
 	}
+	normalizePostCollections(post)
 	return c.JSON(post)
 }
 
@@ -147,6 +163,7 @@ func (h *PostsHandler) Get(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "not found")
 	}
+	normalizePostCollections(post)
 	return c.JSON(post)
 }
 

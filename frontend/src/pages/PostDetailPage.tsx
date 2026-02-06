@@ -24,6 +24,8 @@ interface Post {
   attachments: Attachment[];
 }
 
+const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+
 const PostDetailPage = () => {
   const { t } = useTranslation();
   const { id } = useParams();
@@ -33,7 +35,11 @@ const PostDetailPage = () => {
   const loadPost = async () => {
     if (!id) return;
     const data = await apiFetch(`/posts/${id}`);
-    setPost(data);
+    setPost({
+      ...data,
+      comments: asArray<Comment>(data.comments),
+      attachments: asArray<Attachment>(data.attachments)
+    });
   };
 
   useEffect(() => {

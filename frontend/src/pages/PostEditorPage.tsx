@@ -8,6 +8,8 @@ interface Suggestion {
   name: string;
 }
 
+const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+
 const PostEditorPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -22,8 +24,8 @@ const PostEditorPage = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    void apiFetch('/hashtags').then(setHashtags);
-    void apiFetch('/persons').then(setPersons);
+    void apiFetch('/hashtags').then((data) => setHashtags(asArray<Suggestion>(data)));
+    void apiFetch('/persons').then((data) => setPersons(asArray<Suggestion>(data)));
   }, []);
 
   useEffect(() => {

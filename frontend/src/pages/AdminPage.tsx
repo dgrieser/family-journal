@@ -9,6 +9,8 @@ interface User {
   active: boolean;
 }
 
+const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+
 const AdminPage = () => {
   const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
@@ -17,7 +19,7 @@ const AdminPage = () => {
   const loadUsers = async () => {
     try {
       const data = await apiFetch('/admin/users');
-      setUsers(data);
+      setUsers(asArray<User>(data));
     } catch (err) {
       setError(String(err));
     }

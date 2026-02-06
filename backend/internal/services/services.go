@@ -77,6 +77,13 @@ type Service struct {
 	Attachments AttachmentRepository
 }
 
+func ensureSlice[T any](items []T) []T {
+	if items == nil {
+		return []T{}
+	}
+	return items
+}
+
 func New(users UserRepository, persons PersonRepository, hashtags HashtagRepository, posts PostRepository, comments CommentRepository, attachments AttachmentRepository) *Service {
 	return &Service{
 		Users:       users,
@@ -158,7 +165,7 @@ func (s *Service) ListPosts(userID int64, date time.Time, hashtags, persons []st
 	if err != nil {
 		return nil, err
 	}
-	return s.hydratePosts(posts)
+	return s.hydratePosts(ensureSlice(posts))
 }
 
 func (s *Service) GetPost(userID, postID int64) (*models.Post, error) {
@@ -177,11 +184,19 @@ func (s *Service) GetPost(userID, postID int64) (*models.Post, error) {
 }
 
 func (s *Service) ListHashtags(userID int64) ([]models.Hashtag, error) {
-	return s.Hashtags.ListHashtagsByUser(userID)
+	tags, err := s.Hashtags.ListHashtagsByUser(userID)
+	if err != nil {
+		return nil, err
+	}
+	return ensureSlice(tags), nil
 }
 
 func (s *Service) ListPersons(userID int64) ([]models.Person, error) {
-	return s.Persons.ListPersons(userID)
+	persons, err := s.Persons.ListPersons(userID)
+	if err != nil {
+		return nil, err
+	}
+	return ensureSlice(persons), nil
 }
 
 func (s *Service) CreatePerson(userID int64, name string, description *string) (*models.Person, error) {
@@ -210,7 +225,11 @@ func (s *Service) UpdateUserProfile(userID int64, email string) error {
 }
 
 func (s *Service) ListUsers() ([]models.User, error) {
-	return s.Users.ListUsers()
+	users, err := s.Users.ListUsers()
+	if err != nil {
+		return nil, err
+	}
+	return ensureSlice(users), nil
 }
 
 func (s *Service) UpdateUserRole(userID int64, role string) error {
@@ -247,7 +266,7 @@ func (s *Service) GetAttachmentForUser(userID int64, name string) (*models.Attac
 
 func (s *Service) hydratePosts(posts []models.Post) ([]models.Post, error) {
 	if len(posts) == 0 {
-		return posts, nil
+		return ensureSlice(posts), nil
 	}
 	ids := make([]int64, 0, len(posts))
 	for _, post := range posts {
@@ -270,10 +289,10 @@ func (s *Service) hydratePosts(posts []models.Post) ([]models.Post, error) {
 		return nil, err
 	}
 	for i := range posts {
-		posts[i].Hashtags = tagsByPost[posts[i].ID]
-		posts[i].Persons = personsByPost[posts[i].ID]
-		posts[i].Comments = commentsByPost[posts[i].ID]
-		posts[i].Attachments = attachmentsByPost[posts[i].ID]
+		posts[i].Hashtags = ensureSlice(tagsByPost[posts[i].ID])
+		posts[i].Persons = ensureSlice(personsByPost[posts[i].ID])
+		posts[i].Comments = ensureSlice(commentsByPost[posts[i].ID])
+		posts[i].Attachments = ensureSlice(attachmentsByPost[posts[i].ID])
 	}
 	return posts, nil
 }

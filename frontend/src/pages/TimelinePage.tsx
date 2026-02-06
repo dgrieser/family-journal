@@ -28,6 +28,8 @@ interface Post {
   attachments: Attachment[];
 }
 
+const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+
 const TimelinePage = () => {
   const { t } = useTranslation();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -39,8 +41,8 @@ const TimelinePage = () => {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    void apiFetch('/hashtags').then(setHashtags);
-    void apiFetch('/persons').then(setPersons);
+    void apiFetch('/hashtags').then((data) => setHashtags(asArray<Hashtag>(data)));
+    void apiFetch('/persons').then((data) => setPersons(asArray<Person>(data)));
   }, []);
 
   const query = useMemo(() => {
@@ -59,7 +61,15 @@ const TimelinePage = () => {
   }, [date, search, selectedHashtags, selectedPersons]);
 
   useEffect(() => {
-    void apiFetch(`/posts?${query}`).then(setPosts);
+    void apiFetch(`/posts?${query}`).then((data) => {
+      const normalizedPosts = asArray<Post>(data).map((post) => ({
+        ...post,
+        hashtags: asArray<Hashtag>(post.hashtags),
+        persons: asArray<Person>(post.persons),
+        attachments: asArray<Attachment>(post.attachments)
+      }));
+      setPosts(normalizedPosts);
+    });
   }, [query]);
 
   const toggleFilter = (value: string, list: string[], setList: (next: string[]) => void) => {
