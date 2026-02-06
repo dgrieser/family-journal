@@ -21,8 +21,18 @@ func New(dsn string, cfg Config) (*sqlx.DB, error) {
 	db.SetConnMaxLifetime(cfg.MaxLifetime)
 	db.SetMaxOpenConns(cfg.MaxOpen)
 	db.SetMaxIdleConns(cfg.MaxIdle)
-	if err := db.Ping(); err != nil {
-		return nil, err
+	const (
+		maxPingAttempts = 30
+		pingInterval    = 2 * time.Second
+	)
+	var pingErr error
+	for attempt := 1; attempt <= maxPingAttempts; attempt++ {
+		pingErr = db.Ping()
+		if pingErr == nil {
+			return db, nil
+		}
+		time.Sleep(pingInterval)
 	}
-	return db, nil
+	_ = db.Close()
+	return nil, pingErr
 }

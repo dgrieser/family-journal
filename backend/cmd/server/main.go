@@ -52,6 +52,9 @@ func main() {
 	})
 
 	app := fiber.New()
+	app.Get("/healthz", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
 	app.Use(recover.New())
 	app.Use(logger.New())
 	app.Use(limiter.New())
