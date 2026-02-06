@@ -19,6 +19,8 @@ type Config struct {
 	DBMaxIdle     int
 	DBMaxLifetime int
 	AllowedTypes  []string
+	RateLimitMax  int
+	RateLimitTTL  int
 }
 
 func Load() Config {
@@ -34,6 +36,8 @@ func Load() Config {
 		DBMaxIdle:     int(getEnvInt("DB_MAX_IDLE", 5)),
 		DBMaxLifetime: int(getEnvInt("DB_MAX_LIFETIME_MINUTES", 5)),
 		AllowedTypes:  getEnvList("ALLOWED_UPLOAD_TYPES", []string{"image/jpeg", "image/png", "application/pdf"}),
+		RateLimitMax:  int(getEnvInt("RATE_LIMIT_MAX", 200)),
+		RateLimitTTL:  int(getEnvInt("RATE_LIMIT_WINDOW_SECONDS", 60)),
 	}
 }
 

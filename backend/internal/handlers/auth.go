@@ -41,6 +41,13 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, err.Error())
 	}
+	if err := h.establishSession(c, user.ID, user.Role); err != nil {
+		return err
+	}
+	return c.JSON(user)
+}
+
+func (h *AuthHandler) establishSession(c *fiber.Ctx, userID int64, role string) error {
 	sess, err := h.Store.Get(c)
 	if err != nil {
 		log.Printf("session get error: %v", err)
@@ -50,13 +57,13 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		log.Printf("session regenerate error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "session error")
 	}
-	sess.Set("user_id", user.ID)
-	sess.Set("role", user.Role)
+	sess.Set("user_id", userID)
+	sess.Set("role", role)
 	if err := sess.Save(); err != nil {
 		log.Printf("session save error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "session error")
 	}
-	return c.JSON(user)
+	return nil
 }
 
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {

@@ -17,7 +17,8 @@
     "haveAccount": "Already have an account?",
     "noAccount": "Need an account?",
     "signIn": "Sign in",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "registerSuccess": "Account created successfully. Please sign in."
   },
   "timeline": {
     "heading": "Today",

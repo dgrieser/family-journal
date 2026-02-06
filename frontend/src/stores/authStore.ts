@@ -37,11 +37,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user });
   },
   register: async (email, password) => {
-    const user = await apiFetch('/auth/register', {
+    await apiFetch('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
-    set({ user });
+    set({ user: null });
   },
   logout: async () => {
     await apiFetch('/auth/logout', { method: 'POST' });

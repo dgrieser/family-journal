@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"familyjournal/backend/internal/config"
@@ -64,7 +65,29 @@ func main() {
 	})
 	app.Use(recover.New())
 	app.Use(logger.New())
-	app.Use(limiter.New())
+	if cfg.RateLimitMax > 0 {
+		app.Use(limiter.New(limiter.Config{
+			Max:        cfg.RateLimitMax,
+			Expiration: time.Duration(cfg.RateLimitTTL) * time.Second,
+			KeyGenerator: func(c *fiber.Ctx) string {
+				forwardedFor := c.Get(fiber.HeaderXForwardedFor)
+				if forwardedFor != "" {
+					parts := strings.Split(forwardedFor, ",")
+					if len(parts) > 0 {
+						clientIP := strings.TrimSpace(parts[0])
+						if clientIP != "" {
+							return clientIP
+						}
+					}
+				}
+				realIP := strings.TrimSpace(c.Get("X-Real-IP"))
+				if realIP != "" {
+					return realIP
+				}
+				return c.IP()
+			},
+		}))
+	}
 	app.Use(csrf.New(csrf.Config{
 		KeyLookup:      "header:X-CSRF-Token",
 		CookieName:     "csrf_token",

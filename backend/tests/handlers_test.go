@@ -138,6 +138,16 @@ func TestRegisterLoginSession(t *testing.T) {
 	if err != nil || resp.StatusCode != http.StatusOK {
 		t.Fatalf("register failed: %v", err)
 	}
+	registerCookie := resp.Header.Get("Set-Cookie")
+	if registerCookie != "" {
+		t.Fatalf("did not expect session cookie on register")
+	}
+
+	profileReq := httptest.NewRequest(http.MethodGet, "/profile", nil)
+	profileResp, err := app.Test(profileReq)
+	if err != nil || profileResp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected unauthorized profile right after register: %v", err)
+	}
 
 	req = httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
@@ -150,11 +160,11 @@ func TestRegisterLoginSession(t *testing.T) {
 		t.Fatalf("expected session cookie")
 	}
 
-	profileReq := httptest.NewRequest(http.MethodGet, "/profile", nil)
+	profileReq = httptest.NewRequest(http.MethodGet, "/profile", nil)
 	profileReq.Header.Set("Cookie", cookie)
-	profileResp, err := app.Test(profileReq)
+	profileResp, err = app.Test(profileReq)
 	if err != nil || profileResp.StatusCode != http.StatusOK {
-		t.Fatalf("profile failed: %v", err)
+		t.Fatalf("profile failed right after login: %v", err)
 	}
 }
 

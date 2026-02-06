@@ -17,7 +17,8 @@
     "haveAccount": "Schon ein Konto?",
     "noAccount": "Noch kein Konto?",
     "signIn": "Einloggen",
-    "signOut": "Abmelden"
+    "signOut": "Abmelden",
+    "registerSuccess": "Konto erfolgreich erstellt. Bitte jetzt einloggen."
   },
   "timeline": {
     "heading": "Heute",

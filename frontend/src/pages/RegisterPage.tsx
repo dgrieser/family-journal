@@ -16,7 +16,11 @@ const RegisterPage = () => {
     setError('');
     try {
       await register(email, password);
-      navigate('/');
+      const params = new URLSearchParams({
+        registered: '1',
+        email
+      });
+      navigate(`/login?${params.toString()}`);
     } catch (err) {
       setError(String(err));
     }
