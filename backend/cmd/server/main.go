@@ -40,6 +40,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	migrationsDir := "./migrations"
+	if _, err := os.Stat(migrationsDir); err != nil {
+		migrationsDir = "/app/migrations"
+	}
+	if err := db.RunMigrations(database, migrationsDir); err != nil {
+		log.Fatal(err)
+	}
 	repo := repositories.New(database)
 	service := services.New(repo, repo, repo, repo, repo, repo)
 
