@@ -15,7 +15,7 @@ export const Register = () => {
     e.preventDefault();
     try {
       await api.post('/register', { email, password });
-      navigate('/login');
+      navigate('/login', { state: { registrationSuccess: true } });
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.error || 'Registration failed');

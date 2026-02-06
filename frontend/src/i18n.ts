@@ -46,6 +46,7 @@ const resources = {
       "clear_filters": "Clear all filters",
       "dont_have_account": "Don't have an account?",
       "already_have_account": "Already have an account?",
+      "registration_success_login": "Registration successful. Please log in.",
     }
   },
   de: {
@@ -92,6 +93,7 @@ const resources = {
       "clear_filters": "Alle Filter löschen",
       "dont_have_account": "Noch kein Konto?",
       "already_have_account": "Schon ein Konto?",
+      "registration_success_login": "Registrierung erfolgreich. Bitte anmelden.",
     }
   }
 };

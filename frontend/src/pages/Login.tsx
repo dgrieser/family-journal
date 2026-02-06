@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import api from '../api';
@@ -10,8 +10,12 @@ export const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const setUser = useAuthStore((state) => state.setUser);
+  const showRegistrationSuccess = Boolean(
+    (location.state as { registrationSuccess?: boolean } | null)?.registrationSuccess
+  );
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -32,6 +36,9 @@ export const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         <h2 className="text-2xl font-bold mb-6 text-center">{t('login')}</h2>
+        {showRegistrationSuccess && (
+          <p className="text-green-600 mb-4 text-center">{t('registration_success_login')}</p>
+        )}
         {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
