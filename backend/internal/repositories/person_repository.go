@@ -51,13 +51,10 @@ func (r *Repository) FindOrCreatePerson(userID int64, name string) (*models.Pers
 	}
 	person = models.Person{Name: name, CreatedBy: userID}
 	if err := r.CreatePerson(&person); err != nil {
-		if isDuplicateKeyError(err) {
-			if getErr := r.DB.Get(&person, query, userID, name); getErr != nil {
-				return nil, getErr
-			}
-			return &person, nil
+		if err = resolveDuplicateInsert(err, func() error { return r.DB.Get(&person, query, userID, name) }); err != nil {
+			return nil, err
 		}
-		return nil, err
+		return &person, nil
 	}
 	if err := r.DB.Get(&person, `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons WHERE id = ?`, person.ID); err != nil {
 		return nil, err

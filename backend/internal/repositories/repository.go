@@ -28,3 +28,13 @@ func isDuplicateKeyError(err error) bool {
 	var mysqlErr *mysql.MySQLError
 	return errors.As(err, &mysqlErr) && mysqlErr.Number == 1062
 }
+
+func resolveDuplicateInsert(insertErr error, fetchExisting func() error) error {
+	if !isDuplicateKeyError(insertErr) {
+		return insertErr
+	}
+	if err := fetchExisting(); err != nil {
+		return err
+	}
+	return nil
+}
