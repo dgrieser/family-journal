@@ -4,8 +4,8 @@
 
 | Label | Branch Name | Shorthand |
 |-------|-------------|-----------|
-| **Branch 1** | `codex/create-familyjournal-full-stack-application` | **Codex** |
-| **Branch 2** | `feature/family-journal-8822241699260044891` | **Feature** |
+| **Branch 1** | `codex` | **Codex** |
+| **Branch 2** | `gemini` | **Gemini** |
 
 Both branches implement the same application: a full-stack family journal for documenting daily care activities for children. They share the same tech stack at a high level (Go + Fiber backend, React + TypeScript + Vite frontend, MySQL database, Docker Compose deployment) but differ significantly in architectural decisions, code quality, and completeness.
 
@@ -39,7 +39,7 @@ frontend/
     stores/authStore.ts
 ```
 
-### Branch 2 (Feature)
+### Branch 2 (Gemini)
 
 ```
 backend/
@@ -60,7 +60,7 @@ frontend/
 mysql/init.sql
 ```
 
-**Verdict:** Branch 2 (Feature) has better file organization — models, repositories, and services are split into separate files per domain entity, which is more maintainable and follows Go conventions. Branch 1 (Codex) puts everything in monolithic files (`models.go`, `repositories.go`, `services.go`), which becomes unwieldy as the codebase grows. However, Branch 1 has a dedicated `config` package which is cleaner than Branch 2's scattered `os.Getenv()` calls.
+**Verdict:** Branch 2 (Gemini) has better file organization — models, repositories, and services are split into separate files per domain entity, which is more maintainable and follows Go conventions. Branch 1 (Codex) puts everything in monolithic files (`models.go`, `repositories.go`, `services.go`), which becomes unwieldy as the codebase grows. However, Branch 1 has a dedicated `config` package which is cleaner than Branch 2's scattered `os.Getenv()` calls.
 
 ---
 
@@ -68,7 +68,7 @@ mysql/init.sql
 
 ### 2.1 Database Layer
 
-| Aspect | Branch 1 (Codex) | Branch 2 (Feature) |
+| Aspect | Branch 1 (Codex) | Branch 2 (Gemini) |
 |--------|-------------------|---------------------|
 | **ORM/Driver** | `sqlx` (thin SQL wrapper) | `GORM` (full ORM) |
 | **Migrations** | Manual SQL files (`001_init.sql`) with custom runner | GORM `AutoMigrate` + separate `init.sql` for Docker |
@@ -88,7 +88,7 @@ mysql/init.sql
 
 **Branch 1 (Codex):** Uses a single `Repository` struct that implements all repository interfaces. The service layer defines clean interfaces (`UserRepository`, `PersonRepository`, `HashtagRepository`, `PostRepository`, `CommentRepository`, `AttachmentRepository`), enabling dependency injection and testability. The `SavePostWithRelations` method uses database transactions (`sqlx.Tx`) for atomic operations.
 
-**Branch 2 (Feature):** Uses separate repository structs (`UserRepository`, `PersonRepository`, `PostRepository`) with concrete types rather than interfaces. The service layer depends directly on concrete repository types (`*repository.PostRepository`), making it harder to mock for unit tests.
+**Branch 2 (Gemini):** Uses separate repository structs (`UserRepository`, `PersonRepository`, `PostRepository`) with concrete types rather than interfaces. The service layer depends directly on concrete repository types (`*repository.PostRepository`), making it harder to mock for unit tests.
 
 **Verdict:** Branch 1 has significantly better abstraction with interface-based dependency injection. Branch 2's concrete dependencies are a testability anti-pattern in Go.
 
@@ -99,7 +99,7 @@ mysql/init.sql
 - `hydratePosts()` for batch-loading related data (tags, persons, comments, attachments) using `IN (?)` queries — avoiding N+1
 - `CreateOrUpdatePost()` delegates to `SavePostWithRelations` which uses transactions
 
-**Branch 2 (Feature):** Separate `AuthService` and `PostService`. The `parseText()` method uses `\w+` regex (ASCII-only, won't match German umlauts). The `UpdatePost()` method calls `postRepo.Update(post)` which uses GORM's `Save()` — this replaces the entire record including associations, which GORM handles via its association mode.
+**Branch 2 (Gemini):** Separate `AuthService` and `PostService`. The `parseText()` method uses `\w+` regex (ASCII-only, won't match German umlauts). The `UpdatePost()` method calls `postRepo.Update(post)` which uses GORM's `Save()` — this replaces the entire record including associations, which GORM handles via its association mode.
 
 **Key Differences:**
 - Branch 1's `hydratePosts()` does batch loading (1 query per relation type for all posts), while Branch 2 relies on GORM's `Preload()` which may issue separate queries per post
@@ -108,7 +108,7 @@ mysql/init.sql
 
 ### 2.4 Authentication & Security
 
-| Aspect | Branch 1 (Codex) | Branch 2 (Feature) |
+| Aspect | Branch 1 (Codex) | Branch 2 (Gemini) |
 |--------|-------------------|---------------------|
 | **Session management** | Session regeneration on login | No session regeneration |
 | **CSRF** | `X-CSRF-Token` header, cookie-based token | `X-Csrf-Token` header, cookie-based, non-HttpOnly |
@@ -130,7 +130,7 @@ mysql/init.sql
 
 **Branch 1 (Codex):** Posts are always scoped to `user_id` in SQL queries (`WHERE user_id = ?`). There's no admin override for viewing/editing other users' posts. The `RequireRole` middleware is a simple role check.
 
-**Branch 2 (Feature):** Implements ownership checks with admin override throughout handlers:
+**Branch 2 (Gemini):** Implements ownership checks with admin override throughout handlers:
 ```go
 if existingPost.UserID != userID && c.Locals("role").(string) != "admin" {
     return c.Status(fiber.StatusForbidden).JSON(...)
@@ -144,7 +144,7 @@ This is more flexible but the repeated pattern should be extracted into a helper
 
 **Branch 1 (Codex):** Uses `fiber.NewError()` which returns plain text error messages. Consistent but not structured.
 
-**Branch 2 (Feature):** Returns JSON error objects (`fiber.Map{"error": "..."}`) consistently. Also handles MySQL-specific errors (e.g., duplicate key error 1062 for email registration). This is more API-friendly.
+**Branch 2 (Gemini):** Returns JSON error objects (`fiber.Map{"error": "..."}`) consistently. Also handles MySQL-specific errors (e.g., duplicate key error 1062 for email registration). This is more API-friendly.
 
 **Verdict:** Branch 2's JSON error responses are better for API consumers.
 
@@ -154,7 +154,7 @@ This is more flexible but the repeated pattern should be extracted into a helper
 
 Both branches have nearly identical schemas with the same tables: `users`, `persons`, `posts`, `comments`, `hashtags`, `post_hashtags`, `mentions`, `attachments`.
 
-| Difference | Branch 1 (Codex) | Branch 2 (Feature) |
+| Difference | Branch 1 (Codex) | Branch 2 (Gemini) |
 |-----------|-------------------|---------------------|
 | **ID type** | `BIGINT` | `INT` |
 | **Post fields** | Has `category` and `mood` columns | No `category`/`mood` |
@@ -175,7 +175,7 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 
 ### 4.1 Dependencies & Versions
 
-| Aspect | Branch 1 (Codex) | Branch 2 (Feature) |
+| Aspect | Branch 1 (Codex) | Branch 2 (Gemini) |
 |--------|-------------------|---------------------|
 | **React** | 18.2 | 19.2 |
 | **HTTP client** | Native `fetch` wrapper | `axios` |
@@ -192,7 +192,7 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 
 **Branch 1 (Codex):** `useAuthStore` with `fetchProfile`, `login`, `register`, `logout` actions. API calls are embedded in the store. Uses a `loading` flag for auth state.
 
-**Branch 2 (Feature):** `useAuthStore` with `user`, `setUser`, `isAuthenticated`, `initialized` state. API calls happen in components, not the store. The store is a pure state container.
+**Branch 2 (Gemini):** `useAuthStore` with `user`, `setUser`, `isAuthenticated`, `initialized` state. API calls happen in components, not the store. The store is a pure state container.
 
 **Verdict:** Branch 2's approach is cleaner — separating API calls from state management follows better separation of concerns. Branch 1's approach is more convenient but couples the store to the API layer.
 
@@ -200,7 +200,7 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 
 **Branch 1 (Codex):** Types are defined inline in each page component. No shared type definitions. This leads to duplication (e.g., `Post`, `Hashtag`, `Person` interfaces repeated across files).
 
-**Branch 2 (Feature):** Centralized [`types.ts`](frontend/src/types.ts) with all shared interfaces. This is significantly better for maintainability and consistency.
+**Branch 2 (Gemini):** Centralized [`types.ts`](frontend/src/types.ts) with all shared interfaces. This is significantly better for maintainability and consistency.
 
 ### 4.4 UI/UX Design
 
@@ -211,7 +211,7 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 - Minimal styling (basic Tailwind classes)
 - No loading states for data fetching (except auth)
 
-**Branch 2 (Feature):**
+**Branch 2 (Gemini):**
 - Single-page timeline with inline post creation form (`PostForm` component)
 - Reusable `PostCard` component with inline comments, edit/delete actions
 - Rich UI with `lucide-react` icons throughout
@@ -227,7 +227,7 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 
 **Branch 1 (Codex):** Translations in separate JSON files (`locales/en.json`, `locales/de.json`). Default language: English. Dedicated `LanguageSwitcher` component.
 
-**Branch 2 (Feature):** Translations inline in `i18n.ts`. Default language: German. Language toggle integrated into the sidebar layout.
+**Branch 2 (Gemini):** Translations inline in `i18n.ts`. Default language: German. Language toggle integrated into the sidebar layout.
 
 **Verdict:** Branch 1's approach with separate JSON files is more scalable and follows i18next best practices. Branch 2's inline translations are harder to maintain but work fine for a small app.
 
@@ -235,7 +235,7 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 
 **Branch 1 (Codex):** Uses `ProtectedRoute` wrapper component with individual `<Route>` elements. Has dedicated routes for `/posts/new`, `/posts/:id`, `/posts/:id/edit`.
 
-**Branch 2 (Feature):** Uses nested routes with `<Outlet />` in the Layout component. The timeline page handles post creation inline. Admin route has role-based redirect.
+**Branch 2 (Gemini):** Uses nested routes with `<Outlet />` in the Layout component. The timeline page handles post creation inline. Admin route has role-based redirect.
 
 **Verdict:** Branch 2's nested routing is cleaner and more idiomatic React Router. Branch 1's flat routing with separate editor/detail pages is more traditional.
 
@@ -243,7 +243,7 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 
 **Branch 1 (Codex):** Two-step process — create post first (JSON), then upload attachments separately (multipart). Files are validated server-side (MIME type detection via `http.DetectContentType`, size limits, allowed types list). Unique filenames generated with crypto/rand.
 
-**Branch 2 (Feature):** Single-step process — post creation and file upload in one multipart form request. The `handleFileUploads` helper in the post handler processes files inline. Files stored with UUID-based names.
+**Branch 2 (Gemini):** Single-step process — post creation and file upload in one multipart form request. The `handleFileUploads` helper in the post handler processes files inline. Files stored with UUID-based names.
 
 **Verdict:** Branch 1's server-side file validation is more thorough (actual content-type detection vs. trusting the client). Branch 2's single-request approach is better UX. Ideally, combine both: single request with thorough server-side validation.
 
@@ -257,7 +257,7 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 - Uses `httptest` for HTTP-level testing
 - Fake repo implements all interfaces — demonstrates the value of interface-based design
 
-### Branch 2 (Feature)
+### Branch 2 (Gemini)
 - `integration_test.go` using SQLite in-memory database
 - Tests: registration/login, post creation with hashtags/mentions, filtering
 - Uses `testify/assert` for assertions
@@ -269,7 +269,7 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 
 ## 6. DevOps & Deployment
 
-| Aspect | Branch 1 (Codex) | Branch 2 (Feature) |
+| Aspect | Branch 1 (Codex) | Branch 2 (Gemini) |
 |--------|-------------------|---------------------|
 | **Backend Dockerfile** | Multi-stage, Go 1.22, Alpine 3.19, non-root user | Multi-stage, Go 1.24, Alpine latest, non-root user+group |
 | **Frontend Dockerfile** | Multi-stage, Node 20, nginx 1.25 | Multi-stage, Node 20, nginx alpine |
