@@ -41,13 +41,9 @@ type HashtagRepository interface {
 }
 
 type PostRepository interface {
-	CreatePost(post *models.Post) error
-	UpdatePost(post *models.Post) error
 	DeletePost(id, userID int64) error
 	GetPost(id, userID int64) (*models.Post, error)
 	ListPosts(userID int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error)
-	ReplacePostTags(postID int64, tags []models.Hashtag) error
-	ReplacePostMentions(postID int64, persons []models.Person) error
 	ListPersonsForPosts(postIDs []int64) (map[int64][]models.Person, error)
 	ListCommentsForPosts(postIDs []int64) (map[int64][]models.Comment, error)
 	ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error)

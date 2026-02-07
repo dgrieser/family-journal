@@ -1,7 +1,6 @@
 package services
 
 import (
-	"errors"
 	"strings"
 	"time"
 
@@ -58,9 +57,6 @@ func (s *Service) GetPost(userID, postID int64) (*models.Post, error) {
 	posts, err := s.hydratePosts([]models.Post{*post})
 	if err != nil {
 		return nil, err
-	}
-	if len(posts) == 0 {
-		return nil, errors.New("post not found")
 	}
 	return &posts[0], nil
 }
