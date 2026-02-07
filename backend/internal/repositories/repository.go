@@ -2,7 +2,9 @@ package repositories
 
 import (
 	"database/sql"
+	"errors"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -20,4 +22,9 @@ func lastInsertID(result sql.Result) (int64, error) {
 
 func New(db *sqlx.DB) *Repository {
 	return &Repository{DB: db}
+}
+
+func isDuplicateKeyError(err error) bool {
+	var mysqlErr *mysql.MySQLError
+	return errors.As(err, &mysqlErr) && mysqlErr.Number == 1062
 }

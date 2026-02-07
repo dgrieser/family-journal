@@ -53,5 +53,8 @@ func (r *Repository) FindOrCreatePerson(userID int64, name string) (*models.Pers
 	if err := r.CreatePerson(&person); err != nil {
 		return nil, err
 	}
+	if err := r.DB.Get(&person, `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons WHERE id = ?`, person.ID); err != nil {
+		return nil, err
+	}
 	return &person, nil
 }
