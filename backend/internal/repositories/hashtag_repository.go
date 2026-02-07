@@ -44,7 +44,8 @@ func (r *Repository) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
 	res, err := r.DB.Exec(`INSERT INTO hashtags (name, created_at) VALUES (?, NOW())`, name)
 	if err != nil {
 		if isDuplicateKeyError(err) {
-			if getErr := r.DB.Get(&tag, query, name); getErr == nil {
+			err = r.DB.Get(&tag, query, name)
+			if err == nil {
 				return &tag, nil
 			}
 		}
@@ -104,9 +105,10 @@ func findOrCreateHashtagTx(tx *sqlx.Tx, name string) (*models.Hashtag, error) {
 	res, err := tx.Exec(`INSERT INTO hashtags (name, created_at) VALUES (?, NOW())`, name)
 	if err != nil {
 		if isDuplicateKeyError(err) {
-			if getErr := tx.Get(&tag, `SELECT id, name, created_at FROM hashtags WHERE name = ?`, name); getErr == nil {
-				return &tag, nil
+			if getErr := tx.Get(&tag, `SELECT id, name, created_at FROM hashtags WHERE name = ?`, name); getErr != nil {
+				return nil, getErr
 			}
+			return &tag, nil
 		}
 		return nil, err
 	}

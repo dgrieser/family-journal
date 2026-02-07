@@ -11,6 +11,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+var errPostNotFoundOrForbidden = fmt.Errorf("post not found or access denied")
+
 func (r *Repository) SavePostWithRelations(userID int64, post *models.Post, tagNames, personNames []string) (err error) {
 	tx, err := r.DB.Beginx()
 	if err != nil {
@@ -33,7 +35,7 @@ func (r *Repository) SavePostWithRelations(userID int64, post *models.Post, tagN
 	if post.ID == 0 {
 		query := `INSERT INTO posts (user_id, date, text, category, mood, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, NOW(), NOW())`
-		res, execErr := tx.Exec(query, post.UserID, post.Date, post.Text, post.Category, post.Mood)
+		res, execErr := tx.Exec(query, userID, post.Date, post.Text, post.Category, post.Mood)
 		if execErr != nil {
 			return execErr
 		}
@@ -42,11 +44,21 @@ func (r *Repository) SavePostWithRelations(userID int64, post *models.Post, tagN
 			return err
 		}
 		post.ID = id
+		post.UserID = userID
 	} else {
-		if _, execErr := tx.Exec(`UPDATE posts SET text = ?, category = ?, mood = ?, updated_at = NOW() WHERE id = ? AND user_id = ?`,
-			post.Text, post.Category, post.Mood, post.ID, post.UserID); execErr != nil {
+		res, execErr := tx.Exec(`UPDATE posts SET text = ?, category = ?, mood = ?, updated_at = NOW() WHERE id = ? AND user_id = ?`,
+			post.Text, post.Category, post.Mood, post.ID, userID)
+		if execErr != nil {
 			return execErr
 		}
+		rowsAffected, rowsErr := res.RowsAffected()
+		if rowsErr != nil {
+			return rowsErr
+		}
+		if rowsAffected == 0 {
+			return errPostNotFoundOrForbidden
+		}
+		post.UserID = userID
 	}
 
 	var tagModels []models.Hashtag
