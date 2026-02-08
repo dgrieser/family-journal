@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,12 +15,14 @@ import (
 	"familyjournal/backend/internal/repositories"
 	"familyjournal/backend/internal/services"
 
+	mysql "github.com/go-sql-driver/mysql"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/session"
+	mysqlstorage "github.com/gofiber/storage/mysql/v2"
 )
 
 func main() {
@@ -51,12 +54,29 @@ func main() {
 	repo := repositories.New(database)
 	service := services.New(repo, repo, repo, repo, repo, repo)
 
+	parsedDSN, err := mysql.ParseDSN(cfg.DatabaseDSN)
+	if err != nil {
+		log.Fatalf("invalid MYSQL_DSN for session storage: %v", err)
+	}
+
+	host, port := parseMySQLAddr(parsedDSN.Addr)
+	storage := mysqlstorage.New(mysqlstorage.Config{
+		Host:       host,
+		Port:       port,
+		Database:   parsedDSN.DBName,
+		Username:   parsedDSN.User,
+		Password:   parsedDSN.Passwd,
+		Table:      "sessions",
+		GCInterval: 24 * time.Hour,
+	})
+
 	store := session.New(session.Config{
 		CookieHTTPOnly: true,
 		CookieSecure:   cfg.CookieSecure,
 		CookieSameSite: "Lax",
 		Expiration:     24 * time.Hour,
 		KeyLookup:      "cookie:fj_session",
+		Storage:        storage,
 	})
 
 	app := fiber.New()
@@ -140,4 +160,28 @@ func main() {
 	api.Delete("/persons/:id", middleware.RequireAuth(store), personsHandler.Delete)
 
 	log.Fatal(app.Listen(":" + cfg.Port))
+}
+
+func parseMySQLAddr(addr string) (string, int) {
+	host := "127.0.0.1"
+	port := 3306
+	if addr == "" {
+		return host, port
+	}
+
+	host, portPart, found := strings.Cut(addr, ":")
+	if !found {
+		if addr != "" {
+			host = addr
+		}
+		return host, port
+	}
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	if parsedPort, err := strconv.Atoi(portPart); err == nil {
+		port = parsedPort
+	}
+
+	return host, port
 }

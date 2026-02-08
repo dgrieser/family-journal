@@ -5,7 +5,7 @@ FamilyJournal is a full-stack application for documenting daily care activities 
 ## Tech stack
 
 - **Frontend:** React + TypeScript, Vite, TailwindCSS, Zustand, React Router, react-i18next (de/en).
-- **Backend:** Go + Fiber with session-based authentication and CSRF protection.
+- **Backend:** Go + Fiber with MySQL-backed session-based authentication and CSRF protection.
 - **Database:** MySQL with migrations.
 - **Deployment:** Docker Compose for local development.
 
@@ -47,6 +47,8 @@ Services:
 | `DB_MAX_LIFETIME_MINUTES` | Max connection lifetime (minutes) | `5` |
 | `RATE_LIMIT_MAX` | Requests allowed per rate-limit window (`<=0` disables limiter) | `200` |
 | `RATE_LIMIT_WINDOW_SECONDS` | Rate-limit window in seconds | `60` |
+
+Session records are persisted in MySQL table `sessions`.
 
 ### Frontend
 
