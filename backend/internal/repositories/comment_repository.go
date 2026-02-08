@@ -12,8 +12,10 @@ func (r *Repository) CreateComment(comment *models.Comment) error {
 	if err != nil {
 		return err
 	}
-	comment.ID = id
-	return nil
+	return r.DB.Get(comment, `SELECT c.id, c.post_id, c.user_id, c.text, c.created_at, c.updated_at, u.email AS author_email
+		FROM comments c
+		JOIN users u ON u.id = c.user_id
+		WHERE c.id = ?`, id)
 }
 
 func (r *Repository) UpdateComment(comment *models.Comment) error {

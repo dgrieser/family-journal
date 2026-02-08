@@ -12,8 +12,7 @@ func (r *Repository) CreateAttachment(att *models.Attachment) error {
 	if err != nil {
 		return err
 	}
-	att.ID = id
-	return nil
+	return r.DB.Get(att, `SELECT id, post_id, file_name, file_type, file_size, url, created_at FROM attachments WHERE id = ?`, id)
 }
 
 func (r *Repository) GetAttachmentByName(userID int64, name string) (*models.Attachment, error) {
