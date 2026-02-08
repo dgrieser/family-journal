@@ -13,8 +13,7 @@ func (r *Repository) CreateUser(user *models.User) error {
 	if err != nil {
 		return err
 	}
-	user.ID = id
-	return nil
+	return r.DB.Get(user, `SELECT id, email, password_hash, role, active, created_at, updated_at FROM users WHERE id = ?`, id)
 }
 
 func (r *Repository) GetUserByEmail(email string) (*models.User, error) {

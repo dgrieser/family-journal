@@ -17,8 +17,7 @@ func (r *Repository) CreatePerson(person *models.Person) error {
 	if err != nil {
 		return err
 	}
-	person.ID = id
-	return nil
+	return r.DB.Get(person, `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons WHERE id = ?`, id)
 }
 
 func (r *Repository) UpdatePerson(person *models.Person) error {
@@ -55,9 +54,6 @@ func (r *Repository) FindOrCreatePerson(userID int64, name string) (*models.Pers
 			return nil, err
 		}
 		return &person, nil
-	}
-	if err := r.DB.Get(&person, `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons WHERE id = ?`, person.ID); err != nil {
-		return nil, err
 	}
 	return &person, nil
 }

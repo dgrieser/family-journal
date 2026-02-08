@@ -10,6 +10,18 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+func (r *Repository) CreateHashtag(tag *models.Hashtag) error {
+	res, err := r.DB.Exec(`INSERT INTO hashtags (name, created_at) VALUES (?, NOW())`, tag.Name)
+	if err != nil {
+		return err
+	}
+	id, err := lastInsertID(res)
+	if err != nil {
+		return err
+	}
+	return r.DB.Get(tag, `SELECT id, name, created_at FROM hashtags WHERE id = ?`, id)
+}
+
 func (r *Repository) ListHashtags() ([]models.Hashtag, error) {
 	var tags []models.Hashtag
 	if err := r.DB.Select(&tags, `SELECT id, name, created_at FROM hashtags ORDER BY name ASC`); err != nil {
@@ -41,19 +53,12 @@ func (r *Repository) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
 	} else if err != sql.ErrNoRows {
 		return nil, err
 	}
-	res, err := r.DB.Exec(`INSERT INTO hashtags (name, created_at) VALUES (?, NOW())`, name)
-	if err != nil {
+	tag = models.Hashtag{Name: name}
+	if err := r.CreateHashtag(&tag); err != nil {
 		if err = resolveDuplicateInsert(err, func() error { return r.DB.Get(&tag, query, name) }); err != nil {
 			return nil, err
 		}
 		return &tag, nil
-	}
-	id, err := lastInsertID(res)
-	if err != nil {
-		return nil, err
-	}
-	if err := r.DB.Get(&tag, `SELECT id, name, created_at FROM hashtags WHERE id = ?`, id); err != nil {
-		return nil, err
 	}
 	return &tag, nil
 }
@@ -99,8 +104,8 @@ func findOrCreateHashtagTx(tx *sqlx.Tx, name string) (*models.Hashtag, error) {
 	} else if err != sql.ErrNoRows {
 		return nil, err
 	}
-	res, err := tx.Exec(`INSERT INTO hashtags (name, created_at) VALUES (?, NOW())`, name)
-	if err != nil {
+	tag = models.Hashtag{Name: name}
+	if err := createHashtagTx(tx, &tag); err != nil {
 		if err = resolveDuplicateInsert(err, func() error {
 			return tx.Get(&tag, `SELECT id, name, created_at FROM hashtags WHERE name = ?`, name)
 		}); err != nil {
@@ -108,12 +113,17 @@ func findOrCreateHashtagTx(tx *sqlx.Tx, name string) (*models.Hashtag, error) {
 		}
 		return &tag, nil
 	}
+	return &tag, nil
+}
+
+func createHashtagTx(tx *sqlx.Tx, tag *models.Hashtag) error {
+	res, err := tx.Exec(`INSERT INTO hashtags (name, created_at) VALUES (?, NOW())`, tag.Name)
+	if err != nil {
+		return err
+	}
 	id, err := lastInsertID(res)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if err := tx.Get(&tag, `SELECT id, name, created_at FROM hashtags WHERE id = ?`, id); err != nil {
-		return nil, err
-	}
-	return &tag, nil
+	return tx.Get(tag, `SELECT id, name, created_at FROM hashtags WHERE id = ?`, id)
 }
