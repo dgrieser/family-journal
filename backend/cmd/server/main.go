@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"familyjournal/backend/internal/repositories"
 	"familyjournal/backend/internal/services"
 
-	mysql "github.com/go-sql-driver/mysql"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
@@ -54,24 +52,10 @@ func main() {
 	repo := repositories.New(database)
 	service := services.New(repo, repo, repo, repo, repo, repo)
 
-	parsedDSN, err := mysql.ParseDSN(cfg.DatabaseDSN)
-	if err != nil {
-		log.Fatalf("invalid MYSQL_DSN for session storage: %v", err)
-	}
-
-	host, port := parseMySQLAddr(parsedDSN.Addr)
-	if parsedDSN.TLSConfig != "" {
-		log.Fatalf("MYSQL_DSN uses tls=%q, but gofiber/storage/mysql/v2 does not accept full DSN options in this setup; refusing to start to avoid insecure session storage transport", parsedDSN.TLSConfig)
-	}
-
 	storage := mysqlstorage.New(mysqlstorage.Config{
-		Host:       host,
-		Port:       port,
-		Database:   parsedDSN.DBName,
-		Username:   parsedDSN.User,
-		Password:   parsedDSN.Passwd,
+		DSN:        cfg.DatabaseDSN,
 		Table:      "sessions",
-		GCInterval: 24 * time.Hour,
+		GCInterval: 1 * time.Hour,
 	})
 
 	store := session.New(session.Config{
@@ -164,33 +148,4 @@ func main() {
 	api.Delete("/persons/:id", middleware.RequireAuth(store), personsHandler.Delete)
 
 	log.Fatal(app.Listen(":" + cfg.Port))
-}
-
-func parseMySQLAddr(addr string) (string, int) {
-	const defaultHost = "127.0.0.1"
-	const defaultPort = 3306
-
-	if addr == "" {
-		return defaultHost, defaultPort
-	}
-
-	host, portPart, found := strings.Cut(addr, ":")
-	if !found {
-		return host, defaultPort
-	}
-
-	if host == "" {
-		host = defaultHost
-	}
-	if portPart == "" {
-		return host, defaultPort
-	}
-
-	port, err := strconv.Atoi(portPart)
-	if err != nil {
-		log.Printf("warning: could not parse port %q in MYSQL_DSN address, using default %d", portPart, defaultPort)
-		return host, defaultPort
-	}
-
-	return host, port
 }

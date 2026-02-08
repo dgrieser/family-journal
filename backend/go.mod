@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gofiber/fiber/v2 v2.52.5
-	github.com/gofiber/storage/mysql/v2 v2.0.2
+	github.com/gofiber/storage/mysql/v2 v2.1.0
 	github.com/jmoiron/sqlx v1.4.0
 	golang.org/x/crypto v0.22.0
 )

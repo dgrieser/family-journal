@@ -50,7 +50,7 @@ Services:
 
 Session records are persisted in MySQL table `sessions`.
 
-> Note: The current `gofiber/storage/mysql/v2` setup maps host/user/password from `MYSQL_DSN`. If you set `tls=` in `MYSQL_DSN`, backend startup will fail fast to prevent insecure session-storage transport.
+Session storage now reuses `MYSQL_DSN` directly, including DSN parameters such as `tls`, `timeout`, and `parseTime`.
 
 ### Frontend
 
