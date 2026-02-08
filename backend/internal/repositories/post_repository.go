@@ -45,7 +45,6 @@ func (r *Repository) SavePostWithRelations(userID int64, post *models.Post, tagN
 			return err
 		}
 		post.ID = id
-		post.UserID = userID
 	} else {
 		post.UserID = userID
 		res, execErr := tx.Exec(`UPDATE posts SET text = ?, category = ?, mood = ?, updated_at = NOW() WHERE id = ? AND user_id = ?`,
@@ -60,7 +59,6 @@ func (r *Repository) SavePostWithRelations(userID int64, post *models.Post, tagN
 		if rowsAffected == 0 {
 			return errPostNotFoundOrForbidden
 		}
-		post.UserID = userID
 	}
 
 	var tagModels []models.Hashtag
