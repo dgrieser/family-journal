@@ -60,6 +60,10 @@ func main() {
 	}
 
 	host, port := parseMySQLAddr(parsedDSN.Addr)
+	if parsedDSN.TLSConfig != "" {
+		log.Fatalf("MYSQL_DSN uses tls=%q, but gofiber/storage/mysql/v2 does not accept full DSN options in this setup; refusing to start to avoid insecure session storage transport", parsedDSN.TLSConfig)
+	}
+
 	storage := mysqlstorage.New(mysqlstorage.Config{
 		Host:       host,
 		Port:       port,
@@ -163,24 +167,29 @@ func main() {
 }
 
 func parseMySQLAddr(addr string) (string, int) {
-	host := "127.0.0.1"
-	port := 3306
+	const defaultHost = "127.0.0.1"
+	const defaultPort = 3306
+
 	if addr == "" {
-		return host, port
+		return defaultHost, defaultPort
 	}
 
 	host, portPart, found := strings.Cut(addr, ":")
 	if !found {
-		if addr != "" {
-			host = addr
-		}
-		return host, port
+		return host, defaultPort
 	}
+
 	if host == "" {
-		host = "127.0.0.1"
+		host = defaultHost
 	}
-	if parsedPort, err := strconv.Atoi(portPart); err == nil {
-		port = parsedPort
+	if portPart == "" {
+		return host, defaultPort
+	}
+
+	port, err := strconv.Atoi(portPart)
+	if err != nil {
+		log.Printf("warning: could not parse port %q in MYSQL_DSN address, using default %d", portPart, defaultPort)
+		return host, defaultPort
 	}
 
 	return host, port
