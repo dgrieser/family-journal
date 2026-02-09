@@ -1,9 +1,13 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"familyjournal/backend/internal/config"
@@ -17,6 +21,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
+	"github.com/gofiber/fiber/v2/middleware/encryptcookie"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -67,6 +72,9 @@ func main() {
 	})
 	app.Use(recover.New())
 	app.Use(logger.New())
+	app.Use(encryptcookie.New(encryptcookie.Config{
+		Key: deriveCookieKey(cfg.SessionSecret),
+	}))
 	if cfg.RateLimitMax > 0 {
 		app.Use(limiter.New(limiter.Config{
 			Max:        cfg.RateLimitMax,
@@ -110,20 +118,20 @@ func main() {
 	}
 	personsHandler := &handlers.PersonsHandler{Service: service, Store: store}
 
-	app.Get("/uploads/:name", middleware.RequireAuth(store), postsHandler.DownloadAttachment)
+	app.Get("/uploads/:name", middleware.RequireAuth(store, service), postsHandler.DownloadAttachment)
 
 	api.Post("/auth/register", authHandler.Register)
 	api.Post("/auth/login", authHandler.Login)
 	api.Post("/auth/logout", authHandler.Logout)
-	api.Get("/auth/profile", middleware.RequireAuth(store), authHandler.Profile)
-	api.Put("/auth/profile", middleware.RequireAuth(store), authHandler.UpdateProfile)
+	api.Get("/auth/profile", middleware.RequireAuth(store, service), authHandler.Profile)
+	api.Put("/auth/profile", middleware.RequireAuth(store, service), authHandler.UpdateProfile)
 
-	admin := api.Group("/admin", middleware.RequireAuth(store), middleware.RequireRole(store, models.RoleAdmin))
+	admin := api.Group("/admin", middleware.RequireAuth(store, service), middleware.RequireRole(store, models.RoleAdmin))
 	admin.Get("/users", adminHandler.ListUsers)
 	admin.Patch("/users/:id/role", adminHandler.UpdateRole)
 	admin.Patch("/users/:id/active", adminHandler.UpdateActive)
 
-	posts := api.Group("/posts", middleware.RequireAuth(store))
+	posts := api.Group("/posts", middleware.RequireAuth(store, service))
 	posts.Get("/", postsHandler.List)
 	posts.Post("/", postsHandler.Create)
 	posts.Get("/:id", postsHandler.Get)
@@ -132,14 +140,39 @@ func main() {
 	posts.Post("/:id/comments", postsHandler.AddComment)
 	posts.Post("/:id/attachments", postsHandler.UploadAttachment)
 
-	api.Put("/comments/:id", middleware.RequireAuth(store), postsHandler.UpdateComment)
-	api.Delete("/comments/:id", middleware.RequireAuth(store), postsHandler.DeleteComment)
+	api.Put("/comments/:id", middleware.RequireAuth(store, service), postsHandler.UpdateComment)
+	api.Delete("/comments/:id", middleware.RequireAuth(store, service), postsHandler.DeleteComment)
 
-	api.Get("/hashtags", middleware.RequireAuth(store), postsHandler.ListHashtags)
-	api.Get("/persons", middleware.RequireAuth(store), personsHandler.List)
-	api.Post("/persons", middleware.RequireAuth(store), personsHandler.Create)
-	api.Put("/persons/:id", middleware.RequireAuth(store), personsHandler.Update)
-	api.Delete("/persons/:id", middleware.RequireAuth(store), personsHandler.Delete)
+	api.Get("/hashtags", middleware.RequireAuth(store, service), postsHandler.ListHashtags)
+	api.Get("/persons", middleware.RequireAuth(store, service), personsHandler.List)
+	api.Post("/persons", middleware.RequireAuth(store, service), personsHandler.Create)
+	api.Put("/persons/:id", middleware.RequireAuth(store, service), personsHandler.Update)
+	api.Delete("/persons/:id", middleware.RequireAuth(store, service), personsHandler.Delete)
 
-	log.Fatal(app.Listen(":" + cfg.Port))
+	listenErrCh := make(chan error, 1)
+	go func() {
+		if err := app.Listen(":" + cfg.Port); err != nil {
+			listenErrCh <- err
+		}
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	select {
+	case sig := <-sigCh:
+		log.Printf("shutdown signal received: %s", sig.String())
+	case err := <-listenErrCh:
+		log.Printf("server stopped: %v", err)
+	}
+	if err := app.Shutdown(); err != nil {
+		log.Printf("shutdown error: %v", err)
+	}
+	if err := database.Close(); err != nil {
+		log.Printf("db close error: %v", err)
+	}
+}
+
+func deriveCookieKey(secret string) string {
+	hash := sha256.Sum256([]byte(secret))
+	return hex.EncodeToString(hash[:])[:32]
 }

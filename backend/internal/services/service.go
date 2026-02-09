@@ -21,6 +21,7 @@ type UserRepository interface {
 	GetUserByEmail(email string) (*models.User, error)
 	GetUserByID(id int64) (*models.User, error)
 	UpdateUserProfile(id int64, email string) error
+	UpdateUserPassword(id int64, passwordHash string) error
 	ListUsers() ([]models.User, error)
 	UpdateUserRole(id int64, role string) error
 	UpdateUserActive(id int64, active bool) error
