@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -22,6 +24,9 @@ type fakeRepo struct {
 	users          map[string]*models.User
 	tagsCreated    []string
 	personsCreated []string
+	postToReturn   *models.Post
+	deletedPostID  int64
+	deletedUserID  int64
 	listPostsArgs  struct {
 		date     time.Time
 		hashtags []string
@@ -77,10 +82,19 @@ func (f *fakeRepo) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
 	f.tagsCreated = append(f.tagsCreated, name)
 	return &models.Hashtag{ID: int64(len(f.tagsCreated)), Name: name}, nil
 }
-func (f *fakeRepo) CreatePost(post *models.Post) error             { post.ID = 1; return nil }
-func (f *fakeRepo) UpdatePost(post *models.Post) error             { return nil }
-func (f *fakeRepo) DeletePost(id, userID int64) error              { return nil }
-func (f *fakeRepo) GetPost(id, userID int64) (*models.Post, error) { return &models.Post{}, nil }
+func (f *fakeRepo) CreatePost(post *models.Post) error { post.ID = 1; return nil }
+func (f *fakeRepo) UpdatePost(post *models.Post) error { return nil }
+func (f *fakeRepo) DeletePost(id, userID int64) error {
+	f.deletedPostID = id
+	f.deletedUserID = userID
+	return nil
+}
+func (f *fakeRepo) GetPost(id, userID int64) (*models.Post, error) {
+	if f.postToReturn != nil {
+		return f.postToReturn, nil
+	}
+	return &models.Post{}, nil
+}
 func (f *fakeRepo) ListPosts(userID int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error) {
 	f.listPostsArgs.date = date
 	f.listPostsArgs.hashtags = hashtags
@@ -220,6 +234,48 @@ func TestListPostsFilters(t *testing.T) {
 	}
 	if len(repo.listPostsArgs.persons) != 1 {
 		t.Fatalf("expected persons")
+	}
+}
+
+func TestDeletePostRemovesAttachmentFiles(t *testing.T) {
+	repo := newFakeRepo()
+	repo.postToReturn = &models.Post{
+		ID: 1,
+		Attachments: []models.Attachment{
+			{FileName: "test-file.jpg"},
+		},
+	}
+
+	service := services.New(repo, repo, repo, repo, repo, repo)
+	store := session.New()
+	uploadDir := t.TempDir()
+	filePath := filepath.Join(uploadDir, "test-file.jpg")
+	if err := os.WriteFile(filePath, []byte("content"), 0o600); err != nil {
+		t.Fatalf("write attachment file: %v", err)
+	}
+
+	app := fiber.New()
+	postsHandler := &handlers.PostsHandler{Service: service, Store: store, UploadDir: uploadDir}
+	app.Use(func(c *fiber.Ctx) error {
+		sess, _ := store.Get(c)
+		sess.Set("user_id", int64(1))
+		sess.Set("role", "user")
+		_ = sess.Save()
+		return c.Next()
+	})
+	app.Delete("/posts/:id", postsHandler.Delete)
+
+	req := httptest.NewRequest(http.MethodDelete, "/posts/1", nil)
+	resp, err := app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("delete post failed: %v", err)
+	}
+
+	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+		t.Fatalf("expected attachment file to be removed")
+	}
+	if repo.deletedPostID != 1 || repo.deletedUserID != 1 {
+		t.Fatalf("expected delete to be called with post and user ids")
 	}
 }
 
