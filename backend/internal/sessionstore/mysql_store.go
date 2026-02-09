@@ -4,18 +4,54 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 )
 
+const cleanupInterval = time.Hour
+
+type sessionDB interface {
+	Get(dest interface{}, query string, args ...interface{}) error
+	Exec(query string, args ...interface{}) (sql.Result, error)
+}
+
 // MySQLStore implements fiber.Storage backed by MySQL.
 type MySQLStore struct {
-	db *sqlx.DB
+	db           sessionDB
+	cleanupDone  chan struct{}
+	cleanupStop  chan struct{}
+	cleanupClose sync.Once
 }
 
 func NewMySQLStore(db *sqlx.DB) *MySQLStore {
-	return &MySQLStore{db: db}
+	store := &MySQLStore{
+		db:          db,
+		cleanupDone: make(chan struct{}),
+		cleanupStop: make(chan struct{}),
+	}
+	go store.cleanupExpiredSessions()
+	return store
+}
+
+func (s *MySQLStore) cleanupExpiredSessions() {
+	ticker := time.NewTicker(cleanupInterval)
+	defer func() {
+		ticker.Stop()
+		close(s.cleanupDone)
+	}()
+
+	for {
+		select {
+		case <-ticker.C:
+			if _, err := s.db.Exec("DELETE FROM session_store WHERE expires_at IS NOT NULL AND expires_at < ?", time.Now().UTC()); err != nil {
+				log.Printf("failed to cleanup expired sessions: %v", err)
+			}
+		case <-s.cleanupStop:
+			return
+		}
+	}
 }
 
 func (s *MySQLStore) Get(key string) ([]byte, error) {
@@ -37,7 +73,7 @@ func (s *MySQLStore) Get(key string) ([]byte, error) {
 
 	if row.ExpiresAt != nil && row.ExpiresAt.Before(time.Now().UTC()) {
 		if _, err := s.db.Exec("DELETE FROM session_store WHERE id = ?", key); err != nil {
-			log.Printf("failed to delete expired session %s: %v", key, err)
+			log.Printf("failed to delete expired session: %v", err)
 		}
 		return nil, nil
 	}
@@ -78,5 +114,9 @@ func (s *MySQLStore) Reset() error {
 }
 
 func (s *MySQLStore) Close() error {
+	s.cleanupClose.Do(func() {
+		close(s.cleanupStop)
+		<-s.cleanupDone
+	})
 	return nil
 }
