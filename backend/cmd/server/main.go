@@ -13,6 +13,7 @@ import (
 	"familyjournal/backend/internal/models"
 	"familyjournal/backend/internal/repositories"
 	"familyjournal/backend/internal/services"
+	"familyjournal/backend/internal/sessionstore"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
@@ -52,6 +53,7 @@ func main() {
 	service := services.New(repo, repo, repo, repo, repo, repo)
 
 	store := session.New(session.Config{
+		Storage:        sessionstore.NewMySQLStore(database),
 		CookieHTTPOnly: true,
 		CookieSecure:   cfg.CookieSecure,
 		CookieSameSite: "Lax",

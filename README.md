@@ -54,10 +54,11 @@ The frontend uses `/api` and `/uploads` proxies in development (see `vite.config
 
 ## Database migrations
 
-Run the migration SQL file against MySQL:
+Run migration SQL files against MySQL in order:
 
 ```bash
 mysql -u root -p familyjournal < backend/migrations/001_init.sql
+mysql -u root -p familyjournal < backend/migrations/002_session_store.sql
 ```
 
 ## API overview
@@ -96,7 +97,7 @@ All endpoints are namespaced under `/api/v1`.
 
 ## MySQL schema
 
-See `backend/migrations/001_init.sql` for the full schema, including indexes and foreign keys.
+See `backend/migrations/001_init.sql` and `backend/migrations/002_session_store.sql` for the full schema, including persistent session storage.
 
 ## Tests
 
