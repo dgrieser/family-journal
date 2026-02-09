@@ -198,10 +198,13 @@ func (h *PostsHandler) deleteAttachmentFiles(attachments []models.Attachment) er
 		if attachment.FileName == "" {
 			continue
 		}
-		path := filepath.Join(h.UploadDir, attachment.FileName)
+		path := filepath.Join(h.UploadDir, filepath.Base(attachment.FileName))
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			wrappedErr := errors.New(attachment.FileName + ": " + err.Error())
 			if firstErr == nil {
-				firstErr = err
+				firstErr = wrappedErr
+			} else {
+				firstErr = errors.Join(firstErr, wrappedErr)
 			}
 		}
 	}

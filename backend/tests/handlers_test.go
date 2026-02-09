@@ -334,6 +334,54 @@ func TestDeletePostAttemptsAllAttachmentDeletesOnError(t *testing.T) {
 	}
 }
 
+func TestDeletePostUsesBaseFileNameForAttachmentCleanup(t *testing.T) {
+	repo := newFakeRepo()
+	repo.postToReturn = &models.Post{
+		ID: 1,
+		Attachments: []models.Attachment{
+			{FileName: "../outside.jpg"},
+		},
+	}
+
+	service := services.New(repo, repo, repo, repo, repo, repo)
+	store := session.New()
+	uploadDir := t.TempDir()
+	parentDir := filepath.Dir(uploadDir)
+
+	outsideFile := filepath.Join(parentDir, "outside.jpg")
+	if err := os.WriteFile(outsideFile, []byte("outside"), 0o600); err != nil {
+		t.Fatalf("write outside file: %v", err)
+	}
+	insideFile := filepath.Join(uploadDir, "outside.jpg")
+	if err := os.WriteFile(insideFile, []byte("inside"), 0o600); err != nil {
+		t.Fatalf("write inside file: %v", err)
+	}
+
+	app := fiber.New()
+	postsHandler := &handlers.PostsHandler{Service: service, Store: store, UploadDir: uploadDir}
+	app.Use(func(c *fiber.Ctx) error {
+		sess, _ := store.Get(c)
+		sess.Set("user_id", int64(1))
+		sess.Set("role", "user")
+		_ = sess.Save()
+		return c.Next()
+	})
+	app.Delete("/posts/:id", postsHandler.Delete)
+
+	req := httptest.NewRequest(http.MethodDelete, "/posts/1", nil)
+	resp, err := app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("delete post failed: %v", err)
+	}
+
+	if _, err := os.Stat(insideFile); !os.IsNotExist(err) {
+		t.Fatalf("expected in-upload attachment file to be deleted")
+	}
+	if _, err := os.Stat(outsideFile); err != nil {
+		t.Fatalf("expected file outside upload dir to remain untouched: %v", err)
+	}
+}
+
 func TestServiceNormalizesNilSlices(t *testing.T) {
 	repo := newFakeRepo()
 	service := services.New(repo, repo, repo, repo, repo, repo)
