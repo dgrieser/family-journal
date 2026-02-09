@@ -193,16 +193,19 @@ func (h *PostsHandler) Delete(c *fiber.Ctx) error {
 }
 
 func (h *PostsHandler) deleteAttachmentFiles(attachments []models.Attachment) error {
+	var firstErr error
 	for _, attachment := range attachments {
 		if attachment.FileName == "" {
 			continue
 		}
 		path := filepath.Join(h.UploadDir, attachment.FileName)
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return err
+			if firstErr == nil {
+				firstErr = err
+			}
 		}
 	}
-	return nil
+	return firstErr
 }
 
 func (h *PostsHandler) AddComment(c *fiber.Ctx) error {

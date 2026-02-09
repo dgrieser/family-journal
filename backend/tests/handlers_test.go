@@ -279,6 +279,61 @@ func TestDeletePostRemovesAttachmentFiles(t *testing.T) {
 	}
 }
 
+func TestDeletePostAttemptsAllAttachmentDeletesOnError(t *testing.T) {
+	repo := newFakeRepo()
+	repo.postToReturn = &models.Post{
+		ID: 1,
+		Attachments: []models.Attachment{
+			{FileName: "blocked"},
+			{FileName: "still-delete.jpg"},
+		},
+	}
+
+	service := services.New(repo, repo, repo, repo, repo, repo)
+	store := session.New()
+	uploadDir := t.TempDir()
+
+	blockedDir := filepath.Join(uploadDir, "blocked")
+	if err := os.Mkdir(blockedDir, 0o700); err != nil {
+		t.Fatalf("create blocked dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(blockedDir, "child.txt"), []byte("x"), 0o600); err != nil {
+		t.Fatalf("create nested file: %v", err)
+	}
+
+	goodFile := filepath.Join(uploadDir, "still-delete.jpg")
+	if err := os.WriteFile(goodFile, []byte("content"), 0o600); err != nil {
+		t.Fatalf("write attachment file: %v", err)
+	}
+
+	app := fiber.New()
+	postsHandler := &handlers.PostsHandler{Service: service, Store: store, UploadDir: uploadDir}
+	app.Use(func(c *fiber.Ctx) error {
+		sess, _ := store.Get(c)
+		sess.Set("user_id", int64(1))
+		sess.Set("role", "user")
+		_ = sess.Save()
+		return c.Next()
+	})
+	app.Delete("/posts/:id", postsHandler.Delete)
+
+	req := httptest.NewRequest(http.MethodDelete, "/posts/1", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("delete post request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected internal server error, got %d", resp.StatusCode)
+	}
+
+	if _, err := os.Stat(goodFile); !os.IsNotExist(err) {
+		t.Fatalf("expected later attachment file to still be deleted")
+	}
+	if repo.deletedPostID != 0 || repo.deletedUserID != 0 {
+		t.Fatalf("did not expect post delete repository call when attachment cleanup fails")
+	}
+}
+
 func TestServiceNormalizesNilSlices(t *testing.T) {
 	repo := newFakeRepo()
 	service := services.New(repo, repo, repo, repo, repo, repo)
