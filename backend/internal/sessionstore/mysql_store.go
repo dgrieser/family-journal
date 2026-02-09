@@ -3,6 +3,7 @@ package sessionstore
 import (
 	"database/sql"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -35,7 +36,9 @@ func (s *MySQLStore) Get(key string) ([]byte, error) {
 	}
 
 	if row.ExpiresAt != nil && row.ExpiresAt.Before(time.Now().UTC()) {
-		_, _ = s.db.Exec("DELETE FROM session_store WHERE id = ?", key)
+		if _, err := s.db.Exec("DELETE FROM session_store WHERE id = ?", key); err != nil {
+			log.Printf("failed to delete expired session %s: %v", key, err)
+		}
 		return nil, nil
 	}
 
@@ -70,7 +73,7 @@ func (s *MySQLStore) Delete(key string) error {
 }
 
 func (s *MySQLStore) Reset() error {
-	_, err := s.db.Exec("DELETE FROM session_store")
+	_, err := s.db.Exec("TRUNCATE TABLE session_store")
 	return err
 }
 
