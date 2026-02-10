@@ -3,18 +3,25 @@ package middleware
 import (
 	"errors"
 
+	"familyjournal/backend/internal/services"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
 )
 
-func RequireAuth(store *session.Store) fiber.Handler {
+func RequireAuth(store *session.Store, svc *services.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		sess, err := store.Get(c)
 		if err != nil {
 			return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 		}
-		userID := sess.Get("user_id")
-		if userID == nil {
+		userID, ok := sess.Get("user_id").(int64)
+		if !ok {
+			return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+		}
+		user, err := svc.GetUserByID(userID)
+		if err != nil || !user.Active {
+			_ = sess.Destroy()
 			return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 		}
 		return c.Next()

@@ -39,6 +39,11 @@ func (r *Repository) UpdateUserProfile(id int64, email string) error {
 	return err
 }
 
+func (r *Repository) UpdateUserPassword(id int64, passwordHash string) error {
+	_, err := r.DB.Exec(`UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?`, passwordHash, id)
+	return err
+}
+
 func (r *Repository) ListUsers() ([]models.User, error) {
 	var users []models.User
 	query := `SELECT id, email, role, active, created_at, updated_at FROM users ORDER BY created_at DESC`

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log"
 
 	"familyjournal/backend/internal/middleware"
@@ -97,17 +98,36 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
 	var req struct {
-		Email string `json:"email"`
+		Email           string `json:"email"`
+		CurrentPassword string `json:"currentPassword"`
+		NewPassword     string `json:"newPassword"`
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}
-	if req.Email == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "email required")
+	if req.Email == "" && req.NewPassword == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "email or newPassword required")
 	}
-	if err := h.Service.UpdateUserProfile(userID, req.Email); err != nil {
-		log.Printf("update profile error: %v", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to update profile")
+	if req.Email != "" {
+		if err := h.Service.UpdateUserProfile(userID, req.Email); err != nil {
+			log.Printf("update profile error: %v", err)
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to update profile")
+		}
+	}
+	if req.NewPassword != "" {
+		if req.CurrentPassword == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "currentPassword required")
+		}
+		if err := h.Service.ChangePassword(userID, req.CurrentPassword, req.NewPassword); err != nil {
+			log.Printf("change password error: %v", err)
+			if errors.Is(err, services.ErrInvalidCredentials) {
+				return fiber.NewError(fiber.StatusUnauthorized, "invalid credentials")
+			}
+			if errors.Is(err, services.ErrInvalidPassword) {
+				return fiber.NewError(fiber.StatusBadRequest, err.Error())
+			}
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to change password")
+		}
 	}
 	user, err := h.Service.GetUserByID(userID)
 	if err != nil {

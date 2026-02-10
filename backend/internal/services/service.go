@@ -11,6 +11,7 @@ import (
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInactiveUser       = errors.New("user is inactive")
+	ErrInvalidPassword    = errors.New("password must be between 6 and 72 characters")
 )
 
 var hashtagRegex = regexp.MustCompile(`#([\pL\d_]+)`)
@@ -21,6 +22,7 @@ type UserRepository interface {
 	GetUserByEmail(email string) (*models.User, error)
 	GetUserByID(id int64) (*models.User, error)
 	UpdateUserProfile(id int64, email string) error
+	UpdateUserPassword(id int64, passwordHash string) error
 	ListUsers() ([]models.User, error)
 	UpdateUserRole(id int64, role string) error
 	UpdateUserActive(id int64, active bool) error
