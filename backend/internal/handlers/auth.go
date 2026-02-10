@@ -123,6 +123,9 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 			if errors.Is(err, services.ErrInvalidCredentials) {
 				return fiber.NewError(fiber.StatusUnauthorized, "invalid credentials")
 			}
+			if errors.Is(err, services.ErrInvalidPassword) {
+				return fiber.NewError(fiber.StatusBadRequest, err.Error())
+			}
 			return fiber.NewError(fiber.StatusInternalServerError, "failed to change password")
 		}
 	}

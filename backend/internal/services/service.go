@@ -11,6 +11,7 @@ import (
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInactiveUser       = errors.New("user is inactive")
+	ErrInvalidPassword    = errors.New("password must be between 6 and 72 characters")
 )
 
 var hashtagRegex = regexp.MustCompile(`#([\pL\d_]+)`)

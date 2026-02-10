@@ -17,6 +17,10 @@ func (s *Service) UpdateUserProfile(userID int64, email string) error {
 }
 
 func (s *Service) ChangePassword(userID int64, currentPassword, newPassword string) error {
+	if len(newPassword) < 6 || len(newPassword) > 72 {
+		return ErrInvalidPassword
+	}
+
 	user, err := s.Users.GetUserByID(userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
