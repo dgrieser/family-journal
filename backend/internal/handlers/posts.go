@@ -4,11 +4,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -176,11 +178,33 @@ func (h *PostsHandler) Delete(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
+	post, err := h.Service.GetPost(userID, int64(id))
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "not found")
+	}
+	if err := h.deleteAttachmentFiles(post.Attachments); err != nil {
+		log.Printf("delete post attachments error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete attachments")
+	}
 	if err := h.Service.DeletePost(userID, int64(id)); err != nil {
 		log.Printf("delete post error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete post")
 	}
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func (h *PostsHandler) deleteAttachmentFiles(attachments []models.Attachment) error {
+	var errs []error
+	for _, attachment := range attachments {
+		if attachment.FileName == "" {
+			continue
+		}
+		path := filepath.Join(h.UploadDir, filepath.Base(attachment.FileName))
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			errs = append(errs, fmt.Errorf("%s: %w", attachment.FileName, err))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func (h *PostsHandler) AddComment(c *fiber.Ctx) error {
