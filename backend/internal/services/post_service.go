@@ -35,22 +35,30 @@ func (s *Service) ParseMentions(text string) []string {
 	return names
 }
 
-func (s *Service) CreateOrUpdatePost(userID int64, post *models.Post) error {
+func (s *Service) CreateOrUpdatePost(scope AccessScope, post *models.Post) error {
+	ownerID := scope.UserID
+	if post.ID != 0 {
+		existing, err := s.Posts.GetPost(post.ID, scope.OwnerFilter())
+		if err != nil {
+			return err
+		}
+		ownerID = existing.UserID
+	}
 	tags := s.ParseHashtags(post.Text)
 	persons := s.ParseMentions(post.Text)
-	return s.Posts.SavePostWithRelations(userID, post, tags, persons)
+	return s.Posts.SavePostWithRelations(ownerID, scope.OwnerFilter(), post, tags, persons)
 }
 
-func (s *Service) ListPosts(userID int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error) {
-	posts, err := s.Posts.ListPosts(userID, date, hashtags, persons, search)
+func (s *Service) ListPosts(scope AccessScope, date time.Time, hashtags, persons []string, search string) ([]models.Post, error) {
+	posts, err := s.Posts.ListPosts(scope.OwnerFilter(), date, hashtags, persons, search)
 	if err != nil {
 		return nil, err
 	}
 	return s.hydratePosts(ensureSlice(posts))
 }
 
-func (s *Service) GetPost(userID, postID int64) (*models.Post, error) {
-	post, err := s.Posts.GetPost(postID, userID)
+func (s *Service) GetPost(scope AccessScope, postID int64) (*models.Post, error) {
+	post, err := s.Posts.GetPost(postID, scope.OwnerFilter())
 	if err != nil {
 		return nil, err
 	}
@@ -61,12 +69,12 @@ func (s *Service) GetPost(userID, postID int64) (*models.Post, error) {
 	return &posts[0], nil
 }
 
-func (s *Service) DeletePost(userID, postID int64) error {
-	return s.Posts.DeletePost(postID, userID)
+func (s *Service) DeletePost(scope AccessScope, postID int64) error {
+	return s.Posts.DeletePost(postID, scope.OwnerFilter())
 }
 
-func (s *Service) ListHashtags(userID int64) ([]models.Hashtag, error) {
-	tags, err := s.Hashtags.ListHashtagsByUser(userID)
+func (s *Service) ListHashtags(scope AccessScope) ([]models.Hashtag, error) {
+	tags, err := s.Hashtags.ListHashtagsByUser(scope.UserID)
 	if err != nil {
 		return nil, err
 	}

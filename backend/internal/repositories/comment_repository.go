@@ -18,12 +18,24 @@ func (r *Repository) CreateComment(comment *models.Comment) error {
 		WHERE c.id = ?`, id)
 }
 
-func (r *Repository) UpdateComment(comment *models.Comment) error {
-	_, err := r.DB.Exec(`UPDATE comments SET text = ?, updated_at = NOW() WHERE id = ? AND user_id = ?`, comment.Text, comment.ID, comment.UserID)
+func (r *Repository) UpdateComment(comment *models.Comment, ownerFilter *int64) error {
+	query := `UPDATE comments SET text = ?, updated_at = NOW() WHERE id = ?`
+	args := []interface{}{comment.Text, comment.ID}
+	if ownerFilter != nil {
+		query += ` AND user_id = ?`
+		args = append(args, *ownerFilter)
+	}
+	_, err := r.DB.Exec(query, args...)
 	return err
 }
 
-func (r *Repository) DeleteComment(id, userID int64) error {
-	_, err := r.DB.Exec(`DELETE FROM comments WHERE id = ? AND user_id = ?`, id, userID)
+func (r *Repository) DeleteComment(id int64, ownerFilter *int64) error {
+	query := `DELETE FROM comments WHERE id = ?`
+	args := []interface{}{id}
+	if ownerFilter != nil {
+		query += ` AND user_id = ?`
+		args = append(args, *ownerFilter)
+	}
+	_, err := r.DB.Exec(query, args...)
 	return err
 }

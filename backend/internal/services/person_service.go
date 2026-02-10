@@ -2,8 +2,8 @@ package services
 
 import "familyjournal/backend/internal/models"
 
-func (s *Service) ListPersons(userID int64) ([]models.Person, error) {
-	persons, err := s.Persons.ListPersons(userID)
+func (s *Service) ListPersons(scope AccessScope) ([]models.Person, error) {
+	persons, err := s.Persons.ListPersons(scope.OwnerFilter())
 	if err != nil {
 		return nil, err
 	}
@@ -18,11 +18,10 @@ func (s *Service) CreatePerson(userID int64, name string, description *string) (
 	return person, nil
 }
 
-func (s *Service) UpdatePerson(userID int64, person *models.Person) error {
-	person.CreatedBy = userID
-	return s.Persons.UpdatePerson(person)
+func (s *Service) UpdatePerson(scope AccessScope, person *models.Person) error {
+	return s.Persons.UpdatePerson(person, scope.OwnerFilter())
 }
 
-func (s *Service) DeletePerson(userID, personID int64) error {
-	return s.Persons.DeletePerson(personID, userID)
+func (s *Service) DeletePerson(scope AccessScope, personID int64) error {
+	return s.Persons.DeletePerson(personID, scope.OwnerFilter())
 }

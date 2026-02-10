@@ -27,6 +27,7 @@ type fakeRepo struct {
 	postToReturn   *models.Post
 	deletedPostID  int64
 	deletedUserID  int64
+	ownerFilterNil bool
 	listPostsArgs  struct {
 		date     time.Time
 		hashtags []string
@@ -62,14 +63,14 @@ func (f *fakeRepo) GetUserByID(id int64) (*models.User, error) {
 	return nil, fiber.ErrNotFound
 }
 
-func (f *fakeRepo) UpdateUserProfile(id int64, email string) error    { return nil }
-func (f *fakeRepo) ListUsers() ([]models.User, error)                 { return nil, nil }
-func (f *fakeRepo) UpdateUserRole(id int64, role string) error        { return nil }
-func (f *fakeRepo) UpdateUserActive(id int64, active bool) error      { return nil }
-func (f *fakeRepo) CreatePerson(person *models.Person) error          { return nil }
-func (f *fakeRepo) UpdatePerson(person *models.Person) error          { return nil }
-func (f *fakeRepo) DeletePerson(id, userID int64) error               { return nil }
-func (f *fakeRepo) ListPersons(userID int64) ([]models.Person, error) { return nil, nil }
+func (f *fakeRepo) UpdateUserProfile(id int64, email string) error               { return nil }
+func (f *fakeRepo) ListUsers() ([]models.User, error)                            { return nil, nil }
+func (f *fakeRepo) UpdateUserRole(id int64, role string) error                   { return nil }
+func (f *fakeRepo) UpdateUserActive(id int64, active bool) error                 { return nil }
+func (f *fakeRepo) CreatePerson(person *models.Person) error                     { return nil }
+func (f *fakeRepo) UpdatePerson(person *models.Person, ownerFilter *int64) error { return nil }
+func (f *fakeRepo) DeletePerson(id int64, ownerFilter *int64) error              { return nil }
+func (f *fakeRepo) ListPersons(ownerFilter *int64) ([]models.Person, error)      { return nil, nil }
 func (f *fakeRepo) FindOrCreatePerson(userID int64, name string) (*models.Person, error) {
 	f.personsCreated = append(f.personsCreated, name)
 	return &models.Person{ID: int64(len(f.personsCreated)), Name: name}, nil
@@ -84,18 +85,21 @@ func (f *fakeRepo) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
 }
 func (f *fakeRepo) CreatePost(post *models.Post) error { post.ID = 1; return nil }
 func (f *fakeRepo) UpdatePost(post *models.Post) error { return nil }
-func (f *fakeRepo) DeletePost(id, userID int64) error {
+func (f *fakeRepo) DeletePost(id int64, ownerFilter *int64) error {
 	f.deletedPostID = id
-	f.deletedUserID = userID
+	f.ownerFilterNil = ownerFilter == nil
+	if ownerFilter != nil {
+		f.deletedUserID = *ownerFilter
+	}
 	return nil
 }
-func (f *fakeRepo) GetPost(id, userID int64) (*models.Post, error) {
+func (f *fakeRepo) GetPost(id int64, ownerFilter *int64) (*models.Post, error) {
 	if f.postToReturn != nil {
 		return f.postToReturn, nil
 	}
 	return &models.Post{}, nil
 }
-func (f *fakeRepo) ListPosts(userID int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error) {
+func (f *fakeRepo) ListPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error) {
 	f.listPostsArgs.date = date
 	f.listPostsArgs.hashtags = hashtags
 	f.listPostsArgs.persons = persons
@@ -106,8 +110,8 @@ func (f *fakeRepo) ReplacePostTags(postID int64, tags []models.Hashtag) error   
 func (f *fakeRepo) ReplacePostMentions(postID int64, persons []models.Person) error { return nil }
 func (f *fakeRepo) ListPostComments(postID int64) ([]models.Comment, error)         { return nil, nil }
 func (f *fakeRepo) CreateComment(comment *models.Comment) error                     { return nil }
-func (f *fakeRepo) UpdateComment(comment *models.Comment) error                     { return nil }
-func (f *fakeRepo) DeleteComment(id, userID int64) error                            { return nil }
+func (f *fakeRepo) UpdateComment(comment *models.Comment, ownerFilter *int64) error { return nil }
+func (f *fakeRepo) DeleteComment(id int64, ownerFilter *int64) error                { return nil }
 func (f *fakeRepo) ListPostTags(postID int64) ([]models.Hashtag, error)             { return nil, nil }
 func (f *fakeRepo) ListPostPersons(postID int64) ([]models.Person, error)           { return nil, nil }
 func (f *fakeRepo) ListPostAttachments(postID int64) ([]models.Attachment, error)   { return nil, nil }
@@ -124,7 +128,7 @@ func (f *fakeRepo) ListCommentsForPosts(postIDs []int64) (map[int64][]models.Com
 func (f *fakeRepo) ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error) {
 	return map[int64][]models.Attachment{}, nil
 }
-func (f *fakeRepo) SavePostWithRelations(userID int64, post *models.Post, tagNames, personNames []string) error {
+func (f *fakeRepo) SavePostWithRelations(ownerID int64, ownerFilter *int64, post *models.Post, tagNames, personNames []string) error {
 	f.tagsCreated = append(f.tagsCreated, tagNames...)
 	f.personsCreated = append(f.personsCreated, personNames...)
 	if post.ID == 0 {
@@ -132,7 +136,7 @@ func (f *fakeRepo) SavePostWithRelations(userID int64, post *models.Post, tagNam
 	}
 	return nil
 }
-func (f *fakeRepo) GetAttachmentByName(userID int64, name string) (*models.Attachment, error) {
+func (f *fakeRepo) GetAttachmentByName(name string, ownerFilter *int64) (*models.Attachment, error) {
 	return nil, sql.ErrNoRows
 }
 
@@ -187,7 +191,7 @@ func TestCreatePostParsesTagsAndPersons(t *testing.T) {
 	repo := newFakeRepo()
 	service := services.New(repo, repo, repo, repo, repo, repo)
 	post := &models.Post{UserID: 1, Date: time.Now(), Text: "Today #Care with @Lena"}
-	if err := service.CreateOrUpdatePost(1, post); err != nil {
+	if err := service.CreateOrUpdatePost(services.NewAccessScope(1, models.RoleUser), post); err != nil {
 		t.Fatalf("create post: %v", err)
 	}
 	if len(repo.tagsCreated) != 1 || repo.tagsCreated[0] != "care" {
@@ -234,6 +238,19 @@ func TestListPostsFilters(t *testing.T) {
 	}
 	if len(repo.listPostsArgs.persons) != 1 {
 		t.Fatalf("expected persons")
+	}
+}
+
+func TestAdminDeletePostUsesUnscopedAccess(t *testing.T) {
+	repo := newFakeRepo()
+	service := services.New(repo, repo, repo, repo, repo, repo)
+
+	err := service.DeletePost(services.NewAccessScope(99, models.RoleAdmin), 42)
+	if err != nil {
+		t.Fatalf("delete post: %v", err)
+	}
+	if !repo.ownerFilterNil {
+		t.Fatalf("expected admin delete to skip owner filter")
 	}
 }
 
@@ -394,7 +411,7 @@ func TestServiceNormalizesNilSlices(t *testing.T) {
 		t.Fatalf("expected users slice to be non-nil")
 	}
 
-	persons, err := service.ListPersons(1)
+	persons, err := service.ListPersons(services.NewAccessScope(1, models.RoleUser))
 	if err != nil {
 		t.Fatalf("list persons: %v", err)
 	}
@@ -410,7 +427,7 @@ func TestServiceNormalizesNilSlices(t *testing.T) {
 		t.Fatalf("expected hashtags slice to be non-nil")
 	}
 
-	posts, err := service.ListPosts(1, time.Now(), nil, nil, "")
+	posts, err := service.ListPosts(services.NewAccessScope(1, models.RoleUser), time.Now(), nil, nil, "")
 	if err != nil {
 		t.Fatalf("list posts: %v", err)
 	}
@@ -418,7 +435,7 @@ func TestServiceNormalizesNilSlices(t *testing.T) {
 		t.Fatalf("expected posts slice to be non-nil")
 	}
 
-	post, err := service.GetPost(1, 1)
+	post, err := service.GetPost(services.NewAccessScope(1, models.RoleUser), 1)
 	if err != nil {
 		t.Fatalf("get post: %v", err)
 	}
