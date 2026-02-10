@@ -20,21 +20,38 @@ func (r *Repository) CreatePerson(person *models.Person) error {
 	return r.DB.Get(person, `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons WHERE id = ?`, id)
 }
 
-func (r *Repository) UpdatePerson(person *models.Person) error {
-	_, err := r.DB.Exec(`UPDATE persons SET name = ?, description = ?, updated_at = NOW() WHERE id = ? AND created_by_user_id = ?`,
-		person.Name, person.Description, person.ID, person.CreatedBy)
+func (r *Repository) UpdatePerson(person *models.Person, ownerFilter *int64) error {
+	query := `UPDATE persons SET name = ?, description = ?, updated_at = NOW() WHERE id = ?`
+	args := []interface{}{person.Name, person.Description, person.ID}
+	if ownerFilter != nil {
+		query += ` AND created_by_user_id = ?`
+		args = append(args, *ownerFilter)
+	}
+	_, err := r.DB.Exec(query, args...)
 	return err
 }
 
-func (r *Repository) DeletePerson(id, userID int64) error {
-	_, err := r.DB.Exec(`DELETE FROM persons WHERE id = ? AND created_by_user_id = ?`, id, userID)
+func (r *Repository) DeletePerson(id int64, ownerFilter *int64) error {
+	query := `DELETE FROM persons WHERE id = ?`
+	args := []interface{}{id}
+	if ownerFilter != nil {
+		query += ` AND created_by_user_id = ?`
+		args = append(args, *ownerFilter)
+	}
+	_, err := r.DB.Exec(query, args...)
 	return err
 }
 
-func (r *Repository) ListPersons(userID int64) ([]models.Person, error) {
+func (r *Repository) ListPersons(ownerFilter *int64) ([]models.Person, error) {
 	var persons []models.Person
-	query := `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons WHERE created_by_user_id = ? ORDER BY name ASC`
-	if err := r.DB.Select(&persons, query, userID); err != nil {
+	query := `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons`
+	args := []interface{}{}
+	if ownerFilter != nil {
+		query += ` WHERE created_by_user_id = ?`
+		args = append(args, *ownerFilter)
+	}
+	query += ` ORDER BY name ASC`
+	if err := r.DB.Select(&persons, query, args...); err != nil {
 		return nil, err
 	}
 	return persons, nil

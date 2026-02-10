@@ -53,7 +53,7 @@ func normalizePostCollections(post *models.Post) {
 }
 
 func (h *PostsHandler) List(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -68,7 +68,8 @@ func (h *PostsHandler) List(c *fiber.Ctx) error {
 	tags := splitQueryList(c.Query("hashtags"))
 	persons := splitQueryList(c.Query("persons"))
 	search := c.Query("search")
-	posts, err := h.Service.ListPosts(userID, date, tags, persons, search)
+	scope := services.NewAccessScope(userID, role)
+	posts, err := h.Service.ListPosts(scope, date, tags, persons, search)
 	if err != nil {
 		log.Printf("list posts error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to list posts")
@@ -92,7 +93,7 @@ func splitQueryList(value string) []string {
 }
 
 func (h *PostsHandler) Create(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -111,7 +112,8 @@ func (h *PostsHandler) Create(c *fiber.Ctx) error {
 		Category: req.Category,
 		Mood:     req.Mood,
 	}
-	if err := h.Service.CreateOrUpdatePost(userID, post); err != nil {
+	scope := services.NewAccessScope(userID, role)
+	if err := h.Service.CreateOrUpdatePost(scope, post); err != nil {
 		log.Printf("create post error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to save post")
 	}
@@ -120,7 +122,7 @@ func (h *PostsHandler) Create(c *fiber.Ctx) error {
 }
 
 func (h *PostsHandler) Update(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -144,7 +146,8 @@ func (h *PostsHandler) Update(c *fiber.Ctx) error {
 		Category: req.Category,
 		Mood:     req.Mood,
 	}
-	if err := h.Service.CreateOrUpdatePost(userID, post); err != nil {
+	scope := services.NewAccessScope(userID, role)
+	if err := h.Service.CreateOrUpdatePost(scope, post); err != nil {
 		log.Printf("update post error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update post")
 	}
@@ -153,7 +156,7 @@ func (h *PostsHandler) Update(c *fiber.Ctx) error {
 }
 
 func (h *PostsHandler) Get(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -161,7 +164,8 @@ func (h *PostsHandler) Get(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
-	post, err := h.Service.GetPost(userID, int64(id))
+	scope := services.NewAccessScope(userID, role)
+	post, err := h.Service.GetPost(scope, int64(id))
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "not found")
 	}
@@ -170,7 +174,7 @@ func (h *PostsHandler) Get(c *fiber.Ctx) error {
 }
 
 func (h *PostsHandler) Delete(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -178,7 +182,8 @@ func (h *PostsHandler) Delete(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
-	post, err := h.Service.GetPost(userID, int64(id))
+	scope := services.NewAccessScope(userID, role)
+	post, err := h.Service.GetPost(scope, int64(id))
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "not found")
 	}
@@ -186,7 +191,7 @@ func (h *PostsHandler) Delete(c *fiber.Ctx) error {
 		log.Printf("delete post attachments error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete attachments")
 	}
-	if err := h.Service.DeletePost(userID, int64(id)); err != nil {
+	if err := h.Service.DeletePost(scope, int64(id)); err != nil {
 		log.Printf("delete post error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete post")
 	}
@@ -208,7 +213,7 @@ func (h *PostsHandler) deleteAttachmentFiles(attachments []models.Attachment) er
 }
 
 func (h *PostsHandler) AddComment(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -216,7 +221,8 @@ func (h *PostsHandler) AddComment(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
-	if _, err := h.Service.GetPost(userID, int64(postID)); err != nil {
+	scope := services.NewAccessScope(userID, role)
+	if _, err := h.Service.GetPost(scope, int64(postID)); err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "post not found")
 	}
 	var req struct {
@@ -234,7 +240,7 @@ func (h *PostsHandler) AddComment(c *fiber.Ctx) error {
 }
 
 func (h *PostsHandler) UpdateComment(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -249,7 +255,8 @@ func (h *PostsHandler) UpdateComment(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}
 	comment := &models.Comment{ID: int64(commentID), UserID: userID, Text: req.Text}
-	if err := h.Service.UpdateComment(comment); err != nil {
+	scope := services.NewAccessScope(userID, role)
+	if err := h.Service.UpdateComment(scope, comment); err != nil {
 		log.Printf("update comment error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update comment")
 	}
@@ -257,7 +264,7 @@ func (h *PostsHandler) UpdateComment(c *fiber.Ctx) error {
 }
 
 func (h *PostsHandler) DeleteComment(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -265,7 +272,8 @@ func (h *PostsHandler) DeleteComment(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
-	if err := h.Service.DeleteComment(userID, int64(commentID)); err != nil {
+	scope := services.NewAccessScope(userID, role)
+	if err := h.Service.DeleteComment(scope, int64(commentID)); err != nil {
 		log.Printf("delete comment error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete comment")
 	}
@@ -273,11 +281,12 @@ func (h *PostsHandler) DeleteComment(c *fiber.Ctx) error {
 }
 
 func (h *PostsHandler) ListHashtags(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
-	tags, err := h.Service.ListHashtags(userID)
+	scope := services.NewAccessScope(userID, role)
+	tags, err := h.Service.ListHashtags(scope)
 	if err != nil {
 		log.Printf("list hashtags error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to list hashtags")
@@ -286,7 +295,7 @@ func (h *PostsHandler) ListHashtags(c *fiber.Ctx) error {
 }
 
 func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -294,7 +303,8 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
-	if _, err := h.Service.GetPost(userID, int64(postID)); err != nil {
+	scope := services.NewAccessScope(userID, role)
+	if _, err := h.Service.GetPost(scope, int64(postID)); err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "post not found")
 	}
 	form, err := c.MultipartForm()
@@ -342,7 +352,7 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 }
 
 func (h *PostsHandler) DownloadAttachment(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -350,7 +360,8 @@ func (h *PostsHandler) DownloadAttachment(c *fiber.Ctx) error {
 	if name == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid file")
 	}
-	attachment, err := h.Service.GetAttachmentForUser(userID, name)
+	scope := services.NewAccessScope(userID, role)
+	attachment, err := h.Service.GetAttachmentForUser(scope, name)
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "not found")
 	}

@@ -30,37 +30,37 @@ type UserRepository interface {
 
 type PersonRepository interface {
 	CreatePerson(person *models.Person) error
-	UpdatePerson(person *models.Person) error
-	DeletePerson(id, userID int64) error
-	ListPersons(userID int64) ([]models.Person, error)
+	UpdatePerson(person *models.Person, ownerFilter *int64) error
+	DeletePerson(id int64, ownerFilter *int64) error
+	ListPersons(ownerFilter *int64) ([]models.Person, error)
 	FindOrCreatePerson(userID int64, name string) (*models.Person, error)
 }
 
 type HashtagRepository interface {
-	ListHashtagsByUser(userID int64) ([]models.Hashtag, error)
+	ListHashtags(ownerFilter *int64) ([]models.Hashtag, error)
 	FindOrCreateHashtag(name string) (*models.Hashtag, error)
 	ListTagsForPosts(postIDs []int64) (map[int64][]models.Hashtag, error)
 }
 
 type PostRepository interface {
-	DeletePost(id, userID int64) error
-	GetPost(id, userID int64) (*models.Post, error)
-	ListPosts(userID int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error)
+	DeletePost(id int64, ownerFilter *int64) error
+	GetPost(id int64, ownerFilter *int64) (*models.Post, error)
+	ListPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error)
 	ListPersonsForPosts(postIDs []int64) (map[int64][]models.Person, error)
 	ListCommentsForPosts(postIDs []int64) (map[int64][]models.Comment, error)
 	ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error)
-	SavePostWithRelations(userID int64, post *models.Post, tagNames, personNames []string) error
+	SavePostWithRelations(ownerID int64, ownerFilter *int64, post *models.Post, tagNames, personNames []string) error
 }
 
 type CommentRepository interface {
 	CreateComment(comment *models.Comment) error
-	UpdateComment(comment *models.Comment) error
-	DeleteComment(id, userID int64) error
+	UpdateComment(comment *models.Comment, ownerFilter *int64) error
+	DeleteComment(id int64, ownerFilter *int64) error
 }
 
 type AttachmentRepository interface {
 	CreateAttachment(att *models.Attachment) error
-	GetAttachmentByName(userID int64, name string) (*models.Attachment, error)
+	GetAttachmentByName(name string, ownerFilter *int64) (*models.Attachment, error)
 }
 
 type Service struct {

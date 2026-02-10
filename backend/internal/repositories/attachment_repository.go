@@ -15,13 +15,18 @@ func (r *Repository) CreateAttachment(att *models.Attachment) error {
 	return r.DB.Get(att, `SELECT id, post_id, file_name, file_type, file_size, url, created_at FROM attachments WHERE id = ?`, id)
 }
 
-func (r *Repository) GetAttachmentByName(userID int64, name string) (*models.Attachment, error) {
+func (r *Repository) GetAttachmentByName(name string, ownerFilter *int64) (*models.Attachment, error) {
 	var attachment models.Attachment
 	query := `SELECT a.id, a.post_id, a.file_name, a.file_type, a.file_size, a.url, a.created_at
 		FROM attachments a
 		JOIN posts p ON p.id = a.post_id
-		WHERE a.file_name = ? AND p.user_id = ?`
-	if err := r.DB.Get(&attachment, query, name, userID); err != nil {
+		WHERE a.file_name = ?`
+	args := []interface{}{name}
+	if ownerFilter != nil {
+		query += ` AND p.user_id = ?`
+		args = append(args, *ownerFilter)
+	}
+	if err := r.DB.Get(&attachment, query, args...); err != nil {
 		return nil, err
 	}
 	return &attachment, nil

@@ -17,11 +17,12 @@ type PersonsHandler struct {
 }
 
 func (h *PersonsHandler) List(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
-	persons, err := h.Service.ListPersons(userID)
+	scope := services.NewAccessScope(userID, role)
+	persons, err := h.Service.ListPersons(scope)
 	if err != nil {
 		log.Printf("list persons error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to list persons")
@@ -50,7 +51,7 @@ func (h *PersonsHandler) Create(c *fiber.Ctx) error {
 }
 
 func (h *PersonsHandler) Update(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -66,7 +67,8 @@ func (h *PersonsHandler) Update(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}
 	person := &models.Person{ID: int64(id), Name: req.Name, Description: req.Description}
-	if err := h.Service.UpdatePerson(userID, person); err != nil {
+	scope := services.NewAccessScope(userID, role)
+	if err := h.Service.UpdatePerson(scope, person); err != nil {
 		log.Printf("update person error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update person")
 	}
@@ -74,7 +76,7 @@ func (h *PersonsHandler) Update(c *fiber.Ctx) error {
 }
 
 func (h *PersonsHandler) Delete(c *fiber.Ctx) error {
-	userID, _, err := middleware.GetSessionUser(c, h.Store)
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
@@ -82,7 +84,8 @@ func (h *PersonsHandler) Delete(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
-	if err := h.Service.DeletePerson(userID, int64(id)); err != nil {
+	scope := services.NewAccessScope(userID, role)
+	if err := h.Service.DeletePerson(scope, int64(id)); err != nil {
 		log.Printf("delete person error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete person")
 	}
