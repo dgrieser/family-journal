@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"mime"
@@ -193,22 +194,17 @@ func (h *PostsHandler) Delete(c *fiber.Ctx) error {
 }
 
 func (h *PostsHandler) deleteAttachmentFiles(attachments []models.Attachment) error {
-	var firstErr error
+	var errs []error
 	for _, attachment := range attachments {
 		if attachment.FileName == "" {
 			continue
 		}
 		path := filepath.Join(h.UploadDir, filepath.Base(attachment.FileName))
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-			wrappedErr := errors.New(attachment.FileName + ": " + err.Error())
-			if firstErr == nil {
-				firstErr = wrappedErr
-			} else {
-				firstErr = errors.Join(firstErr, wrappedErr)
-			}
+			errs = append(errs, fmt.Errorf("%s: %w", attachment.FileName, err))
 		}
 	}
-	return firstErr
+	return errors.Join(errs...)
 }
 
 func (h *PostsHandler) AddComment(c *fiber.Ctx) error {
