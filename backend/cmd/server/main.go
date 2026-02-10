@@ -55,9 +55,10 @@ func main() {
 	}
 	repo := repositories.New(database)
 	service := services.New(repo, repo, repo, repo, repo, repo)
+	storage := sessionstore.NewMySQLStore(database)
 
 	store := session.New(session.Config{
-		Storage:        sessionstore.NewMySQLStore(database),
+		Storage:        storage,
 		CookieHTTPOnly: true,
 		CookieSecure:   cfg.CookieSecure,
 		CookieSameSite: "Lax",
@@ -165,6 +166,9 @@ func main() {
 	}
 	if err := app.Shutdown(); err != nil {
 		log.Printf("shutdown error: %v", err)
+	}
+	if err := storage.Close(); err != nil {
+		log.Printf("session store close error: %v", err)
 	}
 	if err := database.Close(); err != nil {
 		log.Printf("db close error: %v", err)

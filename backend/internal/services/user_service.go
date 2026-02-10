@@ -1,6 +1,8 @@
 package services
 
 import (
+	"database/sql"
+	"errors"
 	"familyjournal/backend/internal/models"
 
 	"golang.org/x/crypto/bcrypt"
@@ -17,7 +19,10 @@ func (s *Service) UpdateUserProfile(userID int64, email string) error {
 func (s *Service) ChangePassword(userID int64, currentPassword, newPassword string) error {
 	user, err := s.Users.GetUserByID(userID)
 	if err != nil {
-		return ErrInvalidCredentials
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrInvalidCredentials
+		}
+		return err
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(currentPassword)); err != nil {
 		return ErrInvalidCredentials
