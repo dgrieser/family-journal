@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log"
 
 	"familyjournal/backend/internal/middleware"
@@ -119,7 +120,10 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 		}
 		if err := h.Service.ChangePassword(userID, req.CurrentPassword, req.NewPassword); err != nil {
 			log.Printf("change password error: %v", err)
-			return fiber.NewError(fiber.StatusUnauthorized, "invalid credentials")
+			if errors.Is(err, services.ErrInvalidCredentials) {
+				return fiber.NewError(fiber.StatusUnauthorized, "invalid credentials")
+			}
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to change password")
 		}
 	}
 	user, err := h.Service.GetUserByID(userID)

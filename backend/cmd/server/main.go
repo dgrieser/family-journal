@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
 	"log"
 	"os"
 	"os/signal"
@@ -174,5 +173,5 @@ func main() {
 
 func deriveCookieKey(secret string) string {
 	hash := sha256.Sum256([]byte(secret))
-	return hex.EncodeToString(hash[:])[:32]
+	return string(hash[:])
 }
