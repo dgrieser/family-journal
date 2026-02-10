@@ -140,6 +140,35 @@ func (f *fakeRepo) GetAttachmentByName(name string, ownerFilter *int64) (*models
 	return nil, sql.ErrNoRows
 }
 
+func TestJSONErrorHandlerReturnsErrorObject(t *testing.T) {
+	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
+	app.Get("/bad", func(c *fiber.Ctx) error {
+		return fiber.NewError(fiber.StatusBadRequest, "cannot parse json")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/bad", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+
+	var got map[string]string
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("expected json error response, got %q: %v", string(body), err)
+	}
+	if got["error"] != "cannot parse json" {
+		t.Fatalf("expected error message, got %#v", got)
+	}
+}
+
 func TestRegisterLoginSession(t *testing.T) {
 	repo := newFakeRepo()
 	service := services.New(repo, repo, repo, repo, repo, repo)

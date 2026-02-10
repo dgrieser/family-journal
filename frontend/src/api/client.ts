@@ -5,6 +5,31 @@ const getCsrfToken = () => {
   return match ? decodeURIComponent(match[1]) : '';
 };
 
+const parseErrorMessage = async (response: Response): Promise<string> => {
+  const contentType = response.headers.get('Content-Type') || '';
+  if (contentType.includes('application/json')) {
+    try {
+      const data = (await response.json()) as { error?: unknown };
+      if (typeof data.error === 'string' && data.error.trim() !== '') {
+        return data.error;
+      }
+    } catch {
+      // Fallback to plain text parsing below.
+    }
+  }
+
+  try {
+    const text = await response.text();
+    if (text.trim() !== '') {
+      return text;
+    }
+  } catch {
+    // Ignore read errors and fallback to status text.
+  }
+
+  return response.statusText || 'Request failed';
+};
+
 export const apiFetch = async (url: string, options: RequestInit = {}) => {
   const headers = new Headers(options.headers || {});
   if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
@@ -20,8 +45,8 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
     headers
   });
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || response.statusText);
+    const message = await parseErrorMessage(response);
+    throw new Error(message);
   }
   if (response.status === 204) {
     return null;
