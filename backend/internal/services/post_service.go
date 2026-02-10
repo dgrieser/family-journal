@@ -74,7 +74,7 @@ func (s *Service) DeletePost(scope AccessScope, postID int64) error {
 }
 
 func (s *Service) ListHashtags(scope AccessScope) ([]models.Hashtag, error) {
-	tags, err := s.Hashtags.ListHashtagsByUser(scope.UserID)
+	tags, err := s.Hashtags.ListHashtags(scope.OwnerFilter())
 	if err != nil {
 		return nil, err
 	}

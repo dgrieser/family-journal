@@ -37,7 +37,7 @@ type PersonRepository interface {
 }
 
 type HashtagRepository interface {
-	ListHashtagsByUser(userID int64) ([]models.Hashtag, error)
+	ListHashtags(ownerFilter *int64) ([]models.Hashtag, error)
 	FindOrCreateHashtag(name string) (*models.Hashtag, error)
 	ListTagsForPosts(postIDs []int64) (map[int64][]models.Hashtag, error)
 }

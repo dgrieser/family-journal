@@ -76,7 +76,7 @@ func (f *fakeRepo) FindOrCreatePerson(userID int64, name string) (*models.Person
 	return &models.Person{ID: int64(len(f.personsCreated)), Name: name}, nil
 }
 func (f *fakeRepo) ListHashtags() ([]models.Hashtag, error) { return nil, nil }
-func (f *fakeRepo) ListHashtagsByUser(userID int64) ([]models.Hashtag, error) {
+func (f *fakeRepo) ListHashtags(ownerFilter *int64) ([]models.Hashtag, error) {
 	return nil, nil
 }
 func (f *fakeRepo) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
@@ -419,7 +419,7 @@ func TestServiceNormalizesNilSlices(t *testing.T) {
 		t.Fatalf("expected persons slice to be non-nil")
 	}
 
-	tags, err := service.ListHashtags(1)
+	tags, err := service.ListHashtags(services.NewAccessScope(1, models.RoleUser))
 	if err != nil {
 		t.Fatalf("list hashtags: %v", err)
 	}

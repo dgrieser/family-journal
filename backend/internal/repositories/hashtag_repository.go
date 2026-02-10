@@ -22,23 +22,19 @@ func (r *Repository) CreateHashtag(tag *models.Hashtag) error {
 	return r.DB.Get(tag, `SELECT id, name, created_at FROM hashtags WHERE id = ?`, id)
 }
 
-func (r *Repository) ListHashtags() ([]models.Hashtag, error) {
-	var tags []models.Hashtag
-	if err := r.DB.Select(&tags, `SELECT id, name, created_at FROM hashtags ORDER BY name ASC`); err != nil {
-		return nil, err
-	}
-	return tags, nil
-}
-
-func (r *Repository) ListHashtagsByUser(userID int64) ([]models.Hashtag, error) {
+func (r *Repository) ListHashtags(ownerFilter *int64) ([]models.Hashtag, error) {
 	var tags []models.Hashtag
 	query := `SELECT DISTINCT h.id, h.name, h.created_at
 		FROM hashtags h
 		JOIN post_hashtags ph ON ph.hashtag_id = h.id
-		JOIN posts p ON p.id = ph.post_id
-		WHERE p.user_id = ?
-		ORDER BY h.name ASC`
-	if err := r.DB.Select(&tags, query, userID); err != nil {
+		JOIN posts p ON p.id = ph.post_id`
+	args := []interface{}{}
+	if ownerFilter != nil {
+		query += ` WHERE p.user_id = ?`
+		args = append(args, *ownerFilter)
+	}
+	query += ` ORDER BY h.name ASC`
+	if err := r.DB.Select(&tags, query, args...); err != nil {
 		return nil, err
 	}
 	return tags, nil
