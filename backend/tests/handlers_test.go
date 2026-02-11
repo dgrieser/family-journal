@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -166,6 +167,35 @@ func TestJSONErrorHandlerReturnsErrorObject(t *testing.T) {
 	}
 	if got["error"] != "cannot parse json" {
 		t.Fatalf("expected error message, got %#v", got)
+	}
+}
+
+func TestJSONErrorHandlerMasksInternalErrors(t *testing.T) {
+	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
+	app.Get("/explode", func(c *fiber.Ctx) error {
+		return errors.New("db connection failed: password=super-secret")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/explode", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected status 500, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+
+	var got map[string]string
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("expected json error response, got %q: %v", string(body), err)
+	}
+	if got["error"] != "internal server error" {
+		t.Fatalf("expected masked error message, got %#v", got)
 	}
 }
 

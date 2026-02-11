@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,7 +19,7 @@ func JSONErrorHandler(c *fiber.Ctx, err error) error {
 			message = fiberErr.Message
 		}
 	} else if err != nil {
-		message = err.Error()
+		log.Printf("unhandled error: %v", err)
 	}
 
 	message = strings.TrimSpace(message)
