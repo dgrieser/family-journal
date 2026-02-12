@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,21 +11,26 @@ import (
 
 func JSONErrorHandler(c *fiber.Ctx, err error) error {
 	code := fiber.StatusInternalServerError
-	message := "internal server error"
+	var message string
 
 	var fiberErr *fiber.Error
 	if errors.As(err, &fiberErr) {
 		code = fiberErr.Code
-		if fiberErr.Message != "" {
-			message = fiberErr.Message
-		}
+		message = fiberErr.Message
 	} else if err != nil {
 		log.Printf("unhandled error: %v", err)
 	}
 
 	message = strings.TrimSpace(message)
 	if message == "" {
-		message = "internal server error"
+		if code >= fiber.StatusInternalServerError {
+			message = "internal server error"
+		} else {
+			message = http.StatusText(code)
+		}
+	}
+	if strings.TrimSpace(message) == "" {
+		message = "request failed"
 	}
 
 	return c.Status(code).JSON(fiber.Map{"error": message})

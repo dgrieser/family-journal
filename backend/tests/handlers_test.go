@@ -199,6 +199,35 @@ func TestJSONErrorHandlerMasksInternalErrors(t *testing.T) {
 	}
 }
 
+func TestJSONErrorHandlerUsesStatusTextForClientErrorsWithoutMessage(t *testing.T) {
+	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
+	app.Get("/missing", func(c *fiber.Ctx) error {
+		return &fiber.Error{Code: fiber.StatusNotFound}
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/missing", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+
+	var got map[string]string
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("expected json error response, got %q: %v", string(body), err)
+	}
+	if got["error"] != "Not Found" {
+		t.Fatalf("expected status text error message, got %#v", got)
+	}
+}
+
 func TestRegisterLoginSession(t *testing.T) {
 	repo := newFakeRepo()
 	service := services.New(repo, repo, repo, repo, repo, repo)
