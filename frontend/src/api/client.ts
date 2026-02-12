@@ -22,11 +22,9 @@ const parseErrorMessage = async (response: Response): Promise<string> => {
         return data.error;
       }
     } catch {
-      // Fallback to text/status parsing below.
+      // Fallback to status text below.
     }
-  }
-
-  if (text.trim() !== '') {
+  } else if (text.trim() !== '') {
     return text;
   }
 

@@ -26,11 +26,11 @@ func JSONErrorHandler(c *fiber.Ctx, err error) error {
 		if code >= fiber.StatusInternalServerError {
 			message = "internal server error"
 		} else {
-			message = http.StatusText(code)
+			message = strings.TrimSpace(http.StatusText(code))
 		}
-	}
-	if strings.TrimSpace(message) == "" {
-		message = "request failed"
+		if message == "" {
+			message = "request failed"
+		}
 	}
 
 	return c.Status(code).JSON(fiber.Map{"error": message})
