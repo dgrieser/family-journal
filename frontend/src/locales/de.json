@@ -60,6 +60,12 @@
   },
   "profile": {
     "title": "Mein Profil",
-    "update": "Profil aktualisieren"
+    "update": "Profil aktualisieren",
+    "passwordTitle": "Passwort ändern",
+    "currentPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "changePassword": "Passwort ändern",
+    "updateSuccess": "Profil aktualisiert",
+    "passwordSuccess": "Passwort geändert"
   }
 }

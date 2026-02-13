@@ -60,6 +60,12 @@
   },
   "profile": {
     "title": "My profile",
-    "update": "Update profile"
+    "update": "Update profile",
+    "passwordTitle": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "changePassword": "Change password",
+    "updateSuccess": "Profile updated",
+    "passwordSuccess": "Password changed"
   }
 }
