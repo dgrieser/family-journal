@@ -22,9 +22,11 @@ const parseErrorMessage = async (response: Response): Promise<string> => {
         return data.error;
       }
     } catch {
-      // Fallback to status text below.
+      // Not valid JSON. Fallback to text/status parsing below.
     }
-  } else if (text.trim() !== '') {
+  }
+
+  if (text.trim() !== '') {
     return text;
   }
 
