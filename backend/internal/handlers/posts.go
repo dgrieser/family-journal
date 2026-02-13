@@ -101,6 +101,9 @@ func (h *PostsHandler) Create(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}
+	if strings.TrimSpace(req.Text) == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "text is required")
+	}
 	date, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid date")
@@ -133,6 +136,9 @@ func (h *PostsHandler) Update(c *fiber.Ctx) error {
 	var req postRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
+	}
+	if strings.TrimSpace(req.Text) == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "text is required")
 	}
 	date, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
@@ -231,6 +237,9 @@ func (h *PostsHandler) AddComment(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}
+	if strings.TrimSpace(req.Text) == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "text is required")
+	}
 	comment := &models.Comment{PostID: int64(postID), UserID: userID, Text: req.Text}
 	if err := h.Service.AddComment(comment); err != nil {
 		log.Printf("add comment error: %v", err)
@@ -253,6 +262,9 @@ func (h *PostsHandler) UpdateComment(c *fiber.Ctx) error {
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
+	}
+	if strings.TrimSpace(req.Text) == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "text is required")
 	}
 	comment := &models.Comment{ID: int64(commentID), UserID: userID, Text: req.Text}
 	scope := services.NewAccessScope(userID, role)

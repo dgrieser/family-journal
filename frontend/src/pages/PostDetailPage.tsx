@@ -31,6 +31,7 @@ const PostDetailPage = () => {
   const { id } = useParams();
   const [post, setPost] = useState<Post | null>(null);
   const [comment, setComment] = useState('');
+  const [commentError, setCommentError] = useState('');
 
   const loadPost = async () => {
     if (!id) return;
@@ -49,12 +50,21 @@ const PostDetailPage = () => {
   const handleComment = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!id) return;
-    await apiFetch(`/posts/${id}/comments`, {
-      method: 'POST',
-      body: JSON.stringify({ text: comment })
-    });
-    setComment('');
-    await loadPost();
+    setCommentError('');
+    if (comment.trim() === '') {
+      setCommentError(t('validation.commentRequired'));
+      return;
+    }
+    try {
+      await apiFetch(`/posts/${id}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ text: comment })
+      });
+      setComment('');
+      await loadPost();
+    } catch (err) {
+      setCommentError(String(err));
+    }
   };
 
   if (!post) {
@@ -102,6 +112,7 @@ const PostDetailPage = () => {
             {t('post.addComment')}
           </button>
         </form>
+        {commentError && <p className="text-sm text-red-600 mt-2">{commentError}</p>}
       </div>
     </div>
   );

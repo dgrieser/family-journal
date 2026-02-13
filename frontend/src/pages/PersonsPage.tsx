@@ -18,6 +18,7 @@ const PersonsPage = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingDescription, setEditingDescription] = useState('');
+  const [error, setError] = useState('');
 
   const loadPersons = async () => {
     const data = await apiFetch('/persons');
@@ -30,13 +31,22 @@ const PersonsPage = () => {
 
   const handleAdd = async (event: React.FormEvent) => {
     event.preventDefault();
-    await apiFetch('/persons', {
-      method: 'POST',
-      body: JSON.stringify({ name, description: description || null })
-    });
-    setName('');
-    setDescription('');
-    await loadPersons();
+    setError('');
+    if (name.trim() === '') {
+      setError(t('validation.nameRequired'));
+      return;
+    }
+    try {
+      await apiFetch('/persons', {
+        method: 'POST',
+        body: JSON.stringify({ name, description: description || null })
+      });
+      setName('');
+      setDescription('');
+      await loadPersons();
+    } catch (err) {
+      setError(String(err));
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -52,19 +62,29 @@ const PersonsPage = () => {
 
   const handleUpdate = async () => {
     if (editingId === null) return;
-    await apiFetch(`/persons/${editingId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ name: editingName, description: editingDescription || null })
-    });
-    setEditingId(null);
-    setEditingName('');
-    setEditingDescription('');
-    await loadPersons();
+    setError('');
+    if (editingName.trim() === '') {
+      setError(t('validation.nameRequired'));
+      return;
+    }
+    try {
+      await apiFetch(`/persons/${editingId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name: editingName, description: editingDescription || null })
+      });
+      setEditingId(null);
+      setEditingName('');
+      setEditingDescription('');
+      await loadPersons();
+    } catch (err) {
+      setError(String(err));
+    }
   };
 
   return (
     <div className="max-w-3xl mx-auto p-4 space-y-4">
       <h2 className="text-2xl font-semibold">{t('persons.title')}</h2>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <form onSubmit={handleAdd} className="bg-white p-4 rounded shadow-sm space-y-3">
         <input
           className="w-full border rounded px-3 py-2"

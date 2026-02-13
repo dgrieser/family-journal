@@ -67,5 +67,10 @@
     "changePassword": "Passwort ändern",
     "updateSuccess": "Profil aktualisiert",
     "passwordSuccess": "Passwort geändert"
+  },
+  "validation": {
+    "nameRequired": "Name ist erforderlich",
+    "textRequired": "Text ist erforderlich",
+    "commentRequired": "Kommentartext ist erforderlich"
   }
 }

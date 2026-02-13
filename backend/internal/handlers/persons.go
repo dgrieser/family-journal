@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"log"
+	"strings"
 
 	"familyjournal/backend/internal/middleware"
 	"familyjournal/backend/internal/models"
@@ -42,6 +43,9 @@ func (h *PersonsHandler) Create(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}
+	if strings.TrimSpace(req.Name) == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "name is required")
+	}
 	person, err := h.Service.CreatePerson(userID, req.Name, req.Description)
 	if err != nil {
 		log.Printf("create person error: %v", err)
@@ -65,6 +69,9 @@ func (h *PersonsHandler) Update(c *fiber.Ctx) error {
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "name is required")
 	}
 	person := &models.Person{ID: int64(id), Name: req.Name, Description: req.Description}
 	scope := services.NewAccessScope(userID, role)

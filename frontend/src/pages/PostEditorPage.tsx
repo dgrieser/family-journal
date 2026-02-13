@@ -62,6 +62,10 @@ const PostEditorPage = () => {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
+    if (text.trim() === '') {
+      setError(t('validation.textRequired'));
+      return;
+    }
     try {
       const payload = {
         date,
