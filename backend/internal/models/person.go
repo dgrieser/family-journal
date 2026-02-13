@@ -1,6 +1,11 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var ErrDuplicate = errors.New("duplicate entry")
 
 type Person struct {
 	ID          int64     `db:"id" json:"id"`

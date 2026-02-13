@@ -69,6 +69,7 @@
     "passwordSuccess": "Password changed"
   },
   "validation": {
+    "personExists": "A person with this name already exists",
     "nameRequired": "Name is required",
     "textRequired": "Text is required",
     "commentRequired": "Comment text is required"

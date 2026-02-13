@@ -11,6 +11,9 @@ func (r *Repository) CreatePerson(person *models.Person) error {
 		VALUES (?, ?, ?, NOW(), NOW())`
 	res, err := r.DB.Exec(query, person.Name, person.Description, person.CreatedBy)
 	if err != nil {
+		if isDuplicateKeyError(err) {
+			return models.ErrDuplicate
+		}
 		return err
 	}
 	id, err := lastInsertID(res)
@@ -28,6 +31,9 @@ func (r *Repository) UpdatePerson(person *models.Person, ownerFilter *int64) err
 		args = append(args, *ownerFilter)
 	}
 	_, err := r.DB.Exec(query, args...)
+	if err != nil && isDuplicateKeyError(err) {
+		return models.ErrDuplicate
+	}
 	return err
 }
 

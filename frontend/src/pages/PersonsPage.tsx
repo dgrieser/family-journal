@@ -36,6 +36,10 @@ const PersonsPage = () => {
       setError(t('validation.nameRequired'));
       return;
     }
+    if (persons.some((p) => p.name.toLowerCase() === name.trim().toLowerCase())) {
+      setError(t('validation.personExists'));
+      return;
+    }
     try {
       await apiFetch('/persons', {
         method: 'POST',
@@ -65,6 +69,10 @@ const PersonsPage = () => {
     setError('');
     if (editingName.trim() === '') {
       setError(t('validation.nameRequired'));
+      return;
+    }
+    if (persons.some((p) => p.id !== editingId && p.name.toLowerCase() === editingName.trim().toLowerCase())) {
+      setError(t('validation.personExists'));
       return;
     }
     try {

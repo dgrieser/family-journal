@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log"
 	"strings"
 
@@ -48,6 +49,9 @@ func (h *PersonsHandler) Create(c *fiber.Ctx) error {
 	}
 	person, err := h.Service.CreatePerson(userID, req.Name, req.Description)
 	if err != nil {
+		if errors.Is(err, models.ErrDuplicate) {
+			return fiber.NewError(fiber.StatusConflict, "person already exists")
+		}
 		log.Printf("create person error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create person")
 	}
@@ -76,6 +80,9 @@ func (h *PersonsHandler) Update(c *fiber.Ctx) error {
 	person := &models.Person{ID: int64(id), Name: req.Name, Description: req.Description}
 	scope := services.NewAccessScope(userID, role)
 	if err := h.Service.UpdatePerson(scope, person); err != nil {
+		if errors.Is(err, models.ErrDuplicate) {
+			return fiber.NewError(fiber.StatusConflict, "person already exists")
+		}
 		log.Printf("update person error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update person")
 	}
