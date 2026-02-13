@@ -60,12 +60,13 @@ CREATE TABLE IF NOT EXISTS post_hashtags (
 );
 
 CREATE TABLE IF NOT EXISTS mentions (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
   post_id BIGINT NOT NULL,
-  person_id BIGINT NOT NULL,
-  PRIMARY KEY (post_id, person_id),
+  person_id BIGINT NULL,
+  UNIQUE KEY uniq_mentions_post_person (post_id, person_id),
   INDEX idx_mentions_person (person_id),
   FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
-  FOREIGN KEY (person_id) REFERENCES persons(id) ON DELETE CASCADE
+  FOREIGN KEY (person_id) REFERENCES persons(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS attachments (
