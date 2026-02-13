@@ -77,7 +77,7 @@ func main() {
 	app.Use(encryptcookie.New(encryptcookie.Config{
 		Key: deriveCookieKey(cfg.SessionSecret),
 		// Keep CSRF cookie readable by the browser so the SPA can send it in X-CSRF-Token.
-		Except: []string{"csrf_token"},
+		Except: []string{"csrf_"},
 	}))
 	if cfg.RateLimitMax > 0 {
 		app.Use(limiter.New(limiter.Config{
@@ -104,7 +104,7 @@ func main() {
 	}
 	app.Use(csrf.New(csrf.Config{
 		KeyLookup:      "header:X-CSRF-Token",
-		CookieName:     "csrf_token",
+		CookieName:     "csrf_",
 		CookieSecure:   cfg.CookieSecure,
 		CookieSameSite: "Lax",
 		Expiration:     24 * time.Hour,

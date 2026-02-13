@@ -1,7 +1,7 @@
 const API_BASE = '/api/v1';
 
 const getCsrfToken = () => {
-  const match = document.cookie.match(/csrf_token=([^;]+)/);
+  const match = document.cookie.match(/(?:^|;\s*)(?:csrf_|csrf_token)=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : '';
 };
 
