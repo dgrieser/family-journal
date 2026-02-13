@@ -65,6 +65,7 @@ func (f *fakeRepo) GetUserByID(id int64) (*models.User, error) {
 }
 
 func (f *fakeRepo) UpdateUserProfile(id int64, email string) error               { return nil }
+func (f *fakeRepo) UpdateUserPassword(id int64, passwordHash string) error       { return nil }
 func (f *fakeRepo) ListUsers() ([]models.User, error)                            { return nil, nil }
 func (f *fakeRepo) UpdateUserRole(id int64, role string) error                   { return nil }
 func (f *fakeRepo) UpdateUserActive(id int64, active bool) error                 { return nil }
@@ -76,7 +77,6 @@ func (f *fakeRepo) FindOrCreatePerson(userID int64, name string) (*models.Person
 	f.personsCreated = append(f.personsCreated, name)
 	return &models.Person{ID: int64(len(f.personsCreated)), Name: name}, nil
 }
-func (f *fakeRepo) ListHashtags() ([]models.Hashtag, error) { return nil, nil }
 func (f *fakeRepo) ListHashtags(ownerFilter *int64) ([]models.Hashtag, error) {
 	return nil, nil
 }
@@ -127,7 +127,16 @@ func (f *fakeRepo) ListCommentsForPosts(postIDs []int64) (map[int64][]models.Com
 	return map[int64][]models.Comment{}, nil
 }
 func (f *fakeRepo) ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error) {
-	return map[int64][]models.Attachment{}, nil
+	result := map[int64][]models.Attachment{}
+	if f.postToReturn == nil {
+		return result, nil
+	}
+	for _, postID := range postIDs {
+		if postID == f.postToReturn.ID {
+			result[postID] = f.postToReturn.Attachments
+		}
+	}
+	return result, nil
 }
 func (f *fakeRepo) SavePostWithRelations(ownerID int64, ownerFilter *int64, post *models.Post, tagNames, personNames []string) error {
 	f.tagsCreated = append(f.tagsCreated, tagNames...)
