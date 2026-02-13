@@ -66,7 +66,9 @@ func main() {
 		KeyLookup:      "cookie:fj_session",
 	})
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		ErrorHandler: handlers.JSONErrorHandler,
+	})
 	app.Get("/healthz", func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})

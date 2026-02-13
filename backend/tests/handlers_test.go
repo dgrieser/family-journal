@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -138,6 +139,122 @@ func (f *fakeRepo) SavePostWithRelations(ownerID int64, ownerFilter *int64, post
 }
 func (f *fakeRepo) GetAttachmentByName(name string, ownerFilter *int64) (*models.Attachment, error) {
 	return nil, sql.ErrNoRows
+}
+
+func TestJSONErrorHandlerReturnsErrorObject(t *testing.T) {
+	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
+	app.Get("/bad", func(c *fiber.Ctx) error {
+		return fiber.NewError(fiber.StatusBadRequest, "cannot parse json")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/bad", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+
+	var got map[string]string
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("expected json error response, got %q: %v", string(body), err)
+	}
+	if got["error"] != "cannot parse json" {
+		t.Fatalf("expected error message, got %#v", got)
+	}
+}
+
+func TestJSONErrorHandlerMasksInternalErrors(t *testing.T) {
+	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
+	app.Get("/explode", func(c *fiber.Ctx) error {
+		return errors.New("db connection failed: password=super-secret")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/explode", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected status 500, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+
+	var got map[string]string
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("expected json error response, got %q: %v", string(body), err)
+	}
+	if got["error"] != "internal server error" {
+		t.Fatalf("expected masked error message, got %#v", got)
+	}
+}
+
+func TestJSONErrorHandlerMasksFiberServerErrors(t *testing.T) {
+	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
+	app.Get("/panic", func(c *fiber.Ctx) error {
+		return fiber.NewError(fiber.StatusInternalServerError, "sql query failed: select * from users")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/panic", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected status 500, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+
+	var got map[string]string
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("expected json error response, got %q: %v", string(body), err)
+	}
+	if got["error"] != "internal server error" {
+		t.Fatalf("expected masked fiber server error message, got %#v", got)
+	}
+}
+
+func TestJSONErrorHandlerUsesStatusTextForClientErrorsWithoutMessage(t *testing.T) {
+	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
+	app.Get("/missing", func(c *fiber.Ctx) error {
+		return &fiber.Error{Code: fiber.StatusNotFound}
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/missing", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+
+	var got map[string]string
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("expected json error response, got %q: %v", string(body), err)
+	}
+	if got["error"] != "Not Found" {
+		t.Fatalf("expected status text error message, got %#v", got)
+	}
 }
 
 func TestRegisterLoginSession(t *testing.T) {
