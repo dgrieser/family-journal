@@ -199,6 +199,35 @@ func TestJSONErrorHandlerMasksInternalErrors(t *testing.T) {
 	}
 }
 
+func TestJSONErrorHandlerMasksFiberServerErrors(t *testing.T) {
+	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
+	app.Get("/panic", func(c *fiber.Ctx) error {
+		return fiber.NewError(fiber.StatusInternalServerError, "sql query failed: select * from users")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/panic", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected status 500, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+
+	var got map[string]string
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("expected json error response, got %q: %v", string(body), err)
+	}
+	if got["error"] != "internal server error" {
+		t.Fatalf("expected masked fiber server error message, got %#v", got)
+	}
+}
+
 func TestJSONErrorHandlerUsesStatusTextForClientErrorsWithoutMessage(t *testing.T) {
 	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
 	app.Get("/missing", func(c *fiber.Ctx) error {

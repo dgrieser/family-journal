@@ -18,16 +18,14 @@ func JSONErrorHandler(c *fiber.Ctx, err error) error {
 		code = fiberErr.Code
 		message = fiberErr.Message
 	} else if err != nil {
-		log.Printf("unhandled non-fiber error type=%T", err)
+		log.Printf("unhandled non-fiber error method=%s path=%s type=%T", c.Method(), c.Path(), err)
 	}
 
 	message = strings.TrimSpace(message)
-	if message == "" {
-		if code >= fiber.StatusInternalServerError {
-			message = "internal server error"
-		} else {
-			message = strings.TrimSpace(http.StatusText(code))
-		}
+	if code >= fiber.StatusInternalServerError {
+		message = "internal server error"
+	} else if message == "" {
+		message = strings.TrimSpace(http.StatusText(code))
 		if message == "" {
 			message = "request failed"
 		}
