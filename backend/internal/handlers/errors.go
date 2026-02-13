@@ -18,7 +18,7 @@ func JSONErrorHandler(c *fiber.Ctx, err error) error {
 		code = fiberErr.Code
 		message = fiberErr.Message
 	} else if err != nil {
-		log.Printf("unhandled non-fiber error method=%s path=%s type=%T", c.Method(), c.Path(), err)
+		log.Printf("unhandled non-fiber error method=%s path=%s err=%v", c.Method(), c.Path(), err)
 	}
 
 	message = strings.TrimSpace(message)
