@@ -64,13 +64,14 @@ mysql -u root -p familyjournal < backend/migrations/002_session_store.sql
 ## API overview
 
 All endpoints are namespaced under `/api/v1`.
+Error responses are JSON in the form `{ "error": "message" }`.
 
 ### Auth
 - `POST /auth/register`
 - `POST /auth/login`
 - `POST /auth/logout`
 - `GET /auth/profile`
-- `PUT /auth/profile`
+- `PUT /auth/profile` (update email and/or password; password change requires `currentPassword` and `newPassword`)
 
 ### Posts
 - `GET /posts?date=YYYY-MM-DD&hashtags=tag1,tag2&persons=name1,name2&search=query`
@@ -94,6 +95,14 @@ All endpoints are namespaced under `/api/v1`.
 - `GET /admin/users`
 - `PATCH /admin/users/:id/role`
 - `PATCH /admin/users/:id/active`
+
+### Other routes
+- `GET /healthz`
+- `GET /uploads/:name` (requires authentication)
+
+### Access scope
+- Non-admin users can only read and modify their own posts, comments, persons, and hashtags.
+- Admin users can read and manage items across users via the regular content endpoints.
 
 ## MySQL schema
 
