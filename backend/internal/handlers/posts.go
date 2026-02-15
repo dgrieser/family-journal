@@ -355,6 +355,9 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 			URL:      "/uploads/" + fileName,
 		}
 		if err := h.Service.CreateAttachment(&attachment); err != nil {
+			if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+				log.Printf("rollback attachment file error: %v", removeErr)
+			}
 			log.Printf("create attachment error: %v", err)
 			return fiber.NewError(fiber.StatusInternalServerError, "failed to save attachment")
 		}
@@ -377,7 +380,10 @@ func (h *PostsHandler) DownloadAttachment(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "not found")
 	}
-	path := filepath.Join(h.UploadDir, attachment.FileName)
+	path, err := secureUploadPath(h.UploadDir, attachment.FileName)
+	if err != nil {
+		return fiber.NewError(fiber.StatusForbidden, "forbidden")
+	}
 	c.Type(attachment.FileType)
 	return c.SendFile(path)
 }
@@ -428,4 +434,21 @@ func extensionForType(contentType string) (string, error) {
 		return "", errors.New("unsupported content type")
 	}
 	return extensions[0], nil
+}
+
+func secureUploadPath(uploadDir, fileName string) (string, error) {
+	cleanDir := filepath.Clean(uploadDir)
+	cleanFileName := filepath.Clean(fileName)
+	if cleanFileName == "." || filepath.IsAbs(cleanFileName) {
+		return "", errors.New("invalid file path")
+	}
+	fullPath := filepath.Join(cleanDir, cleanFileName)
+	rel, err := filepath.Rel(cleanDir, fullPath)
+	if err != nil {
+		return "", err
+	}
+	if strings.HasPrefix(rel, "..") || rel == "." || filepath.IsAbs(rel) {
+		return "", errors.New("path traversal detected")
+	}
+	return fullPath, nil
 }
