@@ -297,7 +297,7 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 5. **Attachment files not cleaned up on post deletion**
 6. **`loading` state initialized as `false`** in auth store — causes flash of unauthenticated content before profile fetch completes
 
-### Branch 2 (Feature)
+### Branch 2 (Gemini)
 1. **No session regeneration on login** — session fixation vulnerability
 2. **ASCII-only regex `\w+`** for hashtags/mentions — won't match Unicode characters (German names)
 3. **`ptrInt` helper defined in two files** (`person_handler.go` and `post_service.go`) — DRY violation
@@ -313,22 +313,22 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 
 ## 8. Summary Comparison
 
-| Category | Branch 1 (Codex) | Branch 2 (Feature) | Winner |
+| Category | Branch 1 (Codex) | Branch 2 (Gemini) | Winner |
 |----------|-------------------|---------------------|--------|
-| **File organization** | Monolithic files | Split per entity | Feature |
+| **File organization** | Monolithic files | Split per entity | Gemini |
 | **Database abstraction** | sqlx (raw SQL) | GORM (ORM) | Codex (more control) |
 | **Interface design** | Clean interfaces | Concrete types | Codex |
 | **Testability** | Interface-based mocks | Integration tests with SQLite | Tie |
 | **Security** | Session regeneration, rate limiting | Cookie encryption, active user checks | Tie |
-| **Authorization** | User-scoped only | Ownership + admin override | Feature |
-| **Error responses** | Plain text | Structured JSON | Feature |
-| **Frontend UI/UX** | Basic, multi-page | Polished, single-page | Feature |
-| **Type safety (frontend)** | Inline types, duplicated | Centralized types.ts | Feature |
+| **Authorization** | User-scoped only | Ownership + admin override | Gemini |
+| **Error responses** | Plain text | Structured JSON | Gemini |
+| **Frontend UI/UX** | Basic, multi-page | Polished, single-page | Gemini |
+| **Type safety (frontend)** | Inline types, duplicated | Centralized types.ts | Gemini |
 | **i18n approach** | Separate JSON files | Inline in code | Codex |
 | **DevOps** | Full healthchecks, migration runner | Graceful shutdown, session persistence | Tie |
 | **Code quality** | Clean, no TODOs | Has TODOs, duplicate helpers | Codex |
 | **Feature completeness** | Category/mood fields, attachment validation | Password change, admin overrides, image preview | Tie |
-| **Modern tooling** | Older versions | Latest React 19, Tailwind 4, ESLint | Feature |
+| **Modern tooling** | Older versions | Latest React 19, Tailwind 4, ESLint | Gemini |
 
 ---
 
@@ -343,7 +343,7 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 5. **Add Branch 1's file validation** (content-type detection, configurable allowed types)
 6. **Combine both testing approaches** — unit tests with mocks AND integration tests
 
-If forced to choose one branch to continue from, **Branch 2 (Feature)** is the better starting point because:
+If forced to choose one branch to continue from, **Branch 2 (Gemini)** is the better starting point because:
 - The frontend is significantly more polished and user-friendly
 - The file organization is more maintainable
 - The security features (cookie encryption, active user checks) are harder to retrofit
