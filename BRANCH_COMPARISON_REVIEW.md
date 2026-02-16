@@ -1,4 +1,8 @@
-# Family Journal — Branch Comparison Review
+# Family Journal — Branch Comparison Review (Updated)
+
+> **Last updated:** 2026-02-16
+> **Previous review:** See git history for the original comparison.
+> **Original prompt:** See [ORIGINAL_PROMPT.md](./ORIGINAL_PROMPT.md)
 
 ## Branches Under Review
 
@@ -9,11 +13,37 @@
 
 Both branches implement the same application: a full-stack family journal for documenting daily care activities for children. They share the same tech stack at a high level (Go + Fiber backend, React + TypeScript + Vite frontend, MySQL database, Docker Compose deployment) but differ significantly in architectural decisions, code quality, and completeness.
 
+### Changes Since the Original Review
+
+Since the initial comparison, **both branches have seen significant improvements**:
+
+**Codex** (30+ commits):
+- Models, repositories, and services have been **split into separate files per entity** (previously monolithic)
+- Added a **custom MySQL session store** (previously in-memory)
+- Added **encrypted cookies** (previously unencrypted)
+- Added **graceful shutdown** with proper resource cleanup (previously missing)
+- Added **centralized JSON error handler** that masks 5xx errors
+- Added **AccessScope pattern** with admin override for cross-user content management
+- Added **password change** UI and backend support
+- Added **attachment file cleanup** on post/upload failure
+- Added **path traversal protection** for attachment downloads
+- Added **person duplicate name handling** with proper error messaging
+- Added **input validation** for required fields
+
+**Gemini** (30+ commits):
+- Added **registration success message** on login page
+- Improved **session secret handling** (minimum 32-char requirement)
+- Added **AUTO_MIGRATE toggle** via environment variable
+- Various **model fixes** (GORM tags, type corrections)
+- **Docker healthcheck** improvements
+- Bumped **Go version** to 1.24
+- Updated all frontend and backend dependencies to latest versions
+
 ---
 
 ## 1. Project Structure & Organization
 
-### Branch 1 (Codex)
+### Branch 1 (Codex) — 74 files
 
 ```
 backend/
@@ -21,12 +51,17 @@ backend/
   internal/
     config/config.go
     db/db.go, migrate.go
-    handlers/admin.go, auth.go, persons.go, posts.go
+    handlers/admin.go, auth.go, errors.go, persons.go, posts.go
     middleware/auth.go
-    models/models.go          ← single file for all models
-    repositories/repositories.go  ← single file for all repos
-    services/services.go      ← single file for all services
-  migrations/001_init.sql
+    models/attachment.go, comment.go, hashtag.go, person.go, post.go, user.go
+    repositories/
+      attachment_repository.go, comment_repository.go, hashtag_repository.go,
+      person_repository.go, post_repository.go, repository.go, user_repository.go
+    services/
+      access_scope.go, attachment_service.go, auth_service.go, comment_service.go,
+      person_service.go, post_service.go, service.go, user_service.go
+    sessionstore/mysql_store.go, mysql_store_test.go
+  migrations/001_init.sql, 002_session_store.sql, 003_mentions_person_on_delete_set_null.sql
   tests/handlers_test.go
 frontend/
   src/
@@ -37,9 +72,10 @@ frontend/
           PostDetailPage.tsx, PostEditorPage.tsx, ProfilePage.tsx,
           RegisterPage.tsx, TimelinePage.tsx
     stores/authStore.ts
+    styles.css
 ```
 
-### Branch 2 (Gemini)
+### Branch 2 (Gemini) — 59 files
 
 ```
 backend/
@@ -47,7 +83,7 @@ backend/
   internal/
     handlers/admin_handler.go, auth_handler.go, person_handler.go, post_handler.go
     middleware/auth_middleware.go
-    models/comment.go, person.go, post.go, user.go  ← separate files
+    models/comment.go, person.go, post.go, user.go
     repository/database.go, person_repository.go, post_repository.go, user_repository.go
     services/auth_service.go, post_service.go, integration_test.go
 frontend/
@@ -57,10 +93,11 @@ frontend/
     pages/Admin.tsx, Login.tsx, Persons.tsx, Profile.tsx, Register.tsx, Timeline.tsx
     store.ts
     types.ts
+    i18n.ts
 mysql/init.sql
 ```
 
-**Verdict:** Branch 2 (Gemini) has better file organization — models, repositories, and services are split into separate files per domain entity, which is more maintainable and follows Go conventions. Branch 1 (Codex) puts everything in monolithic files (`models.go`, `repositories.go`, `services.go`), which becomes unwieldy as the codebase grows. However, Branch 1 has a dedicated `config` package which is cleaner than Branch 2's scattered `os.Getenv()` calls.
+**Verdict:** **Codex now leads in organization.** The previous review noted Codex had monolithic files — this has been completely addressed. Codex now has separate files per entity in models, repositories, and services, plus a dedicated `config` package, a custom `sessionstore` package, a centralized error handler (`errors.go`), and an `AccessScope` abstraction. Gemini's structure is clean but less granular — it has fewer service files and no dedicated config or session store package.
 
 ---
 
@@ -71,103 +108,137 @@ mysql/init.sql
 | Aspect | Branch 1 (Codex) | Branch 2 (Gemini) |
 |--------|-------------------|---------------------|
 | **ORM/Driver** | `sqlx` (thin SQL wrapper) | `GORM` (full ORM) |
-| **Migrations** | Manual SQL files (`001_init.sql`) with custom runner | GORM `AutoMigrate` + separate `init.sql` for Docker |
-| **Connection** | `jmoiron/sqlx` with retry loop (30 attempts) | `gorm.io/driver/mysql` with no retry |
+| **Migrations** | Manual SQL files (3 migration files) with custom runner + `schema_migrations` tracking table | GORM `AutoMigrate` (toggleable via `AUTO_MIGRATE` env var) + separate `init.sql` for Docker |
+| **Connection** | `jmoiron/sqlx` with retry loop (30 attempts, 2s interval) | `gorm.io/driver/mysql` with no retry |
 | **Connection pooling** | Configurable via env vars (`DB_MAX_OPEN`, `DB_MAX_IDLE`, `DB_MAX_LIFETIME_MINUTES`) | Not configured |
-| **Session storage** | In-memory (Fiber default) | MySQL-backed via `gofiber/storage/mysql/v2` |
+| **Session storage** | Custom `MySQLStore` implementing Fiber's Storage interface with hourly GC goroutine | `gofiber/storage/mysql/v2` with 10s GC interval |
 
 **Analysis:**
 
-- **Branch 1's `sqlx` approach** gives full control over SQL queries, which is more performant and predictable. The explicit SQL in `repositories.go` is verbose but transparent — you can see exactly what queries run. The connection retry loop in [`db.go`](backend/internal/db/db.go) is production-ready.
+- **Codex's `sqlx` approach** gives full control over SQL queries, which is more performant and predictable. The explicit SQL is verbose but transparent — you can see exactly what queries run. The connection retry loop and configurable pooling are production-ready.
 
-- **Branch 2's GORM approach** is more concise and leverages GORM's `Preload()` for eager loading relationships, `many2many` tags for join tables, and `AutoMigrate` for schema management. However, GORM's magic can lead to N+1 query problems and unexpected behavior. The lack of connection pooling configuration and retry logic is a production concern.
+- **Gemini's GORM approach** is more concise and leverages GORM's `Preload()` for eager loading and `many2many` tags for join tables. However, GORM's magic can lead to N+1 query problems. The lack of connection pooling configuration and retry logic is a production concern.
 
-- **Branch 2's MySQL-backed session storage** is superior for production — sessions survive server restarts and work across multiple instances. Branch 1's in-memory sessions are lost on restart.
+- **Both now have MySQL-backed session storage** — this was previously a Codex weakness (in-memory). Codex's custom implementation gives more control and includes proper `Close()` cleanup. Gemini uses the official Fiber storage adapter.
+
+- **Codex's migration system** with `schema_migrations` tracking is more robust — it tracks which migrations have been applied and supports incremental migrations. Gemini's `AutoMigrate` is convenient but doesn't track changes and can't handle complex schema alterations (column renames, data migrations).
 
 ### 2.2 Repository Pattern
 
-**Branch 1 (Codex):** Uses a single `Repository` struct that implements all repository interfaces. The service layer defines clean interfaces (`UserRepository`, `PersonRepository`, `HashtagRepository`, `PostRepository`, `CommentRepository`, `AttachmentRepository`), enabling dependency injection and testability. The `SavePostWithRelations` method uses database transactions (`sqlx.Tx`) for atomic operations.
+**Branch 1 (Codex):** A single `*Repository` struct wraps `*sqlx.DB` and implements all repository interfaces. The service layer defines clean interfaces (`UserRepository`, `PersonRepository`, `HashtagRepository`, `PostRepository`, `CommentRepository`, `AttachmentRepository`), enabling dependency injection and testability. The `SavePostWithRelations` method uses database transactions (`sqlx.Tx`) for atomic operations. Includes `resolveDuplicateInsert()` helper for race-safe find-or-create patterns.
 
 **Branch 2 (Gemini):** Uses separate repository structs (`UserRepository`, `PersonRepository`, `PostRepository`) with concrete types rather than interfaces. The service layer depends directly on concrete repository types (`*repository.PostRepository`), making it harder to mock for unit tests.
 
-**Verdict:** Branch 1 has significantly better abstraction with interface-based dependency injection. Branch 2's concrete dependencies are a testability anti-pattern in Go.
+**Verdict:** **Codex wins clearly.** Interface-based dependency injection is a Go best practice. Codex's approach enables true unit testing with mocks, while Gemini's concrete dependencies require integration tests with a real (or in-memory) database.
 
 ### 2.3 Service Layer
 
-**Branch 1 (Codex):** A single `Service` struct aggregates all repository interfaces. It includes:
-- `ParseHashtags()` / `ParseMentions()` with Unicode-aware regex (`[\pL\d_]+`)
+**Branch 1 (Codex):** A `Service` struct aggregates all repository interfaces. Includes:
+- `ParseHashtags()` / `ParseMentions()` with **Unicode-aware regex** (`[\pL\d_]+`) — critical for German names
 - `hydratePosts()` for batch-loading related data (tags, persons, comments, attachments) using `IN (?)` queries — avoiding N+1
 - `CreateOrUpdatePost()` delegates to `SavePostWithRelations` which uses transactions
+- `AccessScope` pattern encapsulates authorization logic cleanly
+- `ensureSlice()` generic helper prevents nil slices in JSON responses
 
-**Branch 2 (Gemini):** Separate `AuthService` and `PostService`. The `parseText()` method uses `\w+` regex (ASCII-only, won't match German umlauts). The `UpdatePost()` method calls `postRepo.Update(post)` which uses GORM's `Save()` — this replaces the entire record including associations, which GORM handles via its association mode.
+**Branch 2 (Gemini):** Separate `AuthService` and `PostService`. Includes:
+- `parseText()` using **ASCII-only `\w+` regex** — won't match German umlauts (Muller, Schroder)
+- `DeletePost()` cleans up physical attachment files from disk
+- `ptrInt()` helper for nullable int pointers
+- Simpler overall structure but less abstraction
 
 **Key Differences:**
-- Branch 1's `hydratePosts()` does batch loading (1 query per relation type for all posts), while Branch 2 relies on GORM's `Preload()` which may issue separate queries per post
-- Branch 1's Unicode regex (`\pL`) is important for a German-language app; Branch 2's `\w+` won't match names like "Müller" or "Schröder"
-- Branch 2's `DeletePost()` cleans up physical attachment files from disk — Branch 1 doesn't
+- Codex's `hydratePosts()` does batch loading (1 query per relation type for all posts), while Gemini relies on GORM's `Preload()` which may issue separate queries per post
+- Codex's Unicode regex (`\pL`) is essential for a German-language app; **Gemini's `\w+` still won't match names like "Muller" or "Schroder"** — this was flagged in the original review and remains unfixed
+- Gemini's `DeletePost()` cleans up physical attachment files; Codex also now cleans up files on upload failure and post deletion
 
 ### 2.4 Authentication & Security
 
 | Aspect | Branch 1 (Codex) | Branch 2 (Gemini) |
 |--------|-------------------|---------------------|
 | **Session management** | Session regeneration on login | No session regeneration |
-| **CSRF** | `X-CSRF-Token` header, cookie-based token | `X-Csrf-Token` header, cookie-based, non-HttpOnly |
-| **Cookie encryption** | Not encrypted | `encryptcookie` middleware with SHA-256 derived key |
-| **Rate limiting** | Global rate limiter (configurable, IP-based with X-Forwarded-For support) | Auth-only rate limiter (20/min) |
-| **CORS** | Not configured (relies on same-origin via nginx proxy) | Explicit CORS configuration |
-| **Auth middleware** | Checks session only | Checks session AND verifies user is still active in DB |
-| **Graceful shutdown** | Not implemented | Signal handling with `os.Signal` channel |
-| **Password change** | Not supported | Supported via `UpdateProfile` |
+| **CSRF** | `X-CSRF-Token` header, cookie-based token, 24h expiry | `X-Csrf-Token` header, cookie-based, non-HttpOnly, 1h expiry |
+| **Cookie encryption** | `encryptcookie` middleware with SHA-256 derived key | `encryptcookie` middleware with SHA-256 derived key |
+| **Rate limiting** | Global rate limiter (configurable, IP-based with X-Forwarded-For/X-Real-IP support) | Auth-only rate limiter (20/min, IP-based) |
+| **CORS** | Not configured (relies on same-origin via nginx proxy) | Explicit CORS configuration (configurable origin) |
+| **Auth middleware** | Checks session AND verifies user exists AND is active; logs out inactive users | Checks session AND verifies user is still active in DB |
+| **Graceful shutdown** | Signal handling with proper cleanup of DB, session store | Signal handling with `app.Shutdown()` |
+| **Password change** | Supported with current password verification, length validation (6-72 chars) | Supported via `UpdateProfile` (no current password required) |
+| **Session secret** | Required via env var | Required, minimum 32 characters enforced |
+| **Error masking** | 5xx errors masked as "internal server error" in responses | Raw error messages exposed to clients |
 
 **Analysis:**
 
-- **Branch 1** regenerates sessions on login (preventing session fixation attacks) — a critical security measure that Branch 2 lacks.
-- **Branch 2** encrypts cookies and verifies user active status on every request (catching deactivated users immediately). It also has graceful shutdown.
-- **Branch 1's** rate limiter is more sophisticated with `X-Forwarded-For` parsing for proxy environments.
-- **Branch 2's** CORS configuration is needed if frontend and backend run on different origins during development.
+- **Both branches now have encrypted cookies** — this was previously only in Gemini.
+- **Codex** regenerates sessions on login (preventing session fixation) — Gemini still lacks this.
+- **Codex** now has a centralized `JSONErrorHandler` that masks 5xx error details — a significant security improvement. Gemini still exposes raw `err.Error()` in many handlers.
+- **Codex's** rate limiter is more sophisticated with `X-Forwarded-For` and `X-Real-IP` parsing for proxy environments.
+- **Codex's** graceful shutdown is more thorough — it closes the database connection, session store, and app. Gemini only shuts down the app.
+- **Gemini's** password change doesn't require the current password — a security concern.
+- **Gemini** enforces a minimum session secret length (32 chars) — a good practice Codex lacks.
 
 ### 2.5 Authorization
 
-**Branch 1 (Codex):** Posts are always scoped to `user_id` in SQL queries (`WHERE user_id = ?`). There's no admin override for viewing/editing other users' posts. The `RequireRole` middleware is a simple role check.
+**Branch 1 (Codex):** Implements an `AccessScope` pattern:
+```go
+type AccessScope struct {
+    UserID int64
+    Role   string
+}
 
-**Branch 2 (Gemini):** Implements ownership checks with admin override throughout handlers:
+func (a AccessScope) OwnerFilter() *int64 {
+    if a.IsAdmin() { return nil }
+    return &a.UserID
+}
+```
+The `OwnerFilter()` returns `nil` for admins (no filter, see all data) or `&userID` for regular users. This is passed through all repository queries consistently. Clean, DRY, and type-safe.
+
+**Branch 2 (Gemini):** Implements ownership checks with admin override via repeated inline checks:
 ```go
 if existingPost.UserID != userID && c.Locals("role").(string) != "admin" {
     return c.Status(fiber.StatusForbidden).JSON(...)
 }
 ```
-This is more flexible but the repeated pattern should be extracted into a helper. The `PersonHandler` also checks ownership with admin fallback.
+This pattern is repeated in every handler that needs authorization — GetPost, Update, Delete, AddComment, DeleteComment, DownloadAttachment.
 
-**Verdict:** Branch 2 has more nuanced authorization. Branch 1's approach is simpler but more restrictive.
+**Verdict:** **Codex wins.** The `AccessScope` pattern is cleaner, DRY, and enforced at the repository/service layer rather than the handler layer. Gemini's approach works but is repetitive and error-prone (easy to forget a check).
 
 ### 2.6 Error Handling
 
-**Branch 1 (Codex):** Uses `fiber.NewError()` which returns plain text error messages. Consistent but not structured.
+**Branch 1 (Codex):** Centralized `JSONErrorHandler` that:
+- Always returns structured JSON (`{"error": "..."}`)
+- Masks 5xx errors as "internal server error" (prevents info leakage)
+- Falls back to HTTP status text if no message provided
+- Logs full errors server-side for debugging
 
-**Branch 2 (Gemini):** Returns JSON error objects (`fiber.Map{"error": "..."}`) consistently. Also handles MySQL-specific errors (e.g., duplicate key error 1062 for email registration). This is more API-friendly.
+**Branch 2 (Gemini):** Returns JSON error objects (`fiber.Map{"error": "..."}`) in each handler individually. Also handles MySQL-specific errors (e.g., duplicate key error 1062 for email registration). However, raw error messages from services are exposed to clients in 500 responses.
 
-**Verdict:** Branch 2's JSON error responses are better for API consumers.
+**Verdict:** **Codex wins.** Centralized error handling is more maintainable and the 5xx masking is an important security practice. Gemini's MySQL error detection is good but should be combined with error masking.
 
 ---
 
 ## 3. Database Schema
 
-Both branches have nearly identical schemas with the same tables: `users`, `persons`, `posts`, `comments`, `hashtags`, `post_hashtags`, `mentions`, `attachments`.
+Both branches have the same core tables: `users`, `persons`, `posts`, `comments`, `hashtags`, `post_hashtags`, `mentions`, `attachments`.
 
 | Difference | Branch 1 (Codex) | Branch 2 (Gemini) |
 |-----------|-------------------|---------------------|
 | **ID type** | `BIGINT` | `INT` |
 | **Post fields** | Has `category` and `mood` columns | No `category`/`mood` |
 | **Attachment storage** | `url` column (relative URL path) | `storage_path` column (filesystem path) |
-| **Person FK on delete** | `CASCADE` | `SET NULL` |
+| **Mention on person delete** | `SET NULL` (via migration 003) | `CASCADE` |
 | **Timestamps** | `DATETIME NOT NULL` (app-managed) | `TIMESTAMP DEFAULT CURRENT_TIMESTAMP` (DB-managed) |
+| **Person name constraint** | `UNIQUE (created_by_user_id, name)` | `UNIQUE (name, created_by_user_id)` |
+| **Mentions PK** | `id BIGINT AUTO_INCREMENT` + unique constraint | Composite `PRIMARY KEY (post_id, person_id)` |
+| **Additional tables** | `session_store` (for custom session management) | None (uses Fiber storage adapter's auto-created table) |
+| **Migration tracking** | `schema_migrations` table tracks applied migrations | No tracking (relies on `AutoMigrate` idempotency) |
 
 **Analysis:**
-- Branch 1's `BIGINT` IDs are more future-proof
-- Branch 1's `category` and `mood` fields add richer metadata for care documentation
-- Branch 2's `storage_path` approach is more secure (paths aren't exposed to clients); attachments are served via a protected endpoint (`/attachments/:id/download`)
-- Branch 2's `SET NULL` on person deletion is safer — posts aren't lost when a person is removed
-- Branch 2's DB-managed timestamps are more reliable
+- **Codex's `BIGINT` IDs** are more future-proof for high-volume usage
+- **Codex's `category` and `mood` fields** add richer metadata for care documentation
+- **Codex's `SET NULL` on person deletion** is safer — posts aren't lost when a person is removed. Gemini uses `CASCADE` which would delete mentions (and potentially orphan data)
+- **Gemini's DB-managed timestamps** are more reliable and consistent
+- **Codex's separate `id` on mentions** allows for independent addressing of mentions if needed later
+- **Codex's incremental migrations** are superior for production — you can track schema changes, roll forward, and handle complex alterations
 
 ---
 
@@ -178,38 +249,46 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 | Aspect | Branch 1 (Codex) | Branch 2 (Gemini) |
 |--------|-------------------|---------------------|
 | **React** | 18.2 | 19.2 |
+| **React Router** | 6.22 | 7.13 |
 | **HTTP client** | Native `fetch` wrapper | `axios` |
 | **Zustand** | 4.x | 5.x |
 | **Icons** | None | `lucide-react` |
 | **Utilities** | None | `clsx`, `tailwind-merge` |
-| **Tailwind** | 3.x (PostCSS) | 4.x (Vite plugin) |
-| **TypeScript config** | Single `tsconfig.json` | Split `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` |
+| **Tailwind** | 3.4 (PostCSS) | 4.x (Vite plugin) |
+| **i18next** | 23.10 | 25.8 |
+| **react-i18next** | 14.1 | 16.5 |
+| **TypeScript** | 5.3 | 5.7 |
+| **Vite** | 5.1 | 7.2 |
 | **Linting** | None | ESLint configured |
+| **TypeScript config** | Single `tsconfig.json` | Split `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` |
 
-**Verdict:** Branch 2 uses more modern versions across the board and has better tooling (ESLint, split TS configs). Branch 1's native `fetch` wrapper is lighter but less feature-rich than axios.
+**Verdict:** **Gemini uses significantly more modern versions** across the entire stack — React 19, React Router 7, Vite 7, Tailwind 4, and latest i18next. This reduces future upgrade burden. Codex's native `fetch` wrapper is lighter weight than axios.
 
 ### 4.2 State Management
 
 **Branch 1 (Codex):** `useAuthStore` with `fetchProfile`, `login`, `register`, `logout` actions. API calls are embedded in the store. Uses a `loading` flag for auth state.
 
-**Branch 2 (Gemini):** `useAuthStore` with `user`, `setUser`, `isAuthenticated`, `initialized` state. API calls happen in components, not the store. The store is a pure state container.
+**Branch 2 (Gemini):** `useAuthStore` with `user`, `setUser`, `isAuthenticated`, `initialized` state. API calls happen in components, not the store. The store is a pure state container. Uses an `initialized` flag to prevent flash of unauthenticated content.
 
-**Verdict:** Branch 2's approach is cleaner — separating API calls from state management follows better separation of concerns. Branch 1's approach is more convenient but couples the store to the API layer.
+**Verdict:** Gemini's approach is cleaner — separating API calls from state management follows better separation of concerns. The `initialized` flag pattern is also more reliable for preventing auth flicker.
 
 ### 4.3 Type Safety
 
 **Branch 1 (Codex):** Types are defined inline in each page component. No shared type definitions. This leads to duplication (e.g., `Post`, `Hashtag`, `Person` interfaces repeated across files).
 
-**Branch 2 (Gemini):** Centralized [`types.ts`](frontend/src/types.ts) with all shared interfaces. This is significantly better for maintainability and consistency.
+**Branch 2 (Gemini):** Centralized `types.ts` with all shared interfaces. This is significantly better for maintainability and consistency.
+
+**Verdict:** **Gemini wins.** Centralized types prevent duplication and ensure consistency.
 
 ### 4.4 UI/UX Design
 
 **Branch 1 (Codex):**
 - Separate pages for post creation (`PostEditorPage`), post detail (`PostDetailPage`), and timeline
-- Inline hashtag/mention autocomplete in the editor
+- Inline hashtag/mention autocomplete in the post editor
 - Language switcher as a separate component
-- Minimal styling (basic Tailwind classes)
+- Minimal styling (basic Tailwind utility classes)
 - No loading states for data fetching (except auth)
+- No icons
 
 **Branch 2 (Gemini):**
 - Single-page timeline with inline post creation form (`PostForm` component)
@@ -218,52 +297,63 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 - Date navigation with prev/next buttons
 - Filter panel with toggle visibility
 - Loading spinner for auth check
-- Image preview for image attachments
+- **Image preview** for image attachments directly in the post card
 - Mobile-responsive sidebar/topbar layout with bottom navigation
+- Admin role-gated routing (redirects non-admins away from `/admin`)
 
-**Verdict:** Branch 2 has a significantly more polished and user-friendly UI. The inline editing, icon usage, image previews, and responsive design make it more production-ready. Branch 1's multi-page approach is more traditional but requires more navigation.
+**Verdict:** **Gemini has a significantly more polished and user-friendly UI.** The inline editing, icon usage, image previews, `PostCard` component reuse, and responsive design make it more production-ready. Codex's multi-page approach is more traditional but requires more navigation clicks.
 
 ### 4.5 Internationalization
 
-**Branch 1 (Codex):** Translations in separate JSON files (`locales/en.json`, `locales/de.json`). Default language: English. Dedicated `LanguageSwitcher` component.
+**Branch 1 (Codex):** Translations in separate JSON files (`locales/en.json`, `locales/de.json`). Default language: English. Dedicated `LanguageSwitcher` component. Comprehensive translations with nested key structure.
 
 **Branch 2 (Gemini):** Translations inline in `i18n.ts`. Default language: German. Language toggle integrated into the sidebar layout.
 
-**Verdict:** Branch 1's approach with separate JSON files is more scalable and follows i18next best practices. Branch 2's inline translations are harder to maintain but work fine for a small app.
+**Verdict:** **Codex's approach with separate JSON files is more scalable** and follows i18next best practices. Separate files are easier to hand off to translators and don't bloat the i18n config.
 
 ### 4.6 Routing
 
-**Branch 1 (Codex):** Uses `ProtectedRoute` wrapper component with individual `<Route>` elements. Has dedicated routes for `/posts/new`, `/posts/:id`, `/posts/:id/edit`.
+**Branch 1 (Codex):** Uses a `ProtectedRoute` wrapper component (defined outside component tree) with individual `<Route>` elements. Has dedicated routes for `/posts/new`, `/posts/:id`, `/posts/:id/edit`.
 
-**Branch 2 (Gemini):** Uses nested routes with `<Outlet />` in the Layout component. The timeline page handles post creation inline. Admin route has role-based redirect.
+**Branch 2 (Gemini):** Uses nested routes with `<Outlet />` in the Layout component. The timeline page handles post creation inline. Admin route has role-based redirect. However, `ProtectedRoute` is defined inside the `App` component, meaning it's **recreated on every render** — this was flagged in the original review and remains unfixed.
 
-**Verdict:** Branch 2's nested routing is cleaner and more idiomatic React Router. Branch 1's flat routing with separate editor/detail pages is more traditional.
+**Verdict:** Gemini's nested routing is cleaner and more idiomatic React Router. However, the `ProtectedRoute` re-creation issue is a performance concern. Codex correctly defines `ProtectedRoute` outside the component.
 
 ### 4.7 File Upload Handling
 
-**Branch 1 (Codex):** Two-step process — create post first (JSON), then upload attachments separately (multipart). Files are validated server-side (MIME type detection via `http.DetectContentType`, size limits, allowed types list). Unique filenames generated with crypto/rand.
+**Branch 1 (Codex):** Two-step process — create post first (JSON), then upload attachments separately (multipart). Files are validated server-side with:
+- **Content-type detection** via `http.DetectContentType` (not trusting client headers)
+- Configurable size limits and allowed MIME types via environment variables
+- Crypto/rand-based unique filenames
+- **Path traversal prevention** on download
+- **File cleanup** on upload failure
 
-**Branch 2 (Gemini):** Single-step process — post creation and file upload in one multipart form request. The `handleFileUploads` helper in the post handler processes files inline. Files stored with UUID-based names.
+**Branch 2 (Gemini):** Single-step process — post creation and file upload in one multipart form request. Files validated with:
+- Extension-based and Content-Type header validation (trusts client)
+- Hardcoded 5MB size limit
+- UUID-based filenames
+- Path traversal check on download (`filepath.Clean` + prefix check)
 
-**Verdict:** Branch 1's server-side file validation is more thorough (actual content-type detection vs. trusting the client). Branch 2's single-request approach is better UX. Ideally, combine both: single request with thorough server-side validation.
+**Verdict:** **Codex's file validation is more thorough** — content-type detection via `http.DetectContentType` actually inspects file bytes rather than trusting client-provided MIME headers. Codex also makes limits configurable. Gemini's single-request approach is better UX.
 
 ---
 
 ## 5. Testing
 
 ### Branch 1 (Codex)
-- `handlers_test.go` with fake repository implementations
-- Tests: registration/login flow, post creation with hashtag/mention parsing, list posts with filters
-- Uses `httptest` for HTTP-level testing
+- `handlers_test.go` — HTTP-level tests with fake repository implementations
+- `mysql_store_test.go` — Unit tests for the custom session store
+- Tests cover: registration/login flow, post creation with hashtag/mention parsing, list posts with filters, person duplicate handling, password update stubs
+- Uses Go's `httptest` for HTTP-level testing
 - Fake repo implements all interfaces — demonstrates the value of interface-based design
 
 ### Branch 2 (Gemini)
-- `integration_test.go` using SQLite in-memory database
-- Tests: registration/login, post creation with hashtags/mentions, filtering
-- Uses `testify/assert` for assertions
-- Tests actual database operations (integration tests)
+- `integration_test.go` — service-level tests using **SQLite in-memory database**
+- Tests cover: registration/login, post creation with hashtags/mentions, filtering by hashtag/person/search
+- Uses `testify/assert` for cleaner assertions
+- Tests actual database operations through GORM
 
-**Verdict:** Both approaches have merit. Branch 1's unit tests with fakes are faster and more isolated. Branch 2's integration tests with SQLite verify actual database behavior. Branch 2 uses `testify` which provides better assertion messages. Ideally, a project should have both.
+**Verdict:** Both approaches have merit. Codex's tests are faster and more isolated (no DB needed), and the ability to create fakes proves the architecture works. Gemini's integration tests verify actual database behavior but require a working GORM setup. Codex has slightly broader test coverage with the session store tests and duplicate handling.
 
 ---
 
@@ -271,43 +361,54 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 
 | Aspect | Branch 1 (Codex) | Branch 2 (Gemini) |
 |--------|-------------------|---------------------|
+| **Go version** | 1.22 | 1.24 |
 | **Backend Dockerfile** | Multi-stage, Go 1.22, Alpine 3.19, non-root user | Multi-stage, Go 1.24, Alpine latest, non-root user+group |
 | **Frontend Dockerfile** | Multi-stage, Node 20, nginx 1.25 | Multi-stage, Node 20, nginx alpine |
-| **Docker Compose** | MySQL 8.3, healthchecks on all services, named volumes for uploads | MySQL 8, healthcheck on DB only, bind mount for uploads |
+| **Docker Compose** | MySQL 8.3, healthchecks on all 3 services, named volumes for uploads, `start_period` | MySQL 8, healthcheck on DB only, bind mount for uploads |
 | **Frontend port** | 5173 | 3000 |
 | **Health endpoint** | `/healthz` on backend | None |
-| **Init SQL** | Via migration runner in Go code | Via Docker entrypoint (`/docker-entrypoint-initdb.d/`) |
+| **Init SQL** | Via migration runner in Go code (tracked) | Via Docker entrypoint (`/docker-entrypoint-initdb.d/`) |
+| **Nginx config** | Proxies `/api/*` and `/uploads/*` to backend, SPA fallback | Proxies `/api/*` to backend, SPA fallback |
+| **Default env values** | Provided in docker-compose.yml | Provided in docker-compose.yml |
 
 **Analysis:**
-- Branch 1 has healthchecks on all three services and a dedicated `/healthz` endpoint — essential for production
-- Branch 1 uses `npm ci` (deterministic installs) vs Branch 2's `npm install`
-- Branch 2's bind mount for uploads (`./backend/uploads:/app/uploads`) is simpler for development but less portable
-- Branch 1's migration runner in Go code is more flexible (can run multiple migration files in order)
-- Branch 2 pins specific Alpine versions less precisely (`alpine:latest` is not reproducible)
+- **Codex** has healthchecks on all three services and a dedicated `/healthz` endpoint — essential for production orchestration
+- **Codex** uses `npm ci` (deterministic installs) vs Gemini's `npm install`
+- **Gemini** uses a newer Go version (1.24 vs 1.22) and more current Alpine images
+- **Gemini's** bind mount for uploads (`./backend/uploads:/app/uploads`) is simpler for development but less portable than Codex's named volume
+- **Codex's** migration runner with `schema_migrations` tracking is more robust for production deployments
+- **Gemini** pins Alpine versions less precisely (`alpine:latest` is not reproducible)
+- **Codex's** frontend nginx config also proxies `/uploads/*` requests — needed for attachment downloads
 
 ---
 
 ## 7. Issues & Bugs Found
 
 ### Branch 1 (Codex)
-1. **No CORS configuration** — works behind nginx proxy but breaks for local development without Docker
-2. **No graceful shutdown** — `log.Fatal(app.Listen(...))` doesn't clean up resources
-3. **Session not regenerated on register** — only on login (minor)
-4. **No input validation** — email format, password strength not validated
-5. **Attachment files not cleaned up on post deletion**
-6. **`loading` state initialized as `false`** in auth store — causes flash of unauthenticated content before profile fetch completes
+1. ~~**No CORS configuration**~~ Still no explicit CORS — works behind nginx proxy but breaks for local development without Docker
+2. ~~**No graceful shutdown**~~ **Fixed** — now handles OS signals and closes DB, session store, and app
+3. ~~**Session not regenerated on register**~~ Still only on login (minor)
+4. **No input validation** for email format (basic required field checks exist)
+5. ~~**Attachment files not cleaned up on post deletion**~~ **Fixed** — files cleaned up on deletion and upload failure
+6. ~~**`loading` state initialized as `false`**~~ Still present — may cause brief auth flicker
+7. **No pagination** in post/person list endpoints — could be an issue for large datasets
+8. **Frontend types duplicated** across page components — no shared `types.ts`
+9. **Older dependency versions** — React 18, Vite 5, Tailwind 3
 
 ### Branch 2 (Gemini)
-1. **No session regeneration on login** — session fixation vulnerability
-2. **ASCII-only regex `\w+`** for hashtags/mentions — won't match Unicode characters (German names)
-3. **`ptrInt` helper defined in two files** (`person_handler.go` and `post_service.go`) — DRY violation
+1. **No session regeneration on login** — session fixation vulnerability (unchanged from original review)
+2. **ASCII-only regex `\w+`** for hashtags/mentions — still won't match Unicode characters like German umlauts (unchanged from original review)
+3. ~~**`ptrInt` helper defined in two files**~~ Still present in `post_service.go` (only one instance now)
 4. **No connection retry logic** — backend may crash if DB isn't ready despite Docker healthcheck
-5. **`ProtectedRoute` defined inside component** — recreated on every render, causing unnecessary re-renders
+5. **`ProtectedRoute` defined inside component** — recreated on every render (unchanged from original review)
 6. **No input validation** on registration (email format, password length)
 7. **GORM `Save()` for updates** replaces entire records including associations — may cause unexpected data loss
 8. **`AUTO_MIGRATE` env var** defaults to not running — first-time setup requires manual configuration
-9. **`replace` directive in `go.mod`** — indicates dependency resolution issues
+9. **`replace` directive in `go.mod`** — `github.com/gofiber/storage/testhelpers/tck` requires version override
 10. **Comment in code**: `"Need a way to save attachment. I'll add it to post repo or generic."` — unfinished thought left in production code
+11. **5xx errors expose raw error messages** to API consumers — security/info leakage concern
+12. **Password change doesn't require current password** — security concern
+13. **No health check endpoint** — harder to monitor in production
 
 ---
 
@@ -315,39 +416,76 @@ Both branches have nearly identical schemas with the same tables: `users`, `pers
 
 | Category | Branch 1 (Codex) | Branch 2 (Gemini) | Winner |
 |----------|-------------------|---------------------|--------|
-| **File organization** | Monolithic files | Split per entity | Gemini |
+| **File organization** | Split per entity (improved) | Split per entity | Codex (more granular) |
 | **Database abstraction** | sqlx (raw SQL) | GORM (ORM) | Codex (more control) |
-| **Interface design** | Clean interfaces | Concrete types | Codex |
-| **Testability** | Interface-based mocks | Integration tests with SQLite | Tie |
-| **Security** | Session regeneration, rate limiting | Cookie encryption, active user checks | Tie |
-| **Authorization** | User-scoped only | Ownership + admin override | Gemini |
-| **Error responses** | Plain text | Structured JSON | Gemini |
-| **Frontend UI/UX** | Basic, multi-page | Polished, single-page | Gemini |
+| **Interface design** | Clean interfaces with DI | Concrete types | Codex |
+| **Migration system** | Tracked SQL migrations | GORM AutoMigrate | Codex |
+| **Testability** | Interface-based mocks + session store tests | Integration tests with SQLite | Codex |
+| **Session management** | Custom MySQL store, session regeneration | Fiber storage adapter, no regeneration | Codex |
+| **Authorization** | AccessScope pattern (DRY) | Inline checks (repetitive) | Codex |
+| **Error handling** | Centralized, 5xx masked | Per-handler, raw errors exposed | Codex |
+| **Security overall** | Session regen, error masking, content-type detection, path traversal protection | Cookie encryption, active user checks, CORS config, secret length enforcement | Codex (slight edge) |
+| **Frontend UI/UX** | Basic, multi-page, no icons | Polished, single-page, icons, image preview | Gemini |
 | **Type safety (frontend)** | Inline types, duplicated | Centralized types.ts | Gemini |
 | **i18n approach** | Separate JSON files | Inline in code | Codex |
-| **DevOps** | Full healthchecks, migration runner | Graceful shutdown, session persistence | Tie |
-| **Code quality** | Clean, no TODOs | Has TODOs, duplicate helpers | Codex |
-| **Feature completeness** | Category/mood fields, attachment validation | Password change, admin overrides, image preview | Tie |
-| **Modern tooling** | Older versions | Latest React 19, Tailwind 4, ESLint | Gemini |
+| **Routing (frontend)** | Flat, ProtectedRoute outside component | Nested with Outlet, ProtectedRoute inside component | Tie |
+| **DevOps** | Full healthchecks, migration runner, npm ci | Graceful shutdown, newer Go version | Codex (slight edge) |
+| **Code quality** | Clean, no TODOs | Has TODOs, unfinished comments, replace directive | Codex |
+| **Feature completeness** | Category/mood fields, attachment validation, password change w/ verification | Admin overrides, image preview, attachment file cleanup | Tie |
+| **Modern tooling** | React 18, Vite 5, Tailwind 3 | React 19, Vite 7, Tailwind 4, ESLint | Gemini |
+| **Dependency health** | Older but stable versions | Latest versions, one `replace` workaround | Gemini (slight edge) |
 
 ---
 
 ## 9. Recommendation
 
-**Neither branch is production-ready on its own**, but each has strengths the other lacks. The ideal approach would be to **merge the best of both**:
+### What Changed Since the Original Review
 
-1. **Use Branch 1's backend architecture** (interface-based repositories, sqlx, explicit SQL, connection pooling, migration runner) as the foundation
-2. **Adopt Branch 2's security enhancements** (cookie encryption, active user verification in middleware, graceful shutdown, MySQL session storage)
-3. **Use Branch 2's frontend** as the UI base (better UX, modern tooling, centralized types, reusable components)
-4. **Fix Branch 2's Unicode regex** to use `\pL` for German language support
-5. **Add Branch 1's file validation** (content-type detection, configurable allowed types)
-6. **Combine both testing approaches** — unit tests with mocks AND integration tests
+The original review recommended **Gemini as the better starting point** primarily because:
+1. The frontend was significantly more polished
+2. The file organization was better (Codex was monolithic)
+3. Security features like cookie encryption were harder to retrofit
 
-If forced to choose one branch to continue from, **Branch 2 (Gemini)** is the better starting point because:
-- The frontend is significantly more polished and user-friendly
-- The file organization is more maintainable
-- The security features (cookie encryption, active user checks) are harder to retrofit
-- The backend's GORM dependency can be replaced with sqlx incrementally
-- The modern tooling versions reduce future upgrade burden
+**Since then, Codex has addressed most of its weaknesses:**
+- File organization is now equal or better than Gemini's
+- Cookie encryption has been added
+- Graceful shutdown has been added
+- MySQL session storage has been implemented (custom, with proper cleanup)
+- Error handling has been centralized with 5xx masking
+- Authorization has been formalized with the AccessScope pattern
+- Attachment security has been hardened
 
-However, the backend repository layer should be refactored to use interfaces for proper testability, and the Unicode regex issue must be fixed immediately for a German-language application.
+**Meanwhile, Gemini's key issues from the original review remain unaddressed:**
+- ASCII-only regex (`\w+`) still doesn't support German characters
+- No session regeneration on login
+- `ProtectedRoute` still defined inside component
+- Raw error messages still exposed in API responses
+
+### Updated Recommendation
+
+**If forced to choose one branch to continue from, Codex is now the stronger foundation** because:
+
+1. **Backend architecture is superior** — interface-based repositories, clean AccessScope authorization, centralized error handling, tracked SQL migrations, custom session store with proper lifecycle management
+2. **Security posture is stronger** — session regeneration, error masking, content-type detection, configurable limits, thorough resource cleanup
+3. **Code quality is higher** — no TODOs, no unfinished comments, no dependency workarounds
+4. **The Unicode regex works for German** — this is a non-negotiable requirement for the target use case
+
+**However, the Gemini frontend should be adopted** because:
+- The UI is significantly more polished (icons, image previews, inline editing, responsive layout)
+- Modern dependency versions (React 19, Tailwind 4, Vite 7) reduce upgrade burden
+- Centralized `types.ts` and reusable components (`PostCard`, `PostForm`) are better organized
+- ESLint configuration ensures code quality
+
+### Ideal Merge Strategy
+
+1. **Use Codex's backend** as the foundation (architecture, auth, migrations, error handling)
+2. **Adopt Gemini's frontend** as the UI base, then:
+   - Replace `axios` with Codex's `apiFetch` if preferred, or keep axios
+   - Update API paths from `/api/` to `/api/v1/` to match Codex's versioned API
+   - Add Codex's separate JSON translation files instead of inline i18n
+   - Move `ProtectedRoute` outside the component tree
+3. **Fix Gemini's remaining issues** immediately:
+   - Replace `\w+` regex with `[\pL\d_]+` for Unicode support
+   - Add session regeneration on login
+   - Add error masking for 5xx responses
+4. **Combine testing approaches** — unit tests with mocks AND integration tests
