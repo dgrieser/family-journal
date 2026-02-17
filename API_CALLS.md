@@ -626,7 +626,10 @@ Uses **axios** with a shared instance:
 | **File** | `frontend/src/pages/Persons.tsx` |
 | **Method** | `POST` |
 | **Endpoint** | `/api/persons` |
+| **Purpose** | Create a new person entry |
 | **Request Body** | `{ name: string, description: string }` |
+| **Response** | Clears form fields, resets editing state, calls `fetchPersons()` to refresh list |
+| **Called From** | `Persons.tsx` `handleSubmit` form submit (when `editingId` is not set) |
 
 #### 19. Update Person
 
@@ -635,7 +638,10 @@ Uses **axios** with a shared instance:
 | **File** | `frontend/src/pages/Persons.tsx` |
 | **Method** | `PUT` |
 | **Endpoint** | `/api/persons/:id` |
+| **Purpose** | Update an existing person's name and/or description |
 | **Request Body** | `{ name: string, description: string }` |
+| **Response** | Clears form fields, resets editing state, calls `fetchPersons()` to refresh list |
+| **Called From** | `Persons.tsx` `handleSubmit` form submit (when `editingId` is set) |
 
 #### 20. Delete Person
 
@@ -644,6 +650,9 @@ Uses **axios** with a shared instance:
 | **File** | `frontend/src/pages/Persons.tsx` |
 | **Method** | `DELETE` |
 | **Endpoint** | `/api/persons/:id` |
+| **Purpose** | Delete a person entry |
+| **Response** | Calls `fetchPersons()` to refresh list |
+| **Called From** | `Persons.tsx` `handleDelete` button click |
 
 ---
 
@@ -657,6 +666,8 @@ Uses **axios** with a shared instance:
 | **Method** | `GET` |
 | **Endpoint** | `/api/admin/users` |
 | **Purpose** | Fetch all users for admin management table |
+| **Response** | `User[]` stored via `setUsers(res.data)` |
+| **Called From** | `Admin.tsx` `fetchUsers` in `useEffect` on mount, and after role/active updates |
 
 #### 22. Update User Role
 
@@ -665,8 +676,10 @@ Uses **axios** with a shared instance:
 | **File** | `frontend/src/pages/Admin.tsx` |
 | **Method** | `PUT` |
 | **Endpoint** | `/api/admin/users/:id/role` |
+| **Purpose** | Promote or demote a user between admin and user roles |
 | **Request Body** | `{ role: string }` (`"admin"` or `"user"`) |
 | **Response** | Calls `fetchUsers()` to refresh |
+| **Called From** | `Admin.tsx` `handleRoleChange` via Promote/Demote button |
 
 #### 23. Toggle User Active Status
 
@@ -675,8 +688,10 @@ Uses **axios** with a shared instance:
 | **File** | `frontend/src/pages/Admin.tsx` |
 | **Method** | `PUT` |
 | **Endpoint** | `/api/admin/users/:id/active` |
+| **Purpose** | Activate or deactivate a user account |
 | **Request Body** | `{ is_active: boolean }` |
 | **Response** | Calls `fetchUsers()` to refresh |
+| **Called From** | `Admin.tsx` `handleToggleActive` via Activate/Deactivate button |
 
 ---
 
@@ -760,10 +775,9 @@ Uses **axios** with a shared instance:
 | **Total** | **19** | **20** |
 
 ### Features Only in Codex
-- Single post detail view (`PostDetailPage.tsx`)
+- Dedicated page for viewing a single post and its comments (`PostDetailPage.tsx`)
 - Separate attachment upload endpoint
 - Post `category` and `mood` fields
-- Comment add (via detail page)
 
 ### Features Only in Gemini
 - Post deletion from UI
