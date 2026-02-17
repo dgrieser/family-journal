@@ -490,9 +490,9 @@ Uses **axios** with a shared instance:
 |---|---|
 | **File** | `frontend/src/pages/Timeline.tsx` |
 | **Method** | `GET` |
-| **Endpoint** | `/api/posts` |
+| **Endpoint** | `/api/posts?date=YYYY-MM-DD[&search=...][&hashtags=...][&persons=...]` |
 | **Purpose** | Fetch posts for timeline with filters |
-| **Query Params** | `date`, `search`, `hashtags` (comma-separated), `persons` (comma-separated) |
+| **Query Params** | `date` (required), `search` (optional), `hashtags` (comma-separated, optional), `persons` (comma-separated, optional) |
 | **Response** | `setPosts(response.data)` |
 
 #### 7. Create Post
@@ -686,7 +686,7 @@ Uses **axios** with a shared instance:
 
 | Method | Count | Endpoints |
 |---|---|---|
-| `GET` | 6 | `/me`, `/posts`, `/hashtags`, `/persons`, `/attachments/:id/download`, `/admin/users` |
+| `GET` | 9 | `/me`, `/posts`, `/hashtags` ×2, `/persons` ×3, `/attachments/:id/download`, `/admin/users` |
 | `POST` | 6 | `/login`, `/register`, `/logout`, `/posts`, `/posts/:id/comments`, `/persons` |
 | `PUT` | 5 | `/me`, `/posts/:id`, `/persons/:id`, `/admin/users/:id/role`, `/admin/users/:id/active` |
 | `DELETE` | 3 | `/posts/:id`, `/persons/:id`, `/comments/:id` |
