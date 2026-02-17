@@ -362,8 +362,8 @@ All API calls go through a single `apiFetch()` wrapper function:
 
 | Method | Count | Endpoints |
 |---|---|---|
-| `GET` | 10 | `/auth/profile` ×2, `/posts`, `/posts/:id` ×2, `/hashtags` ×2, `/persons` ×3, `/admin/users` |
-| `POST` | 6 | `/auth/login`, `/auth/register`, `/auth/logout`, `/posts`, `/posts/:id/comments`, `/posts/:id/attachments` |
+| `GET` | 11 | `/auth/profile` ×2, `/posts`, `/posts/:id` ×2, `/hashtags` ×2, `/persons` ×3, `/admin/users` |
+| `POST` | 7 | `/auth/login`, `/auth/register`, `/auth/logout`, `/posts`, `/posts/:id/comments`, `/posts/:id/attachments`, `/persons` |
 | `PUT` | 4 | `/auth/profile` ×2, `/posts/:id`, `/persons/:id` |
 | `PATCH` | 2 | `/admin/users/:id/role`, `/admin/users/:id/active` |
 | `DELETE` | 1 | `/persons/:id` |
@@ -686,8 +686,8 @@ Uses **axios** with a shared instance:
 
 | Method | Count | Endpoints |
 |---|---|---|
-| `GET` | 8 unique | `/me`, `/posts`, `/hashtags`, `/persons`, `/attachments/:id/download`, `/admin/users` |
-| `POST` | 5 | `/login`, `/register`, `/logout`, `/posts`, `/posts/:id/comments` |
+| `GET` | 6 | `/me`, `/posts`, `/hashtags`, `/persons`, `/attachments/:id/download`, `/admin/users` |
+| `POST` | 6 | `/login`, `/register`, `/logout`, `/posts`, `/posts/:id/comments`, `/persons` |
 | `PUT` | 5 | `/me`, `/posts/:id`, `/persons/:id`, `/admin/users/:id/role`, `/admin/users/:id/active` |
 | `DELETE` | 3 | `/posts/:id`, `/persons/:id`, `/comments/:id` |
 
@@ -752,12 +752,12 @@ Uses **axios** with a shared instance:
 
 | Method | Codex (unique) | Gemini (unique) |
 |---|---|---|
-| `GET` | 7 | 8 |
-| `POST` | 6 | 5 |
+| `GET` | 6 | 6 |
+| `POST` | 7 | 6 |
 | `PUT` | 3 | 5 |
 | `PATCH` | 2 | 0 |
 | `DELETE` | 1 | 3 |
-| **Total** | **19** | **21** |
+| **Total** | **19** | **20** |
 
 ### Features Only in Codex
 - Single post detail view (`PostDetailPage.tsx`)
