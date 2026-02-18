@@ -38,6 +38,7 @@ At minimum, align these areas:
 2. **Posts list/detail payloads**
    - Ensure fields used by Gemini UI are always present and consistently typed.
    - Exclude `category` and `mood` from required validation and from frontend rendering contract.
+   - Add pagination support (e.g., cursor or offset-based) to all list endpoints to ensure scalability.
 
 3. **Persons and comments payloads**
    - Keep identifiers and timestamp formats stable.
