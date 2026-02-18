@@ -95,6 +95,10 @@ Add/update backend integration tests for:
 - person CRUD minimal flow
 - attachment upload/list/download metadata contract
 
+### 3.7 Input Validation Hardening
+
+- Review and strengthen input validation across all endpoints, especially for registration (e.g., email format, password complexity) and user-generated content to improve security and data integrity.
+
 ---
 
 ## 4) Minimal Gemini frontend changes required
