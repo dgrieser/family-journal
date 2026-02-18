@@ -43,6 +43,7 @@ At minimum, align these areas:
 3. **Persons and comments payloads**
    - Keep identifiers and timestamp formats stable.
    - Return empty arrays instead of `null` where frontend maps collections.
+   - Document and align on referential integrity rules (e.g., using `SET NULL` on person deletion to prevent data loss).
 
 4. **Filtering/query params**
    - Support Gemini query format for date/search/hashtag/person filters.
