@@ -79,6 +79,7 @@ At minimum, align these areas:
 ### 3.5 CSRF/session interoperability hardening
 
 - Temporarily accept both CSRF header casings.
+- Enforce a minimum session secret length (e.g., 32 characters) in backend configuration.
 - Confirm cookie attributes and session lifecycle work with Gemini frontend request flow.
 
 ### 3.6 Integration checks
@@ -126,6 +127,10 @@ Add/update backend integration tests for:
 - Comment add/delete
 - Attachment upload/open
 
+### 4.6 Code quality fixes
+
+- Move `ProtectedRoute` component definition outside of `App` so it is not recreated on every render.
+
 ---
 
 ## 5) Suggested execution order
@@ -134,8 +139,9 @@ Add/update backend integration tests for:
 2. Implement Codex backend compatibility DTO + shims.
 3. Add backend integration tests for contract-critical flows.
 4. Apply minimal Gemini frontend API/type updates.
-5. Run full integration smoke test.
-6. Remove temporary aliases/shims later (optional cleanup phase).
+5. Apply targeted Gemini frontend code quality fixes (`ProtectedRoute` extraction).
+6. Run full integration smoke test.
+7. Remove temporary aliases/shims later (optional cleanup phase).
 
 ---
 
@@ -147,4 +153,5 @@ Integration is complete when:
 - Posts and comments workflows operate normally without `category`/`mood`.
 - API errors are consistently shaped and frontend-handled.
 - All agreed integration tests and smoke checks pass.
+- Backend enforces minimum session secret length per agreed security baseline.
 - Contract matrix is checked into repo and reflects actual API behavior.
