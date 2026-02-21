@@ -1,25 +1,25 @@
-# Family Journal — API Calls (Codex vs Gemini)
+# Family Journal — API Calls (Codex vs Gemini, side-by-side)
 
-This file compares API usage **thing-by-thing** so each behavior has one table with Codex and Gemini side-by-side, including payloads, responses, and error handling.
+This document compares equivalent frontend API actions (“things”) in **one table per thing**, with concrete request/response field names and error behavior.
 
-> Notes:
-> - `:id` means a path parameter.
-> - Field names are shown exactly as used by each frontend.
-> - Some endpoints are the same backend capability surfaced in different UI locations.
+**Sources used for this comparison inside this repo:**
+- historical detailed API inventory in git history (`API_CALLS.md` from previous commit)
+- implementation/contract notes in `BRANCH_COMPARISON_REVIEW.md`
+- compatibility plan in `CODEX_BACKEND_GEMINI_FRONTEND_ALIGNMENT_PLAN.md`
 
 ---
 
-## 1) API client behavior (global)
+## 1) API client baseline (cross-cutting)
 
-| Aspect | Codex | Gemini |
+| Item | Codex | Gemini |
 |---|---|---|
-| Frontend API file | `frontend/src/api/client.ts` | `frontend/src/api.ts` |
-| Base path | `/api/v1` | `/api` |
-| Auth/session transport | Cookie session (`credentials: 'include'`) | Cookie session via axios instance |
-| CSRF | Reads `csrf_` cookie and sends `X-CSRF-Token` | Not documented as explicit custom header in this comparison file |
-| JSON behavior | `application/json` default unless `FormData` | axios defaults (JSON for objects, multipart for `FormData`) |
-| Non-2xx handling | Parses response body and throws `Error` (JSON `.error` preferred, else raw text) | axios promise rejection (error object with backend message when present) |
-| 204 handling | Returns `null` | axios resolves with empty body as applicable |
+| Client file | `frontend/src/api/client.ts` | `frontend/src/api.ts` |
+| Base URL | `/api/v1` | `/api` |
+| Credentials/cookies | `credentials: 'include'` | `withCredentials: true` |
+| CSRF header | `X-CSRF-Token` from `csrf_` cookie | `X-Csrf-Token` from `csrf_` cookie (axios interceptor) |
+| Default request body encoding | JSON by default; keeps `FormData` for multipart | axios JSON for objects, multipart for `FormData` |
+| Non-2xx behavior | Tries JSON; uses `.error` if present, otherwise text; throws `Error` | axios rejects promise; UI reads `error.response?.data?.error` when available |
+| 204 behavior | explicit `null` return from wrapper | axios resolves with empty data/response |
 
 ---
 
@@ -29,9 +29,9 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 |---|---|---|
 | Method + endpoint | `POST /api/v1/auth/login` | `POST /api/login` |
 | Request payload | `{ email: string, password: string }` | `{ email: string, password: string }` |
-| Success result | `User { id, email, role, active }` stored in auth store | Auth/session established; user loaded via `/api/me` flow/store |
-| Frontend caller(s) | `LoginPage.tsx` → auth store `login` | `Login.tsx` |
-| Error result | Thrown `Error(message)` from parsed `.error` or text body | axios error surfaced to UI; backend message shown when available |
+| Success response body | `User { id, email, role, active }` | `User { id, email, role, is_active }` (shape consumed by app state) |
+| UI result on success | auth store user set, navigate to app | `setUser(response.data)`, navigate to `/` |
+| UI result on error | thrown message displayed | login page shows error message from axios response |
 
 ---
 
@@ -41,9 +41,9 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 |---|---|---|
 | Method + endpoint | `POST /api/v1/auth/register` | `POST /api/register` |
 | Request payload | `{ email: string, password: string }` | `{ email: string, password: string }` |
-| Success result | Returns `User` payload but frontend resets local user to `null` (await admin activation) | Registration success state/message, then login flow |
-| Frontend caller(s) | `RegisterPage.tsx` | `Register.tsx` |
-| Error result | Thrown `Error(message)` from API wrapper | axios error surfaced to UI |
+| Success response body | created `User` object (not kept logged in) | success response (UI uses success state more than payload) |
+| UI result on success | frontend clears user (`null`), expects admin activation | navigate to `/login` with `registrationSuccess: true` state |
+| UI result on error | thrown message surfaced in register form | axios error surfaced in register form |
 
 ---
 
@@ -53,21 +53,21 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 |---|---|---|
 | Method + endpoint | `POST /api/v1/auth/logout` | `POST /api/logout` |
 | Request payload | none | none |
-| Success result | `204 No Content`, clears local auth state | Session ended; UI auth state cleared |
-| Frontend caller(s) | `Layout.tsx` logout action via auth store | Layout/logout action |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Success response body | `204 No Content` | success status (typically empty body) |
+| UI result on success | local auth state cleared | `setUser(null)`, navigate `/login` |
+| UI result on error | thrown message | axios error message |
 
 ---
 
-## 5) Session/profile fetch (who am I)
+## 5) Session check / current user fetch
 
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `GET /api/v1/auth/profile` | `GET /api/me` |
 | Request payload | none | none |
-| Success result | `User { id, email, role, active }` | Current user object for session check |
-| Frontend caller(s) | `App.tsx` on mount; auth store `fetchProfile`; also profile page preload | App/store bootstrap and protected-route flows |
-| Error result | Thrown `Error(message)`; unauth usually drives logged-out state | axios error handled as unauth/logged-out |
+| Success response body | `User { id, email, role, active }` | current user object used by app initialization |
+| UI result on success | app/store marks user authenticated | `setUser(response.data)` |
+| UI result on error | auth boot path treats as logged out | `setUser(null)` during init path |
 
 ---
 
@@ -76,10 +76,10 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `PUT /api/v1/auth/profile` | `PUT /api/me` |
-| Request payload | `{ email: string }` | `{ email: string }` |
-| Success result | Updated profile data reflected in UI/state | Updated user/profile reflected in UI/state |
-| Frontend caller(s) | `ProfilePage.tsx` email form submit | `Profile.tsx` |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Request payload | `{ email: string }` | `{ email: string, password?: string }` (password can be empty/omitted) |
+| Success response body | updated user/profile payload | updated user payload (`setUser(res.data)`) |
+| UI result on success | email form shows success + updated state | success notice; user updated |
+| UI result on error | thrown message shown in profile page | axios error shown in profile page |
 
 ---
 
@@ -88,34 +88,34 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `PUT /api/v1/auth/profile` | `PUT /api/me` |
-| Request payload | `{ currentPassword: string, newPassword: string }` | `{ password: string }` (or branch-specific equivalent password field in same `/me` update route) |
-| Success result | Password changed (with current-password verification in Codex backend) | Password updated |
-| Frontend caller(s) | `ProfilePage.tsx` password form | `Profile.tsx` |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Request payload | `{ currentPassword: string, newPassword: string }` | `{ email: string, password: string }` (same profile endpoint updates password) |
+| Success response body | success/updated user payload | updated user payload |
+| UI result on success | password form reset + success message | password input cleared + success message |
+| UI result on error | thrown message shown (e.g., wrong current password) | axios error shown |
 
 ---
 
-## 8) List posts (timeline + filters)
+## 8) List posts (timeline)
 
 | Item | Codex | Gemini |
 |---|---|---|
-| Method + endpoint | `GET /api/v1/posts` with query params | `GET /api/posts` with query params |
-| Query/payload fields | `date` required; optional `hashtags`, `persons`, `search` | same functional filters used in Gemini timeline |
-| Success result | `Post[]` with fields including `id`, `text`, `created_at`, `hashtags[]`, `persons[]`, `attachments[]` | `Post[]` for timeline cards (plus attachment/comment info used by UI) |
-| Frontend caller(s) | `TimelinePage.tsx` on query changes | `Timeline.tsx` |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Method + endpoint | `GET /api/v1/posts` | `GET /api/posts` |
+| Query params | `date` required; optional `search`, `hashtags` (CSV), `persons` (CSV) | `date` required; optional `search`, `hashtags` (CSV), `persons` (CSV) |
+| Success response body | `Post[]` (used fields include `id`, `text`, `date/created_at`, `hashtags[]`, `persons[]`, `attachments[]`) | `Post[]` for timeline cards including comments/attachments metadata used in `PostCard` |
+| UI result on success | timeline list updates | `setPosts(response.data)` |
+| UI result on error | thrown message on timeline | axios error on timeline |
 
 ---
 
-## 9) Get single post (detail load)
+## 9) Get single post by id
 
 | Item | Codex | Gemini |
 |---|---|---|
-| Method + endpoint | `GET /api/v1/posts/:id` | Backend supports `GET /api/posts/:id`, but Gemini UI does not depend on a dedicated detail page |
+| Method + endpoint | `GET /api/v1/posts/:id` | backend supports `GET /api/posts/:id` |
 | Request payload | none | none |
-| Success result | One `Post` with comments/attachments for detail page and editor preload | Available backend capability, not primary UI path |
-| Frontend caller(s) | `PostDetailPage.tsx`, `PostEditorPage.tsx` (edit preload) | N/A (timeline-centric UI) |
-| Error result | Thrown `Error(message)` | axios error if called |
+| Success response body | `Post { id, text, date, comments[], attachments[] }` | single post payload exists server-side |
+| UI usage | used by `PostDetailPage` and edit preload in `PostEditorPage` | not primary UI path (Gemini uses timeline/list flow) |
+| UI result on error | thrown message in detail/editor page | axios error if endpoint is called |
 
 ---
 
@@ -124,10 +124,10 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `POST /api/v1/posts` | `POST /api/posts` |
-| Request payload | JSON includes `date`, `text`, optional `category`, optional `mood` | `FormData`/payload with `date`, `text`, and attachments inline |
-| Success result | New post created; then Codex may call attachment-upload endpoint separately | New post created (attachments included in same create flow) |
-| Frontend caller(s) | `PostEditorPage.tsx` | `PostForm.tsx` / timeline create flow |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Request payload | JSON: `{ date: string, text: string, category: string|null, mood: string|null }` | `FormData`: `text`, `date`, `attachments` (0..n files) |
+| Success response body | created `Post` object (contains `id` used for follow-up attachment upload) | success payload; UI calls `onSuccess()` and refreshes timeline |
+| UI result on success | save post then optional separate upload call | clear form + refresh list |
+| UI result on error | thrown message in editor | axios error shown in form |
 
 ---
 
@@ -136,10 +136,10 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `PUT /api/v1/posts/:id` | `PUT /api/posts/:id` |
-| Request payload | JSON post fields (same schema as create for editable fields) | Updated post payload used by edit UI |
-| Success result | Post updated | Post updated |
-| Frontend caller(s) | `PostEditorPage.tsx` | Post edit action in timeline/card flow |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Request payload | JSON: `{ date: string, text: string, category: string|null, mood: string|null }` | `FormData`: `text`, `date`, `attachments` (0..n files) |
+| Success response body | updated post payload / success status | success payload; UI calls `onSuccess()` |
+| UI result on success | return to timeline/detail with updated data | clear edit form + refresh list |
+| UI result on error | thrown message in editor | axios error shown in edit form |
 
 ---
 
@@ -147,11 +147,11 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 
 | Item | Codex | Gemini |
 |---|---|---|
-| Method + endpoint | (Not exposed in Codex UI in documented flow) | `DELETE /api/posts/:id` |
-| Request payload | n/a | none |
-| Success result | n/a | Post removed from timeline after refresh/state update |
-| Frontend caller(s) | n/a | `PostCard.tsx` delete action |
-| Error result | n/a | axios error surfaced to UI |
+| Method + endpoint | backend route exists, but not exposed in Codex UI (`DELETE /api/v1/posts/:id`) | `DELETE /api/posts/:id` |
+| Request payload | none | none |
+| Success response body | typically `204` | success status (empty/short body) |
+| UI result on success | n/a in current codex frontend | `onUpdate()` refreshes timeline |
+| UI result on error | n/a in current codex frontend | axios error shown in card action |
 
 ---
 
@@ -160,10 +160,10 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `POST /api/v1/posts/:id/comments` | `POST /api/posts/:id/comments` |
-| Request payload | Comment text payload (field name as used by UI form) | Comment text payload |
-| Success result | Comment persisted; post detail re-fetched | Comment persisted; post list/detail state refreshed |
-| Frontend caller(s) | `PostDetailPage.tsx` comment form | `PostCard.tsx` / timeline comment action |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Request payload | `{ text: string }` | `{ text: string }` |
+| Success response body | `Comment { id, text, author_email, created_at }` | success payload; UI refreshes via callback |
+| UI result on success | clears input and re-fetches post detail | clears input and calls `onUpdate()` |
+| UI result on error | thrown message in detail page | axios error in post card |
 
 ---
 
@@ -171,35 +171,35 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 
 | Item | Codex | Gemini |
 |---|---|---|
-| Method + endpoint | (Not exposed in Codex UI in documented flow) | `DELETE /api/comments/:id` |
-| Request payload | n/a | none |
-| Success result | n/a | Comment removed from UI after refresh/state update |
-| Frontend caller(s) | n/a | `PostCard.tsx` delete-comment action |
-| Error result | n/a | axios error surfaced to UI |
-
----
-
-## 15) Upload attachment
-
-| Item | Codex | Gemini |
-|---|---|---|
-| Method + endpoint | `POST /api/v1/posts/:id/attachments` | No separate endpoint in frontend flow (attachments uploaded in create/update post payload) |
-| Request payload | `FormData` file upload after post creation | Included inline with post submission |
-| Success result | Attachment linked to post | Attachment linked to post |
-| Frontend caller(s) | `PostEditorPage.tsx` attachment upload flow | `PostForm.tsx` inline file flow |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
-
----
-
-## 16) Download/view attachment
-
-| Item | Codex | Gemini |
-|---|---|---|
-| Method + endpoint | Direct static URL navigation (e.g., `/uploads/:name`) | `GET /api/attachments/:id/download` |
+| Method + endpoint | backend route exists, but not exposed in Codex UI (`DELETE /api/v1/comments/:id`) | `DELETE /api/comments/:id` |
 | Request payload | none | none |
-| Success result | Browser opens/downloads file | Browser opens/downloads file via API route |
-| Frontend caller(s) | Attachment link click in post detail/list | Attachment action in post card/list |
-| Error result | Browser-level 404/403 behavior | axios/browser request error surfaced as failed fetch/download |
+| Success response body | typically `204` | success status |
+| UI result on success | n/a in current codex frontend | calls `onUpdate()` to refresh post card |
+| UI result on error | n/a in current codex frontend | axios error shown |
+
+---
+
+## 15) Upload attachments
+
+| Item | Codex | Gemini |
+|---|---|---|
+| Method + endpoint | `POST /api/v1/posts/:id/attachments` | no separate upload route in normal UI flow |
+| Request payload | `FormData` with repeated `files` field | files sent inline in post create/update `FormData` as `attachments` |
+| Success response body | `Attachment[] { id, file_name, file_type, file_size, url }` | attachment metadata included in returned post/list payloads |
+| UI result on success | attachments linked after post save | post card shows attachments directly |
+| UI result on error | thrown upload error shown in editor | axios error on post form submit |
+
+---
+
+## 16) Download / view attachment
+
+| Item | Codex | Gemini |
+|---|---|---|
+| Method + endpoint | direct static path via browser (`GET /uploads/:name`) | `GET /api/attachments/:id/download` |
+| Request payload | none | none |
+| Success response body | binary file stream/static asset | binary file stream via API |
+| UI behavior | anchor navigation from post detail | images inline (`<img src=...>`), files via links |
+| Error behavior | browser-level 404/403 | failed image/link load or axios/browser error |
 
 ---
 
@@ -209,9 +209,9 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 |---|---|---|
 | Method + endpoint | `GET /api/v1/hashtags` | `GET /api/hashtags` |
 | Request payload | none | none |
-| Success result | Hashtag list for filter UI/autocomplete | Hashtag list for filter UI/autocomplete |
-| Frontend caller(s) | Timeline/editor filter controls | Timeline/filter controls |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Success response body | hashtag collection for filters/autocomplete | hashtag collection for filters/autocomplete |
+| UI callers | `TimelinePage.tsx`, `PostEditorPage.tsx` | `Timeline.tsx`, `PostForm.tsx` |
+| Error behavior | thrown message in caller page | axios error in caller page/component |
 
 ---
 
@@ -221,9 +221,9 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 |---|---|---|
 | Method + endpoint | `GET /api/v1/persons` | `GET /api/persons` |
 | Request payload | none | none |
-| Success result | Person list for filters/forms and persons management page | Same purpose |
-| Frontend caller(s) | persons page + filter/editor UIs | `Persons.tsx` + timeline/form filters |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Success response body | person collection for filters/editor/management | person collection for filters/editor/management |
+| UI callers | `TimelinePage.tsx`, `PostEditorPage.tsx`, `PersonsPage.tsx` | `Timeline.tsx`, `PostForm.tsx`, `Persons.tsx` |
+| Error behavior | thrown message in caller page | axios error in caller page/component |
 
 ---
 
@@ -232,10 +232,10 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `POST /api/v1/persons` | `POST /api/persons` |
-| Request payload | `{ name: string, description: string }` | `{ name: string, description: string }` |
-| Success result | Person created; list refresh | Person created; list refresh |
-| Frontend caller(s) | `PersonsPage.tsx` | `Persons.tsx` |
-| Error result | Thrown `Error(message)` (includes duplicate-name style backend errors) | axios error surfaced to UI |
+| Request payload | `{ name: string, description: string|null }` | `{ name: string, description: string }` |
+| Success response body | created person payload | created person payload |
+| UI result on success | form reset + list refresh | form reset + list refresh (`fetchPersons()`) |
+| UI result on error | thrown message (including duplicate-name errors) | axios error shown |
 
 ---
 
@@ -244,10 +244,10 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `PUT /api/v1/persons/:id` | `PUT /api/persons/:id` |
-| Request payload | `{ name: string, description: string }` | `{ name: string, description: string }` |
-| Success result | Person updated; list refresh | Person updated; list refresh |
-| Frontend caller(s) | `PersonsPage.tsx` edit submit | `Persons.tsx` edit submit |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Request payload | `{ name: string, description: string|null }` | `{ name: string, description: string }` |
+| Success response body | updated person payload | updated person payload |
+| UI result on success | inline edit save + list refresh | reset editing state + list refresh |
+| UI result on error | thrown message | axios error shown |
 
 ---
 
@@ -257,54 +257,55 @@ This file compares API usage **thing-by-thing** so each behavior has one table w
 |---|---|---|
 | Method + endpoint | `DELETE /api/v1/persons/:id` | `DELETE /api/persons/:id` |
 | Request payload | none | none |
-| Success result | Person deleted; list refresh | Person deleted; list refresh |
-| Frontend caller(s) | `PersonsPage.tsx` delete action | `Persons.tsx` delete action |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Success response body | `204 No Content` | success status |
+| UI result on success | remove item/refresh list | `fetchPersons()` refresh |
+| UI result on error | thrown message | axios error shown |
 
 ---
 
-## 22) Admin: list users
+## 22) Admin list users
 
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `GET /api/v1/admin/users` | `GET /api/admin/users` |
 | Request payload | none | none |
-| Success result | `User[]` for admin table | `User[]` for admin table |
-| Frontend caller(s) | `AdminPage.tsx` | `Admin.tsx` |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Success response body | `User[] { id, email, role, active }` | `User[]` consumed with active field style used by Gemini UI |
+| UI result on success | admin table load | `setUsers(res.data)` |
+| UI result on error | thrown message in admin page | axios error shown |
 
 ---
 
-## 23) Admin: change user role
+## 23) Admin change role
 
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `PATCH /api/v1/admin/users/:id/role` | `PUT /api/admin/users/:id/role` |
 | Request payload | `{ role: "admin" | "user" }` | `{ role: "admin" | "user" }` |
-| Success result | Role changed; list refresh | Role changed; list refresh |
-| Frontend caller(s) | `AdminPage.tsx` role action | `Admin.tsx` role action |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Success response body | `204 No Content` (UI can optimistic-update) | success status; then `fetchUsers()` |
+| UI result on success | role toggled in table | list reloaded |
+| UI result on error | thrown message in admin page | axios error shown |
 
 ---
 
-## 24) Admin: toggle active status
+## 24) Admin toggle active
 
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `PATCH /api/v1/admin/users/:id/active` | `PUT /api/admin/users/:id/active` |
 | Request payload | `{ active: boolean }` | `{ is_active: boolean }` |
-| Success result | Active state changed; list refresh | Active state changed; list refresh |
-| Frontend caller(s) | `AdminPage.tsx` active toggle action | `Admin.tsx` active toggle action |
-| Error result | Thrown `Error(message)` | axios error surfaced to UI |
+| Success response body | `204 No Content` (UI can optimistic-update) | success status; then `fetchUsers()` |
+| UI result on success | active badge/button state updated | list reloaded |
+| UI result on error | thrown message in admin page | axios error shown |
 
 ---
 
-## Error mapping quick-reference
+## Error shape comparison (explicit)
 
-| Error source | Codex behavior | Gemini behavior |
+| Case | Codex | Gemini |
 |---|---|---|
-| API returns JSON error body | Uses `.error` field as thrown message | axios error contains backend message in response data |
-| API returns text error body | Uses raw text as thrown message | axios error message / response text surfaced |
-| Non-JSON unexpected body | Generic parse fallback to text-based message | axios generic error if unable to parse structured payload |
-| Unauthorized/expired session | Caller typically falls back to logged-out state after thrown error | Caller typically handles 401 via state reset / route guard |
+| Backend returns JSON error | expected format `{ error: string }`; wrapper throws that string | axios exposes `error.response.data` (typically `{ error: string }`) |
+| Backend returns plain text error | wrapper throws text body | axios error falls back to message/response text |
+| Unauthorized session (`401`) | call rejects; auth bootstrap/profile logic resets user to logged-out | call rejects; app init/guards set user `null` and redirect as needed |
+| Validation error (`400`) | thrown validation message from `.error` | axios validation message shown in page/component |
+| Server error (`5xx`) | wrapper throws parsed/fallback message | axios generic or backend-provided message |
 
