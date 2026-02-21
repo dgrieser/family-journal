@@ -269,7 +269,7 @@ This document compares equivalent frontend API actions (“things”) in **one t
 |---|---|---|
 | Method + endpoint | `GET /api/v1/admin/users` | `GET /api/admin/users` |
 | Request payload | none | none |
-| Success response body | `User[] { id, email, role, active }` | `User[]` consumed with active field style used by Gemini UI |
+| Success response body | User[] { id, email, role, active } | User[] { id, email, role, is_active } |
 | UI result on success | admin table load | `setUsers(res.data)` |
 | UI result on error | thrown message in admin page | axios error shown |
 
