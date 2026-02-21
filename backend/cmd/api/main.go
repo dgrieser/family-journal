@@ -135,7 +135,7 @@ func main() {
 	postHandler := handlers.NewPostHandler(postService)
 	adminHandler := handlers.NewAdminHandler(userRepo)
 
-	api := app.Group("/api")
+	api := app.Group("/api/v1")
 
 	// Auth rate limiting
 	authLimiter := limiter.New(limiter.Config{

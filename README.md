@@ -38,7 +38,7 @@ A full-stack web application to document daily care activities for children.
    docker-compose up --build
    ```
 4. The application will be available at `http://localhost:3000`.
-5. The backend API is at `http://localhost:8080/api`.
+5. The backend API is at `http://localhost:8080/api/v1`.
 
 ### Environment Variables
 

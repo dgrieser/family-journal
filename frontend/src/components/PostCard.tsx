@@ -83,7 +83,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
               <div key={a.id} className="space-y-1">
                 {a.file_type.startsWith('image/') ? (
                    <img
-                     src={`/api/attachments/${a.id}/download`}
+                     src={`/api/v1/attachments/${a.id}/download`}
                      alt={a.file_name}
                      className="w-full h-32 object-cover rounded border"
                    />
@@ -93,7 +93,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
                    </div>
                 )}
                 <a
-                  href={`/api/attachments/${a.id}/download`}
+                  href={`/api/v1/attachments/${a.id}/download`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 text-sm truncate"
