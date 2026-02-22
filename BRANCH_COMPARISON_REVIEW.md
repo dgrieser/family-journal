@@ -1,8 +1,10 @@
 # Family Journal — Branch Comparison Review (Updated)
 
-> **Last updated:** 2026-02-16
+> **Last updated:** 2026-02-22
 > **Previous review:** See git history for the original comparison.
 > **Original prompt:** See [ORIGINAL_PROMPT.md](./ORIGINAL_PROMPT.md)
+
+> **Snapshot note:** This repository currently tracks documentation artifacts only; branch state below reflects the latest merged branch-analysis results in git history.
 
 ## Branches Under Review
 
@@ -12,6 +14,15 @@
 | **Branch 2** | `gemini` | **Gemini** |
 
 Both branches implement the same application: a full-stack family journal for documenting daily care activities for children. They share the same tech stack at a high level (Go + Fiber backend, React + TypeScript + Vite frontend, MySQL database, Docker Compose deployment) but differ significantly in architectural decisions, code quality, and completeness.
+
+
+### Current state at a glance
+
+- **Codex** remains the stronger backend baseline (modular architecture, SQL-first control, hardened session and error handling).
+- **Gemini** remains the stronger frontend baseline for velocity (leaner UI flow, simpler axios client, updated dependencies).
+- The practical integration direction is still: **Codex backend + Gemini frontend via compatibility layer**.
+
+---
 
 ### Changes Since the Original Review
 

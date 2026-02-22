@@ -1,5 +1,19 @@
 # Plan: Align Codex Backend for Gemini Frontend Compatibility
 
+> **Current status snapshot:** 2026-02-22
+>
+> This plan remains the recommended path from the latest branch review in this repository.
+
+## Implementation status (based on latest documented branch state)
+
+- ✅ Direction confirmed: Codex backend as canonical, Gemini frontend as compatibility target.
+- 🔄 In progress: endpoint/DTO contract normalization (`/api/v1` vs `/api`).
+- 🔄 In progress: auth/profile field-name parity (`active` vs `is_active`, similar deltas).
+- 🔄 In progress: CSRF header casing interoperability.
+- ⏳ Next: finalize contract matrix and add cross-branch integration tests for the compatibility surface.
+
+---
+
 ## Context and assumptions
 
 - This plan is derived from the existing branch comparison notes in this repository.
