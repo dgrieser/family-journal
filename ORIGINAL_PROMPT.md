@@ -2,6 +2,8 @@
 
 The following prompt was used to generate the two rivaling implementations (Codex and Gemini branches) of the FamilyJournal application.
 
+> **Current-state note (2026-02-22):** This is the original generation prompt. For the latest implementation status of the `codex` and `gemini` branches, see `BRANCH_COMPARISON_REVIEW.md`, `API_CALLS.md`, and `CODEX_BACKEND_GEMINI_FRONTEND_ALIGNMENT_PLAN.md`.
+
 ---
 
 Create a full-stack web application called **FamilyJournal** to document daily care activities for children with officially recognized care levels.
@@ -196,3 +198,12 @@ Use these requirements to generate:
 2. The Go/Fiber backend project (including session-based auth, role handling, and all required endpoints).
 3. The React frontend project (with German/English UI, routing, timeline, filters, post editor with autocomplete and file upload).
 4. A Docker Compose setup to run the complete stack in a development environment.
+
+---
+
+## Current implementation status against this prompt (summary)
+
+- Both branches implement the requested stack shape (Fiber + React + MySQL + Docker Compose), with different architectural tradeoffs.
+- Codex currently aligns better with backend robustness and modularity goals in this prompt.
+- Gemini currently aligns better with lightweight frontend iteration velocity.
+- The active convergence strategy remains to preserve Codex backend strengths while adding compatibility for Gemini frontend request/response expectations.

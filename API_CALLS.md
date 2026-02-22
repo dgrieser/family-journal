@@ -1,11 +1,22 @@
 # Family Journal — API Calls (Codex vs Gemini, side-by-side)
 
+> **Current state snapshot:** 2026-02-22 (branch `work`)
+>
+> This document reflects the latest known API behavior of the `codex` and `gemini` code lines based on the comparison artifacts currently tracked in this branch.
+
 This document compares equivalent frontend API actions (“things”) in **one table per thing**, with concrete request/response field names and error behavior.
 
-**Sources used for this comparison inside this repo:**
+**Sources used for this comparison inside this branch:**
 - historical detailed API inventory in git history (`API_CALLS.md` from previous commit)
 - implementation/contract notes in `BRANCH_COMPARISON_REVIEW.md`
 - compatibility plan in `CODEX_BACKEND_GEMINI_FRONTEND_ALIGNMENT_PLAN.md`
+
+## Snapshot summary (current branch understanding)
+
+- `codex` uses a versioned API namespace (`/api/v1`) and stricter DTO/validation patterns.
+- `gemini` uses unversioned endpoints (`/api/*`) and a simpler axios-driven frontend API client.
+- The largest integration gaps remain route naming, auth/profile payload field names, and optional post fields (`category`, `mood`).
+- Both implementations support the same core product flows (auth, posts, comments, persons, filters, attachments, admin), but they expose them through different endpoint surfaces.
 
 ---
 
@@ -308,4 +319,3 @@ This document compares equivalent frontend API actions (“things”) in **one t
 | Unauthorized session (`401`) | call rejects; auth bootstrap/profile logic resets user to logged-out | call rejects; app init/guards set user `null` and redirect as needed |
 | Validation error (`400`) | thrown validation message from `.error` | axios validation message shown in page/component |
 | Server error (`5xx`) | wrapper throws parsed/fallback message | axios generic or backend-provided message |
-
