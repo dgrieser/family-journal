@@ -16,8 +16,6 @@ const PostEditorPage = () => {
   const { id } = useParams();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [text, setText] = useState('');
-  const [category, setCategory] = useState('');
-  const [mood, setMood] = useState('');
   const [hashtags, setHashtags] = useState<Suggestion[]>([]);
   const [persons, setPersons] = useState<Suggestion[]>([]);
   const [files, setFiles] = useState<File[]>([]);
@@ -33,8 +31,6 @@ const PostEditorPage = () => {
     void apiFetch(`/posts/${id}`).then((post) => {
       setDate(post.date.slice(0, 10));
       setText(post.text);
-      setCategory(post.category || '');
-      setMood(post.mood || '');
     });
   }, [id]);
 
@@ -69,9 +65,7 @@ const PostEditorPage = () => {
     try {
       const payload = {
         date,
-        text,
-        category: category || null,
-        mood: mood || null
+        text
       };
       const post = id
         ? await apiFetch(`/posts/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
@@ -119,18 +113,6 @@ const PostEditorPage = () => {
             </div>
           )}
         </div>
-        <input
-          className="w-full border rounded px-3 py-2"
-          placeholder={t('post.category')}
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-        />
-        <input
-          className="w-full border rounded px-3 py-2"
-          placeholder={t('post.mood')}
-          value={mood}
-          onChange={(event) => setMood(event.target.value)}
-        />
         <div>
           <label className="text-sm font-semibold">{t('post.attachments')}</label>
           <input

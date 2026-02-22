@@ -24,8 +24,6 @@ CREATE TABLE IF NOT EXISTS posts (
   user_id BIGINT NOT NULL,
   date DATE NOT NULL,
   text TEXT NOT NULL,
-  category VARCHAR(120) NULL,
-  mood VARCHAR(120) NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   INDEX idx_posts_date (date),

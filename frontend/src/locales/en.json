@@ -33,8 +33,6 @@
   "post": {
     "title": "Care entry",
     "text": "Entry text",
-    "category": "Category",
-    "mood": "Mood",
     "save": "Save",
     "update": "Update",
     "attachments": "Attachments",

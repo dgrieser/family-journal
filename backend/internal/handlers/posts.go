@@ -32,10 +32,8 @@ type PostsHandler struct {
 }
 
 type postRequest struct {
-	Date     string  `json:"date"`
-	Text     string  `json:"text"`
-	Category *string `json:"category"`
-	Mood     *string `json:"mood"`
+	Date string `json:"date"`
+	Text string `json:"text"`
 }
 
 func ensureSlice[T any](items []T) []T {
@@ -109,11 +107,9 @@ func (h *PostsHandler) Create(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid date")
 	}
 	post := &models.Post{
-		UserID:   userID,
-		Date:     date,
-		Text:     req.Text,
-		Category: req.Category,
-		Mood:     req.Mood,
+		UserID: userID,
+		Date:   date,
+		Text:   req.Text,
 	}
 	scope := services.NewAccessScope(userID, role)
 	if err := h.Service.CreateOrUpdatePost(scope, post); err != nil {
@@ -145,12 +141,10 @@ func (h *PostsHandler) Update(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid date")
 	}
 	post := &models.Post{
-		ID:       int64(id),
-		UserID:   userID,
-		Date:     date,
-		Text:     req.Text,
-		Category: req.Category,
-		Mood:     req.Mood,
+		ID:     int64(id),
+		UserID: userID,
+		Date:   date,
+		Text:   req.Text,
 	}
 	scope := services.NewAccessScope(userID, role)
 	if err := h.Service.CreateOrUpdatePost(scope, post); err != nil {
