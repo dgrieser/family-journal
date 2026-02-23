@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import api from '../api';
+import { APP_ROUTES, API_ROUTES } from '../constants/routes';
 
 export const Register = () => {
   const [email, setEmail] = useState('');
@@ -14,8 +15,8 @@ export const Register = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/auth/register', { email, password });
-      navigate('/auth/login', { state: { registrationSuccess: true } });
+      await api.post(API_ROUTES.AUTH_REGISTER, { email, password });
+      navigate(APP_ROUTES.AUTH_LOGIN, { state: { registrationSuccess: true } });
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.error || 'Registration failed');
@@ -59,7 +60,7 @@ export const Register = () => {
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-600">
-          {t('already_have_account')} <Link to="/auth/login" className="text-indigo-600 hover:underline">{t('login')}</Link>
+          {t('already_have_account')} <Link to={APP_ROUTES.AUTH_LOGIN} className="text-indigo-600 hover:underline">{t('login')}</Link>
         </p>
       </div>
     </div>

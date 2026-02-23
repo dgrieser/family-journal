@@ -62,12 +62,12 @@ func main() {
 
 	// Session storage
 	storage := mysql.New(mysql.Config{
-		Host:     os.Getenv("DB_HOST"),
-		Port:     dbPort,
-		Username: os.Getenv("DB_USER"),
-		Password: os.Getenv("DB_PASSWORD"),
-		Database: os.Getenv("DB_NAME"),
-		Table:    "sessions",
+		Host:       os.Getenv("DB_HOST"),
+		Port:       dbPort,
+		Username:   os.Getenv("DB_USER"),
+		Password:   os.Getenv("DB_PASSWORD"),
+		Database:   os.Getenv("DB_NAME"),
+		Table:      "sessions",
 		GCInterval: 10 * time.Second,
 	})
 
@@ -146,15 +146,17 @@ func main() {
 		},
 	})
 
-	// Public routes
-	api.Post("/auth/register", authLimiter, authHandler.Register)
-	api.Post("/auth/login", authLimiter, authHandler.Login)
-	api.Post("/auth/logout", authHandler.Logout)
+	// Public auth routes
+	auth := api.Group("/auth")
+	auth.Post("/register", authLimiter, authHandler.Register)
+	auth.Post("/login", authLimiter, authHandler.Login)
+	auth.Post("/logout", authHandler.Logout)
 
 	// Protected routes
 	protected := api.Use(middleware.AuthRequired(store, authService))
-	protected.Get("/auth/profile", authHandler.Me)
-	protected.Put("/auth/profile", authHandler.UpdateProfile)
+	authProtected := protected.Group("/auth")
+	authProtected.Get("/profile", authHandler.Me)
+	authProtected.Put("/profile", authHandler.UpdateProfile)
 
 	// Persons
 	protected.Get("/persons", personHandler.GetAll)

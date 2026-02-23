@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import api from '../api';
+import { APP_ROUTES, API_ROUTES } from '../constants/routes';
 import { useAuthStore } from '../store';
 
 export const Login = () => {
@@ -20,7 +21,7 @@ export const Login = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post(API_ROUTES.AUTH_LOGIN, { email, password });
       setUser(response.data);
       navigate('/');
     } catch (err: unknown) {
@@ -69,7 +70,7 @@ export const Login = () => {
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-600">
-          {t('dont_have_account')} <Link to="/auth/register" className="text-indigo-600 hover:underline">{t('register')}</Link>
+          {t('dont_have_account')} <Link to={APP_ROUTES.AUTH_REGISTER} className="text-indigo-600 hover:underline">{t('register')}</Link>
         </p>
       </div>
     </div>
