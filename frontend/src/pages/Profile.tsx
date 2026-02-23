@@ -15,7 +15,7 @@ export const Profile = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await api.put('/me', { email, password });
+      const res = await api.put('/auth/profile', { email, password });
       setUser(res.data);
       setMessage({ type: 'success', text: t('success') });
       setPassword('');

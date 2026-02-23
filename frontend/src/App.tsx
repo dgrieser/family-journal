@@ -17,7 +17,7 @@ function App() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await api.get('/me');
+        const response = await api.get('/auth/profile');
         setUser(response.data);
       } catch (err) {
         setUser(null);
@@ -37,7 +37,7 @@ function App() {
       );
     }
     if (user === null) {
-      return <Navigate to="/login" />;
+      return <Navigate to="/auth/login" />;
     }
     return <>{children}</>;
   };
@@ -45,8 +45,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/auth/login" element={<Login />} />
+        <Route path="/auth/register" element={<Register />} />
 
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Timeline />} />

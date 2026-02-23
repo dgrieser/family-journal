@@ -14,8 +14,8 @@ export const Register = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/register', { email, password });
-      navigate('/login', { state: { registrationSuccess: true } });
+      await api.post('/auth/register', { email, password });
+      navigate('/auth/login', { state: { registrationSuccess: true } });
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.error || 'Registration failed');
@@ -59,7 +59,7 @@ export const Register = () => {
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-600">
-          {t('already_have_account')} <Link to="/login" className="text-indigo-600 hover:underline">{t('login')}</Link>
+          {t('already_have_account')} <Link to="/auth/login" className="text-indigo-600 hover:underline">{t('login')}</Link>
         </p>
       </div>
     </div>

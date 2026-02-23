@@ -11,9 +11,9 @@ export const Layout = () => {
 
   const handleLogout = async () => {
     try {
-      await api.post('/logout');
+      await api.post('/auth/logout');
       setUser(null);
-      navigate('/login');
+      navigate('/auth/login');
     } catch (err) {
       console.error('Logout failed', err);
     }

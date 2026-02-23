@@ -147,14 +147,14 @@ func main() {
 	})
 
 	// Public routes
-	api.Post("/register", authLimiter, authHandler.Register)
-	api.Post("/login", authLimiter, authHandler.Login)
-	api.Post("/logout", authHandler.Logout)
+	api.Post("/auth/register", authLimiter, authHandler.Register)
+	api.Post("/auth/login", authLimiter, authHandler.Login)
+	api.Post("/auth/logout", authHandler.Logout)
 
 	// Protected routes
 	protected := api.Use(middleware.AuthRequired(store, authService))
-	protected.Get("/me", authHandler.Me)
-	protected.Put("/me", authHandler.UpdateProfile)
+	protected.Get("/auth/profile", authHandler.Me)
+	protected.Put("/auth/profile", authHandler.UpdateProfile)
 
 	// Persons
 	protected.Get("/persons", personHandler.GetAll)
