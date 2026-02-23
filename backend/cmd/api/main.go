@@ -147,16 +147,14 @@ func main() {
 	})
 
 	// Public auth routes
-	auth := api.Group("/auth")
-	auth.Post("/register", authLimiter, authHandler.Register)
-	auth.Post("/login", authLimiter, authHandler.Login)
-	auth.Post("/logout", authHandler.Logout)
+	api.Post("/auth/register", authLimiter, authHandler.Register)
+	api.Post("/auth/login", authLimiter, authHandler.Login)
+	api.Post("/auth/logout", authHandler.Logout)
 
 	// Protected routes
 	protected := api.Use(middleware.AuthRequired(store, authService))
-	authProtected := protected.Group("/auth")
-	authProtected.Get("/profile", authHandler.Me)
-	authProtected.Put("/profile", authHandler.UpdateProfile)
+	protected.Get("/auth/profile", authHandler.Me)
+	protected.Put("/auth/profile", authHandler.UpdateProfile)
 
 	// Persons
 	protected.Get("/persons", personHandler.GetAll)

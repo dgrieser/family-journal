@@ -10,7 +10,7 @@ import { Layout } from './components/Layout';
 import { useAuthStore } from './store';
 import api from './api';
 import './i18n';
-import { APP_ROUTES, API_ROUTES } from './constants/routes';
+import { APP_ROUTES, APP_ROUTE_SEGMENTS, API_ROUTES } from './constants/routes';
 
 function App() {
   const { user, setUser, initialized, setInitialized } = useAuthStore();
@@ -51,9 +51,9 @@ function App() {
 
         <Route path={APP_ROUTES.ROOT} element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Timeline />} />
-          <Route path={APP_ROUTES.PERSONS.slice(1)} element={<Persons />} />
-          <Route path={APP_ROUTES.PROFILE.slice(1)} element={<Profile />} />
-          <Route path={APP_ROUTES.ADMIN.slice(1)} element={user?.role === 'admin' ? <Admin /> : <Navigate to={APP_ROUTES.ROOT} />} />
+          <Route path={APP_ROUTE_SEGMENTS.PERSONS} element={<Persons />} />
+          <Route path={APP_ROUTE_SEGMENTS.PROFILE} element={<Profile />} />
+          <Route path={APP_ROUTE_SEGMENTS.ADMIN} element={user?.role === 'admin' ? <Admin /> : <Navigate to={APP_ROUTES.ROOT} />} />
         </Route>
       </Routes>
     </BrowserRouter>
