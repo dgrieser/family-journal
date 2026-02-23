@@ -33,8 +33,6 @@
   "post": {
     "title": "Pflegeeintrag",
     "text": "Eintragstext",
-    "category": "Kategorie",
-    "mood": "Stimmung",
     "save": "Speichern",
     "update": "Aktualisieren",
     "attachments": "Anhänge",
