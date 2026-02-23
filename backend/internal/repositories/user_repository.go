@@ -5,7 +5,7 @@ import "familyjournal/backend/internal/models"
 func (r *Repository) CreateUser(user *models.User) error {
 	query := `INSERT INTO users (email, password_hash, role, active, created_at, updated_at)
 		VALUES (?, ?, ?, ?, NOW(), NOW())`
-	res, err := r.DB.Exec(query, user.Email, user.Password, user.Role, user.Active)
+	res, err := r.DB.Exec(query, user.Email, user.Password, user.Role, user.IsActive)
 	if err != nil {
 		return err
 	}

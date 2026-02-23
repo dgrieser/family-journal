@@ -6,7 +6,7 @@ interface User {
   id: number;
   email: string;
   role: string;
-  active: boolean;
+  is_active: boolean;
 }
 
 const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
@@ -46,9 +46,9 @@ const AdminPage = () => {
     try {
       await apiFetch(`/admin/users/${id}/active`, {
         method: 'PATCH',
-        body: JSON.stringify({ active })
+        body: JSON.stringify({ is_active: active })
       });
-      setUsers((current) => current.map((user) => (user.id === id ? { ...user, active } : user)));
+      setUsers((current) => current.map((user) => (user.id === id ? { ...user, is_active: active } : user)));
       setError('');
     } catch (err) {
       setError(String(err));
@@ -75,9 +75,9 @@ const AdminPage = () => {
               </button>
               <button
                 className="text-sm border px-3 py-1 rounded"
-                onClick={() => void updateActive(user.id, !user.active)}
+                onClick={() => void updateActive(user.id, !user.is_active)}
               >
-                {user.active ? t('admin.deactivate') : t('admin.activate')}
+                {user.is_active ? t('admin.deactivate') : t('admin.activate')}
               </button>
             </div>
           </div>

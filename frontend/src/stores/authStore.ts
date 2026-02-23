@@ -5,7 +5,7 @@ interface User {
   id: number;
   email: string;
   role: string;
-  active: boolean;
+  is_active: boolean;
 }
 
 interface AuthState {
