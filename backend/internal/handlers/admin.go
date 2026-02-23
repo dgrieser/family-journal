@@ -17,7 +17,7 @@ type roleRequest struct {
 	Role string `json:"role"`
 }
 
-type activeRequest struct {
+type updateActiveRequest struct {
 	IsActive bool `json:"is_active"`
 }
 
@@ -54,7 +54,7 @@ func (h *AdminHandler) UpdateActive(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
-	var req activeRequest
+	var req updateActiveRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}

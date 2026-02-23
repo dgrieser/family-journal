@@ -42,13 +42,13 @@ const AdminPage = () => {
     }
   };
 
-  const updateActive = async (id: number, active: boolean) => {
+  const updateActive = async (id: number, isActive: boolean) => {
     try {
       await apiFetch(`/admin/users/${id}/active`, {
         method: 'PATCH',
-        body: JSON.stringify({ is_active: active })
+        body: JSON.stringify({ is_active: isActive })
       });
-      setUsers((current) => current.map((user) => (user.id === id ? { ...user, is_active: active } : user)));
+      setUsers((current) => current.map((user) => (user.id === id ? { ...user, is_active: isActive } : user)));
       setError('');
     } catch (err) {
       setError(String(err));
