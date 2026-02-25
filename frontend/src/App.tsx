@@ -10,6 +10,7 @@ import { Layout } from './components/Layout';
 import { useAuthStore } from './store';
 import api from './api';
 import './i18n';
+import { APP_ROUTES, APP_ROUTE_SEGMENTS, API_ROUTES } from './constants/routes';
 
 function App() {
   const { user, setUser, initialized, setInitialized } = useAuthStore();
@@ -17,7 +18,7 @@ function App() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await api.get('/me');
+        const response = await api.get(API_ROUTES.AUTH_PROFILE);
         setUser(response.data);
       } catch (err) {
         setUser(null);
@@ -37,7 +38,7 @@ function App() {
       );
     }
     if (user === null) {
-      return <Navigate to="/login" />;
+      return <Navigate to={APP_ROUTES.AUTH_LOGIN} />;
     }
     return <>{children}</>;
   };
@@ -45,14 +46,14 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path={APP_ROUTES.AUTH_LOGIN} element={<Login />} />
+        <Route path={APP_ROUTES.AUTH_REGISTER} element={<Register />} />
 
-        <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route path={APP_ROUTES.ROOT} element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Timeline />} />
-          <Route path="persons" element={<Persons />} />
-          <Route path="profile" element={<Profile />} />
-          <Route path="admin" element={user?.role === 'admin' ? <Admin /> : <Navigate to="/" />} />
+          <Route path={APP_ROUTE_SEGMENTS.PERSONS} element={<Persons />} />
+          <Route path={APP_ROUTE_SEGMENTS.PROFILE} element={<Profile />} />
+          <Route path={APP_ROUTE_SEGMENTS.ADMIN} element={user?.role === 'admin' ? <Admin /> : <Navigate to={APP_ROUTES.ROOT} />} />
         </Route>
       </Routes>
     </BrowserRouter>

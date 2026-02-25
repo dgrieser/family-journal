@@ -4,6 +4,7 @@ import axios from 'axios';
 import api from '../api';
 import { useAuthStore } from '../store';
 import { User, Save, CheckCircle, AlertCircle } from 'lucide-react';
+import { API_ROUTES } from '../constants/routes';
 
 export const Profile = () => {
   const { t } = useTranslation();
@@ -15,7 +16,7 @@ export const Profile = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await api.put('/me', { email, password });
+      const res = await api.put(API_ROUTES.AUTH_PROFILE, { email, password });
       setUser(res.data);
       setMessage({ type: 'success', text: t('success') });
       setPassword('');

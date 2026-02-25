@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store';
 import api from '../api';
 import { LayoutDashboard, Users, UserCog, User, LogOut, Languages } from 'lucide-react';
+import { APP_ROUTES, API_ROUTES } from '../constants/routes';
 
 export const Layout = () => {
   const { t, i18n } = useTranslation();
@@ -11,9 +12,9 @@ export const Layout = () => {
 
   const handleLogout = async () => {
     try {
-      await api.post('/logout');
+      await api.post(API_ROUTES.AUTH_LOGOUT);
       setUser(null);
-      navigate('/login');
+      navigate(APP_ROUTES.AUTH_LOGIN);
     } catch (err) {
       console.error('Logout failed', err);
     }
@@ -35,20 +36,20 @@ export const Layout = () => {
         </div>
 
         <div className="flex md:flex-col overflow-x-auto md:overflow-y-auto">
-          <Link to="/" className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
+          <Link to={APP_ROUTES.ROOT} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
             <LayoutDashboard size={20} />
             <span>{t('timeline')}</span>
           </Link>
-          <Link to="/persons" className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
+          <Link to={APP_ROUTES.PERSONS} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
             <Users size={20} />
             <span>{t('persons')}</span>
           </Link>
-          <Link to="/profile" className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
+          <Link to={APP_ROUTES.PROFILE} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
             <User size={20} />
             <span>{t('profile')}</span>
           </Link>
           {user?.role === 'admin' && (
-            <Link to="/admin" className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
+            <Link to={APP_ROUTES.ADMIN} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
               <UserCog size={20} />
               <span>{t('admin')}</span>
             </Link>
