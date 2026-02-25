@@ -1,21 +1,25 @@
-export const APP_ROUTES = {
-  ROOT: '/',
-  PERSONS: '/persons',
-  PROFILE: '/profile',
-  ADMIN: '/admin',
-  AUTH_LOGIN: '/auth/login',
-  AUTH_REGISTER: '/auth/register',
-} as const;
-
 export const APP_ROUTE_SEGMENTS = {
   PERSONS: 'persons',
   PROFILE: 'profile',
   ADMIN: 'admin',
+  AUTH: 'auth',
+  LOGIN: 'login',
+  REGISTER: 'register',
+  LOGOUT: 'logout',
+} as const;
+
+export const APP_ROUTES = {
+  ROOT: '/',
+  PERSONS: `/${APP_ROUTE_SEGMENTS.PERSONS}`,
+  PROFILE: `/${APP_ROUTE_SEGMENTS.PROFILE}`,
+  ADMIN: `/${APP_ROUTE_SEGMENTS.ADMIN}`,
+  AUTH_LOGIN: `/${APP_ROUTE_SEGMENTS.AUTH}/${APP_ROUTE_SEGMENTS.LOGIN}`,
+  AUTH_REGISTER: `/${APP_ROUTE_SEGMENTS.AUTH}/${APP_ROUTE_SEGMENTS.REGISTER}`,
 } as const;
 
 export const API_ROUTES = {
-  AUTH_LOGIN: '/auth/login',
-  AUTH_REGISTER: '/auth/register',
-  AUTH_LOGOUT: '/auth/logout',
-  AUTH_PROFILE: '/auth/profile',
+  AUTH_LOGIN: APP_ROUTES.AUTH_LOGIN,
+  AUTH_REGISTER: APP_ROUTES.AUTH_REGISTER,
+  AUTH_LOGOUT: `/${APP_ROUTE_SEGMENTS.AUTH}/${APP_ROUTE_SEGMENTS.LOGOUT}`,
+  AUTH_PROFILE: `/${APP_ROUTE_SEGMENTS.AUTH}/${APP_ROUTE_SEGMENTS.PROFILE}`,
 } as const;

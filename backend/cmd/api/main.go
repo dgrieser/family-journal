@@ -153,7 +153,7 @@ func main() {
 
 	// Protected routes
 	protected := api.Use(middleware.AuthRequired(store, authService))
-	protected.Get("/auth/profile", authHandler.Me)
+	protected.Get("/auth/profile", authHandler.GetProfile)
 	protected.Put("/auth/profile", authHandler.UpdateProfile)
 
 	// Persons
