@@ -17,8 +17,8 @@ type roleRequest struct {
 	Role string `json:"role"`
 }
 
-type activeRequest struct {
-	Active bool `json:"active"`
+type updateActiveRequest struct {
+	IsActive bool `json:"is_active"`
 }
 
 func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
@@ -54,11 +54,11 @@ func (h *AdminHandler) UpdateActive(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
-	var req activeRequest
+	var req updateActiveRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}
-	if err := h.Service.UpdateUserActive(int64(id), req.Active); err != nil {
+	if err := h.Service.UpdateUserActive(int64(id), req.IsActive); err != nil {
 		log.Printf("update user active error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update user")
 	}

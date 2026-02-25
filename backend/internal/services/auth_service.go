@@ -15,7 +15,7 @@ func (s *Service) Register(email, password string) (*models.User, error) {
 		Email:    email,
 		Password: string(hash),
 		Role:     models.RoleUser,
-		Active:   true,
+		IsActive: true,
 	}
 	if err := s.Users.CreateUser(user); err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func (s *Service) Authenticate(email, password string) (*models.User, error) {
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}
-	if !user.Active {
+	if !user.IsActive {
 		return nil, ErrInactiveUser
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {

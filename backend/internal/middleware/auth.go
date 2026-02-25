@@ -20,7 +20,11 @@ func RequireAuth(store *session.Store, svc *services.Service) fiber.Handler {
 			return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 		}
 		user, err := svc.GetUserByID(userID)
-		if err != nil || !user.Active {
+		if err != nil {
+			_ = sess.Destroy()
+			return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+		}
+		if !user.IsActive {
 			_ = sess.Destroy()
 			return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 		}
