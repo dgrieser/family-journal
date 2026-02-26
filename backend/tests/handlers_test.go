@@ -26,6 +26,7 @@ type fakeRepo struct {
 	tagsCreated    []string
 	personsCreated []string
 	postToReturn   *models.Post
+	attachmentByID *models.Attachment
 	deletedPostID  int64
 	deletedUserID  int64
 	ownerFilterNil bool
@@ -146,7 +147,10 @@ func (f *fakeRepo) SavePostWithRelations(ownerID int64, ownerFilter *int64, post
 	}
 	return nil
 }
-func (f *fakeRepo) GetAttachmentByName(name string, ownerFilter *int64) (*models.Attachment, error) {
+func (f *fakeRepo) GetAttachmentByID(id int64, ownerFilter *int64) (*models.Attachment, error) {
+	if f.attachmentByID != nil {
+		return f.attachmentByID, nil
+	}
 	return nil, sql.ErrNoRows
 }
 
@@ -522,6 +526,46 @@ func TestDeletePostUsesBaseFileNameForAttachmentCleanup(t *testing.T) {
 	}
 	if _, err := os.Stat(outsideFile); err != nil {
 		t.Fatalf("expected file outside upload dir to remain untouched: %v", err)
+	}
+}
+
+func TestDownloadAttachmentByIDSetsSafeDownloadHeaders(t *testing.T) {
+	repo := newFakeRepo()
+	repo.attachmentByID = &models.Attachment{FileName: "sample.png", FileType: "image/png"}
+
+	service := services.New(repo, repo, repo, repo, repo, repo)
+	store := session.New()
+	uploadDir := t.TempDir()
+	filePath := filepath.Join(uploadDir, "sample.png")
+	if err := os.WriteFile(filePath, []byte("png-content"), 0o600); err != nil {
+		t.Fatalf("write attachment file: %v", err)
+	}
+
+	app := fiber.New()
+	postsHandler := &handlers.PostsHandler{Service: service, Store: store, UploadDir: uploadDir}
+	app.Use(func(c *fiber.Ctx) error {
+		sess, _ := store.Get(c)
+		sess.Set("user_id", int64(1))
+		sess.Set("role", "user")
+		_ = sess.Save()
+		return c.Next()
+	})
+	app.Get("/attachments/:id/download", postsHandler.DownloadAttachmentByID)
+
+	req := httptest.NewRequest(http.MethodGet, "/attachments/1/download", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("download request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
+	}
+
+	if got := resp.Header.Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Fatalf("expected nosniff header, got %q", got)
+	}
+	if got := resp.Header.Get("Content-Disposition"); got != `attachment; filename="sample.png"` {
+		t.Fatalf("expected attachment content disposition, got %q", got)
 	}
 }
 

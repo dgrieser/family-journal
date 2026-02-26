@@ -13,7 +13,6 @@ interface Comment {
 interface Attachment {
   id: number;
   file_name: string;
-  url: string;
 }
 
 interface Post {
@@ -25,6 +24,7 @@ interface Post {
 }
 
 const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+const attachmentDownloadURL = (id: number) => `/api/v1/attachments/${id}/download`;
 
 const PostDetailPage = () => {
   const { t } = useTranslation();
@@ -84,7 +84,12 @@ const PostDetailPage = () => {
         <ul className="space-y-2">
           {post.attachments.map((attachment) => (
             <li key={attachment.id}>
-              <a className="text-slate-600 underline" href={attachment.url} target="_blank" rel="noreferrer">
+              <a
+                className="text-slate-600 underline"
+                href={attachmentDownloadURL(attachment.id)}
+                target="_blank"
+                rel="noreferrer"
+              >
                 {attachment.file_name}
               </a>
             </li>

@@ -60,7 +60,7 @@ type CommentRepository interface {
 
 type AttachmentRepository interface {
 	CreateAttachment(att *models.Attachment) error
-	GetAttachmentByName(name string, ownerFilter *int64) (*models.Attachment, error)
+	GetAttachmentByID(id int64, ownerFilter *int64) (*models.Attachment, error)
 }
 
 type Service struct {

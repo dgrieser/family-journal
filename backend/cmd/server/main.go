@@ -123,8 +123,6 @@ func main() {
 	}
 	personsHandler := &handlers.PersonsHandler{Service: service, Store: store}
 
-	app.Get("/uploads/:name", middleware.RequireAuth(store, service), postsHandler.DownloadAttachment)
-
 	api.Post("/auth/register", authHandler.Register)
 	api.Post("/auth/login", authHandler.Login)
 	api.Post("/auth/logout", authHandler.Logout)
@@ -149,6 +147,7 @@ func main() {
 	api.Delete("/comments/:id", middleware.RequireAuth(store, service), postsHandler.DeleteComment)
 
 	api.Get("/hashtags", middleware.RequireAuth(store, service), postsHandler.ListHashtags)
+	api.Get("/attachments/:id/download", middleware.RequireAuth(store, service), postsHandler.DownloadAttachmentByID)
 	api.Get("/persons", middleware.RequireAuth(store, service), personsHandler.List)
 	api.Post("/persons", middleware.RequireAuth(store, service), personsHandler.Create)
 	api.Put("/persons/:id", middleware.RequireAuth(store, service), personsHandler.Update)
