@@ -24,6 +24,8 @@ Grouped by severity. Within each group, items are ordered by the change location
 
 **Files to change:** `backend/cmd/server/main.go`, `backend/internal/handlers/posts.go`, `backend/internal/repositories/attachment_repository.go` (add `GetAttachmentByID`).
 
+**Side task:** While touching the attachment model, rename the JSON field from `url` to `storage_path` (`json:"storage_path"`) to match Gemini's `Attachment` type. This requires updating the DB query aliases in `attachment_repository.go` and any place the `URL` field is set (attachment upload handler).
+
 ---
 
 ### 2. [FRONTEND] Post create/update: switch from FormData to JSON + separate upload
@@ -97,31 +99,16 @@ Gemini's `types.ts` declares `mentions: Person[]` and `PostCard.tsx` iterates `p
 
 ---
 
-### 6. [FRONTEND] Comment card: use `comment.author_email` instead of `comment.user?.email`
+### 6. [BACKEND] Embed author email in comment responses
 
-**What:** Codex's `Comment` model serialises the author as a flat string field:
-```go
-AuthorEmail string `db:"author_email" json:"author_email"`
-```
-Gemini's `PostCard.tsx` renders `c.user?.email` and its `Comment` type includes `user?: User`. Codex never embeds a `User` sub-object, so `c.user` is always `undefined` and author names are blank.
+**What:** Gemini's `PostCard.tsx` renders `c.user?.email` and its `Comment` type includes `user?: User`. Codex's `Comment` model returns a flat `author_email` string field instead of a nested user object, so `c.user` is always `undefined` and comment author names are blank.
 
-**Fix:**
-- In `types.ts`: on the `Comment` interface, remove `user?: User` and add `author_email: string`.
-- In `PostCard.tsx`: replace `c.user?.email` with `c.author_email`.
+**Fix:** In `codex` branch, change the `Comment` model and the query in `comment_repository.go` to embed a minimal user object:
+- Add a nested struct (or reuse `models.User`) with at least `id` and `email`, serialised as `"user"`.
+- Remove (or keep alongside) the flat `author_email` field — keeping it is fine for backwards compatibility, but the `user` key must be present for the Gemini frontend.
+- Update the SQL query in `ListCommentsForPosts` to JOIN `users` and scan the email into the nested struct.
 
-**Files to change:** `frontend/src/types.ts`, `frontend/src/components/PostCard.tsx`
-
----
-
-## Type mismatches — silent errors, no visible breakage today but will cause confusion
-
-### 7. [FRONTEND] Attachment type: rename `storage_path` → `url`
-
-**What:** Gemini's `Attachment` interface has `storage_path: string`. Codex returns the field as `url` (json tag `json:"url"`). The download URL in `PostCard.tsx` is constructed from `a.id`, not from either field, so there is no runtime failure — but the TypeScript type is wrong and any future use of `a.storage_path` would silently be `undefined`.
-
-**Fix:** In `gemini` branch in `types.ts`, rename `storage_path: string` to `url: string` on the `Attachment` interface.
-
-**File to change:** `frontend/src/types.ts`
+**Files to change:** `backend/internal/models/comment.go`, `backend/internal/repositories/post_repository.go` (comment query).
 
 ---
 
