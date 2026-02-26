@@ -377,6 +377,8 @@ func (h *PostsHandler) DownloadAttachmentByID(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusForbidden, "forbidden")
 	}
+	c.Set(fiber.HeaderXContentTypeOptions, "nosniff")
+	c.Set(fiber.HeaderContentDisposition, fmt.Sprintf("attachment; filename=%q", filepath.Base(attachment.FileName)))
 	c.Type(attachment.FileType)
 	return c.SendFile(path)
 }
