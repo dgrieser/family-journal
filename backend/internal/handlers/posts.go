@@ -342,11 +342,10 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusInternalServerError, "save failed")
 		}
 		attachment := models.Attachment{
-			PostID:      int64(postID),
-			FileName:    fileName,
-			FileType:    contentType,
-			FileSize:    file.Size,
-			StoragePath: "/uploads/" + fileName,
+			PostID:   int64(postID),
+			FileName: fileName,
+			FileType: contentType,
+			FileSize: file.Size,
 		}
 		if err := h.Service.CreateAttachment(&attachment); err != nil {
 			if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {

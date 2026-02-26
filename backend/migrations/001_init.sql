@@ -73,7 +73,6 @@ CREATE TABLE IF NOT EXISTS attachments (
   file_name VARCHAR(255) NOT NULL,
   file_type VARCHAR(120) NOT NULL,
   file_size BIGINT NOT NULL,
-  url VARCHAR(255) NOT NULL,
   created_at DATETIME NOT NULL,
   FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
 );
