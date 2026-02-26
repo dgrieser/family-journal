@@ -2,7 +2,7 @@
 
 The following prompt was used to generate the two rivaling implementations (Codex and Gemini branches) of the FamilyJournal application.
 
-> **Current-state note (2026-02-22):** This is the original generation prompt. For the latest implementation status of the `codex` and `gemini` branches, see `BRANCH_COMPARISON_REVIEW.md`, `API_CALLS.md`, and `CODEX_BACKEND_GEMINI_FRONTEND_ALIGNMENT_PLAN.md`.
+> **Current-state note (2026-02-26):** This is the original generation prompt. For the latest implementation status of the `codex` and `gemini` branches, see `BRANCH_COMPARISON_REVIEW.md` and `API_CALLS.md`.
 
 ---
 

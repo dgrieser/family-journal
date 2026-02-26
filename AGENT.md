@@ -17,7 +17,7 @@ The agreed convergence strategy: **Codex backend + Gemini frontend**
 | File | Purpose |
 |------|---------|
 | `ORIGINAL_PROMPT.md` | Full product specification used to generate both implementations |
-| `BRANCH_COMPARISON_REVIEW.md` | Detailed side-by-side comparison of every architectural layer (updated 2026-02-22) |
+| `BRANCH_COMPARISON_REVIEW.md` | Detailed side-by-side comparison of every architectural layer (updated 2026-02-26) |
 | `API_CALLS.md` | Per-endpoint API contract comparison table (Codex vs Gemini, request/response fields) |
 
 ## Application tech stack

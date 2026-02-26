@@ -1,6 +1,6 @@
 # Family Journal — Branch Comparison Review (Updated)
 
-> **Last updated:** 2026-02-22
+> **Last updated:** 2026-02-26
 > **Previous review:** See git history for the original comparison.
 > **Original prompt:** See [ORIGINAL_PROMPT.md](./ORIGINAL_PROMPT.md)
 
@@ -40,6 +40,8 @@ Since the initial comparison, **both branches have seen significant improvements
 - Added **path traversal protection** for attachment downloads
 - Added **person duplicate name handling** with proper error messaging
 - Added **input validation** for required fields
+- Renamed `active` flag to `is_active` in User API (aligning with Gemini)
+- Removed `category` and `mood` fields from posts (migration 004)
 
 **Gemini** (30+ commits):
 - Added **registration success message** on login page
@@ -49,6 +51,8 @@ Since the initial comparison, **both branches have seen significant improvements
 - **Docker healthcheck** improvements
 - Bumped **Go version** to 1.24
 - Updated all frontend and backend dependencies to latest versions
+- Migrated API base path from `/api` to `/api/v1` (aligning with Codex)
+- Renamed auth routes to `/auth/*` namespace (aligning with Codex)
 
 ---
 
@@ -234,18 +238,18 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 | Difference | Branch 1 (Codex) | Branch 2 (Gemini) |
 |-----------|-------------------|---------------------|
 | **ID type** | `BIGINT` | `INT` |
-| **Post fields** | Has `category` and `mood` columns | No `category`/`mood` |
+| **Post fields** | No `category`/`mood` (removed in migration 004) | No `category`/`mood` |
 | **Attachment storage** | `url` column (relative URL path) | `storage_path` column (filesystem path) |
 | **Mention on person delete** | `SET NULL` (via migration 003) | `CASCADE` |
 | **Timestamps** | `DATETIME NOT NULL` (app-managed) | `TIMESTAMP DEFAULT CURRENT_TIMESTAMP` (DB-managed) |
 | **Person name constraint** | `UNIQUE (created_by_user_id, name)` | `UNIQUE (name, created_by_user_id)` |
 | **Mentions PK** | `id BIGINT AUTO_INCREMENT` + unique constraint | Composite `PRIMARY KEY (post_id, person_id)` |
 | **Additional tables** | `session_store` (for custom session management) | None (uses Fiber storage adapter's auto-created table) |
-| **Migration tracking** | `schema_migrations` table tracks applied migrations | No tracking (relies on `AutoMigrate` idempotency) |
+| **Migration tracking** | `schema_migrations` table; 4 migration files applied incrementally | No tracking (relies on `AutoMigrate` idempotency) |
 
 **Analysis:**
 - **Codex's `BIGINT` IDs** are more future-proof for high-volume usage
-- **Codex's `category` and `mood` fields** add richer metadata for care documentation
+- **Post fields are now identical** — Codex migration 004 removed `category` and `mood`, matching Gemini's schema
 - **Codex's `SET NULL` on person deletion** is safer — posts aren't lost when a person is removed. Gemini uses `CASCADE` which would delete mentions (and potentially orphan data)
 - **Gemini's DB-managed timestamps** are more reliable and consistent
 - **Codex's separate `id` on mentions** allows for independent addressing of mentions if needed later
@@ -378,7 +382,7 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 | **Docker Compose** | MySQL 8.3, healthchecks on all 3 services, named volumes for uploads, `start_period` | MySQL 8, healthcheck on DB only, bind mount for uploads |
 | **Frontend port** | 5173 | 3000 |
 | **Health endpoint** | `/healthz` on backend | None |
-| **Init SQL** | Via migration runner in Go code (tracked) | Via Docker entrypoint (`/docker-entrypoint-initdb.d/`) |
+| **Init SQL** | Via migration runner in Go code (tracked; 4 migration files) | Via Docker entrypoint (`/docker-entrypoint-initdb.d/`) |
 | **Nginx config** | Proxies `/api/*` and `/uploads/*` to backend, SPA fallback | Proxies `/api/*` to backend, SPA fallback |
 | **Default env values** | Provided in docker-compose.yml | Provided in docker-compose.yml |
 
@@ -405,6 +409,7 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 7. **No pagination** in post/person list endpoints — could be an issue for large datasets
 8. **Frontend types duplicated** across page components — no shared `types.ts`
 9. **Older dependency versions** — React 18, Vite 5, Tailwind 3
+10. ~~**`category`/`mood` post fields absent from original spec**~~ **Resolved** — removed in migration 004
 
 ### Branch 2 (Gemini)
 1. **No session regeneration on login** — session fixation vulnerability (unchanged from original review)
@@ -420,6 +425,8 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 11. **5xx errors expose raw error messages** to API consumers — security/info leakage concern
 12. **Password change doesn't require current password** — security concern
 13. **No health check endpoint** — harder to monitor in production
+14. ~~**API base URL `/api` diverged from Codex `/api/v1`**~~ **Fixed** — migrated to `/api/v1` (PR #15)
+15. ~~**Auth routes diverged from Codex `/auth/*`**~~ **Fixed** — renamed to `/auth/*` namespace (PR #18)
 
 ---
 
@@ -442,7 +449,7 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 | **Routing (frontend)** | Flat, ProtectedRoute outside component | Nested with Outlet, ProtectedRoute inside component | Tie |
 | **DevOps** | Full healthchecks, migration runner, npm ci | Graceful shutdown, newer Go version | Codex (slight edge) |
 | **Code quality** | Clean, no TODOs | Has TODOs, unfinished comments, replace directive | Codex |
-| **Feature completeness** | Category/mood fields, attachment validation, password change w/ verification | Admin overrides, image preview, attachment file cleanup | Tie |
+| **Feature completeness** | Attachment validation, password change w/ verification | Admin overrides, image preview, attachment file cleanup | Tie |
 | **Modern tooling** | React 18, Vite 5, Tailwind 3 | React 19, Vite 7, Tailwind 4, ESLint | Gemini |
 | **Dependency health** | Older but stable versions | Latest versions, one `replace` workaround | Gemini (slight edge) |
 
@@ -465,8 +472,15 @@ The original review recommended **Gemini as the better starting point** primaril
 - Error handling has been centralized with 5xx masking
 - Authorization has been formalized with the AccessScope pattern
 - Attachment security has been hardened
+- `active` flag renamed to `is_active` in User API (aligned with Gemini)
+- `category` and `mood` removed from posts (aligned with Gemini)
 
-**Meanwhile, Gemini's key issues from the original review remain unaddressed:**
+**Both branches have now converged on the same API surface:**
+- Both use `/api/v1` as the base path (Gemini: PR #15)
+- Both use `/auth/*` for authentication routes (Gemini: PR #18)
+- Both use `is_active` in all User payloads
+
+**Gemini's remaining key issues from the original review are still unaddressed:**
 - ASCII-only regex (`\w+`) still doesn't support German characters
 - No session regeneration on login
 - `ProtectedRoute` still defined inside component
@@ -492,7 +506,8 @@ The original review recommended **Gemini as the better starting point** primaril
 1. **Use Codex's backend** as the foundation (architecture, auth, migrations, error handling)
 2. **Adopt Gemini's frontend** as the UI base, then:
    - Replace `axios` with Codex's `apiFetch` if preferred, or keep axios
-   - Update API paths from `/api/` to `/api/v1/` to match Codex's versioned API
+   - ~~Update API paths from `/api/` to `/api/v1/`~~ — already done in Gemini (PR #15)
+   - ~~Update auth routes to `/auth/*`~~ — already done in Gemini (PR #18)
    - Add Codex's separate JSON translation files instead of inline i18n
    - Move `ProtectedRoute` outside the component tree
 3. **Fix Gemini's remaining issues** immediately:
