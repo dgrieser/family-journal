@@ -146,7 +146,7 @@ func (f *fakeRepo) SavePostWithRelations(ownerID int64, ownerFilter *int64, post
 	}
 	return nil
 }
-func (f *fakeRepo) GetAttachmentByName(name string, ownerFilter *int64) (*models.Attachment, error) {
+func (f *fakeRepo) GetAttachmentByID(id int64, ownerFilter *int64) (*models.Attachment, error) {
 	return nil, sql.ErrNoRows
 }
 

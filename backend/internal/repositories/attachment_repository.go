@@ -4,7 +4,7 @@ import "familyjournal/backend/internal/models"
 
 func (r *Repository) CreateAttachment(att *models.Attachment) error {
 	res, err := r.DB.Exec(`INSERT INTO attachments (post_id, file_name, file_type, file_size, url, created_at)
-		VALUES (?, ?, ?, ?, ?, NOW())`, att.PostID, att.FileName, att.FileType, att.FileSize, att.URL)
+		VALUES (?, ?, ?, ?, ?, NOW())`, att.PostID, att.FileName, att.FileType, att.FileSize, att.StoragePath)
 	if err != nil {
 		return err
 	}
@@ -12,16 +12,16 @@ func (r *Repository) CreateAttachment(att *models.Attachment) error {
 	if err != nil {
 		return err
 	}
-	return r.DB.Get(att, `SELECT id, post_id, file_name, file_type, file_size, url, created_at FROM attachments WHERE id = ?`, id)
+	return r.DB.Get(att, `SELECT id, post_id, file_name, file_type, file_size, url AS storage_path, created_at FROM attachments WHERE id = ?`, id)
 }
 
-func (r *Repository) GetAttachmentByName(name string, ownerFilter *int64) (*models.Attachment, error) {
+func (r *Repository) GetAttachmentByID(id int64, ownerFilter *int64) (*models.Attachment, error) {
 	var attachment models.Attachment
-	query := `SELECT a.id, a.post_id, a.file_name, a.file_type, a.file_size, a.url, a.created_at
+	query := `SELECT a.id, a.post_id, a.file_name, a.file_type, a.file_size, a.url AS storage_path, a.created_at
 		FROM attachments a
 		JOIN posts p ON p.id = a.post_id
-		WHERE a.file_name = ?`
-	args := []interface{}{name}
+		WHERE a.id = ?`
+	args := []interface{}{id}
 	if ownerFilter != nil {
 		query += ` AND p.user_id = ?`
 		args = append(args, *ownerFilter)

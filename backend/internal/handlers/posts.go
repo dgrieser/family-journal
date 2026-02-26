@@ -342,11 +342,11 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusInternalServerError, "save failed")
 		}
 		attachment := models.Attachment{
-			PostID:   int64(postID),
-			FileName: fileName,
-			FileType: contentType,
-			FileSize: file.Size,
-			URL:      "/uploads/" + fileName,
+			PostID:      int64(postID),
+			FileName:    fileName,
+			FileType:    contentType,
+			FileSize:    file.Size,
+			StoragePath: "/uploads/" + fileName,
 		}
 		if err := h.Service.CreateAttachment(&attachment); err != nil {
 			if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
@@ -360,17 +360,17 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(saved)
 }
 
-func (h *PostsHandler) DownloadAttachment(c *fiber.Ctx) error {
+func (h *PostsHandler) DownloadAttachmentByID(c *fiber.Ctx) error {
 	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
-	name := filepath.Base(c.Params("name"))
-	if name == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid file")
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
 	}
 	scope := services.NewAccessScope(userID, role)
-	attachment, err := h.Service.GetAttachmentForUser(scope, name)
+	attachment, err := h.Service.GetAttachmentByIDForUser(scope, int64(id))
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "not found")
 	}

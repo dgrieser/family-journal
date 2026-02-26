@@ -98,7 +98,7 @@ Error responses are JSON in the form `{ "error": "message" }`.
 
 ### Other routes
 - `GET /healthz`
-- `GET /uploads/:name` (requires authentication)
+- `GET /api/v1/attachments/:id/download` (requires authentication)
 
 ### Access scope
 - Non-admin users can only read and modify their own posts, comments, persons, and hashtags.

@@ -236,7 +236,7 @@ func (r *Repository) ListPostPersons(postID int64) ([]models.Person, error) {
 
 func (r *Repository) ListPostAttachments(postID int64) ([]models.Attachment, error) {
 	var attachments []models.Attachment
-	query := `SELECT id, post_id, file_name, file_type, file_size, url, created_at FROM attachments WHERE post_id = ?`
+	query := `SELECT id, post_id, file_name, file_type, file_size, url AS storage_path, created_at FROM attachments WHERE post_id = ?`
 	if err := r.DB.Select(&attachments, query, postID); err != nil {
 		return nil, err
 	}
@@ -328,20 +328,20 @@ func (r *Repository) ListAttachmentsForPosts(postIDs []int64) (map[int64][]model
 	if len(postIDs) == 0 {
 		return results, nil
 	}
-	query, args, err := sqlx.In(`SELECT post_id, id, file_name, file_type, file_size, url, created_at
+	query, args, err := sqlx.In(`SELECT post_id, id, file_name, file_type, file_size, url AS storage_path, created_at
 		FROM attachments WHERE post_id IN (?)`, postIDs)
 	if err != nil {
 		return nil, err
 	}
 	query = r.DB.Rebind(query)
 	type row struct {
-		PostID    int64     `db:"post_id"`
-		ID        int64     `db:"id"`
-		FileName  string    `db:"file_name"`
-		FileType  string    `db:"file_type"`
-		FileSize  int64     `db:"file_size"`
-		URL       string    `db:"url"`
-		CreatedAt time.Time `db:"created_at"`
+		PostID      int64     `db:"post_id"`
+		ID          int64     `db:"id"`
+		FileName    string    `db:"file_name"`
+		FileType    string    `db:"file_type"`
+		FileSize    int64     `db:"file_size"`
+		StoragePath string    `db:"storage_path"`
+		CreatedAt   time.Time `db:"created_at"`
 	}
 	var rows []row
 	if err := r.DB.Select(&rows, query, args...); err != nil {
@@ -349,13 +349,13 @@ func (r *Repository) ListAttachmentsForPosts(postIDs []int64) (map[int64][]model
 	}
 	for _, item := range rows {
 		results[item.PostID] = append(results[item.PostID], models.Attachment{
-			ID:        item.ID,
-			PostID:    item.PostID,
-			FileName:  item.FileName,
-			FileType:  item.FileType,
-			FileSize:  item.FileSize,
-			URL:       item.URL,
-			CreatedAt: item.CreatedAt,
+			ID:          item.ID,
+			PostID:      item.PostID,
+			FileName:    item.FileName,
+			FileType:    item.FileType,
+			FileSize:    item.FileSize,
+			StoragePath: item.StoragePath,
+			CreatedAt:   item.CreatedAt,
 		})
 	}
 	return results, nil
