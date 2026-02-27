@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"mime/multipart"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
@@ -15,6 +18,21 @@ import (
 
 type PostHandler struct {
 	postService *services.PostService
+}
+
+const maxAttachmentSize int64 = 5 * 1024 * 1024 // 5MB
+
+var allowedAttachmentExtByType = map[string]map[string]bool{
+	"image/jpeg": {
+		".jpg":  true,
+		".jpeg": true,
+	},
+	"image/png": {
+		".png": true,
+	},
+	"application/pdf": {
+		".pdf": true,
+	},
 }
 
 func NewPostHandler(postService *services.PostService) *PostHandler {
@@ -122,6 +140,36 @@ func (h *PostHandler) respondUploadError(c *fiber.Ctx, postID uint, err error) e
 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
 }
 
+func validateAttachmentFile(file *multipart.FileHeader) (string, bool, error) {
+	if file.Size <= 0 || file.Size > maxAttachmentSize {
+		return "", false, nil
+	}
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	src, err := file.Open()
+	if err != nil {
+		return "", false, fmt.Errorf("open file %q: %w", file.Filename, err)
+	}
+	defer src.Close()
+
+	header := make([]byte, 512)
+	n, err := io.ReadFull(src, header)
+	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
+		return "", false, fmt.Errorf("read file header %q: %w", file.Filename, err)
+	}
+
+	detectedType := http.DetectContentType(header[:n])
+	allowedExts, ok := allowedAttachmentExtByType[detectedType]
+	if !ok {
+		return "", false, nil
+	}
+	if !allowedExts[ext] {
+		return "", false, nil
+	}
+
+	return detectedType, true, nil
+}
+
 func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) ([]AttachmentResponse, error) {
 	if !strings.HasPrefix(c.Get(fiber.HeaderContentType), fiber.MIMEMultipartForm) {
 		return nil, nil
@@ -140,34 +188,15 @@ func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) ([]Attachment
 
 	uploaded := make([]AttachmentResponse, 0, len(files))
 	for _, file := range files {
-		// Validate file extension
+		contentType, valid, err := validateAttachmentFile(file)
+		if err != nil {
+			return nil, err
+		}
+		if !valid {
+			continue
+		}
+
 		ext := strings.ToLower(filepath.Ext(file.Filename))
-		allowedExts := map[string]bool{
-			".jpg":  true,
-			".jpeg": true,
-			".png":  true,
-			".pdf":  true,
-		}
-		if !allowedExts[ext] {
-			continue
-		}
-
-		// Validate file type
-		contentType := file.Header.Get("Content-Type")
-		allowedTypes := map[string]bool{
-			"image/jpeg":      true,
-			"image/png":       true,
-			"application/pdf": true,
-		}
-		if !allowedTypes[contentType] {
-			continue
-		}
-
-		// Validate file size (e.g. 5MB)
-		if file.Size > 5*1024*1024 {
-			continue
-		}
-
 		newFileName := uuid.New().String() + ext
 		storagePath := filepath.Join("uploads", newFileName)
 
