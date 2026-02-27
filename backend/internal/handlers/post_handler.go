@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -109,6 +110,11 @@ type AttachmentResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type uploadedAttachmentRecord struct {
+	ID          uint
+	StoragePath string
+}
+
 func toAttachmentResponse(a *models.Attachment) AttachmentResponse {
 	return AttachmentResponse{
 		ID:        a.ID,
@@ -139,6 +145,34 @@ func (h *PostHandler) checkPostPermission(c *fiber.Ctx, post *models.Post) error
 func (h *PostHandler) respondUploadError(c *fiber.Ctx, postID uint, err error) error {
 	log.Printf("failed to upload attachments for post %d: %v", postID, err)
 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
+}
+
+var unsafeFilenameChars = regexp.MustCompile(`[^a-zA-Z0-9._ -]+`)
+
+func sanitizeAttachmentFilename(name string) string {
+	normalized := strings.ReplaceAll(name, "\\", "/")
+	base := filepath.Base(normalized)
+	base = strings.TrimSpace(base)
+	base = unsafeFilenameChars.ReplaceAllString(base, "_")
+	base = strings.Trim(base, ". ")
+	if base == "" {
+		return "attachment"
+	}
+	if len(base) > 255 {
+		base = base[:255]
+	}
+	return base
+}
+
+func (h *PostHandler) rollbackUploadedAttachments(attachments []uploadedAttachmentRecord) {
+	for _, attachment := range attachments {
+		if err := h.postService.DeleteAttachment(attachment.ID); err != nil {
+			log.Printf("rollback failed deleting attachment row %d: %v", attachment.ID, err)
+		}
+		if err := os.Remove(attachment.StoragePath); err != nil && !os.IsNotExist(err) {
+			log.Printf("rollback failed deleting attachment file %s: %v", attachment.StoragePath, err)
+		}
+	}
 }
 
 func validateAttachmentFile(file *multipart.FileHeader) (string, bool, error) {
@@ -188,9 +222,11 @@ func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) ([]Attachment
 	}
 
 	uploaded := make([]AttachmentResponse, 0, len(files))
+	uploadedRecords := make([]uploadedAttachmentRecord, 0, len(files))
 	for _, file := range files {
 		contentType, valid, err := validateAttachmentFile(file)
 		if err != nil {
+			h.rollbackUploadedAttachments(uploadedRecords)
 			return nil, err
 		}
 		if !valid {
@@ -202,15 +238,22 @@ func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) ([]Attachment
 		storagePath := filepath.Join("uploads", newFileName)
 
 		if err := c.SaveFile(file, storagePath); err != nil {
+			h.rollbackUploadedAttachments(uploadedRecords)
 			return nil, fmt.Errorf("save file %q: %w", file.Filename, err)
 		}
 
-		attachment, err := h.postService.AddAttachment(postID, file.Filename, contentType, file.Size, storagePath)
+		safeFileName := sanitizeAttachmentFilename(file.Filename)
+		attachment, err := h.postService.AddAttachment(postID, safeFileName, contentType, file.Size, storagePath)
 		if err != nil {
 			// Best-effort cleanup to avoid orphaned files.
 			_ = os.Remove(storagePath)
+			h.rollbackUploadedAttachments(uploadedRecords)
 			return nil, fmt.Errorf("persist attachment %q: %w", file.Filename, err)
 		}
+		uploadedRecords = append(uploadedRecords, uploadedAttachmentRecord{
+			ID:          attachment.ID,
+			StoragePath: storagePath,
+		})
 		uploaded = append(uploaded, toAttachmentResponse(attachment))
 	}
 	return uploaded, nil

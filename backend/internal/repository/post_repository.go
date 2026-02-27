@@ -111,6 +111,10 @@ func (r *PostRepository) FindAttachmentByID(id uint) (*models.Attachment, error)
 	return &attachment, nil
 }
 
+func (r *PostRepository) DeleteAttachment(id uint) error {
+	return r.db.Delete(&models.Attachment{}, id).Error
+}
+
 func (r *PostRepository) GetAllHashtags() ([]models.Hashtag, error) {
 	var hashtags []models.Hashtag
 	err := r.db.Find(&hashtags).Error

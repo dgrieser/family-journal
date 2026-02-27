@@ -193,6 +193,10 @@ func (s *PostService) GetAttachment(id uint) (*models.Attachment, error) {
 	return s.postRepo.FindAttachmentByID(id)
 }
 
+func (s *PostService) DeleteAttachment(id uint) error {
+	return s.postRepo.DeleteAttachment(id)
+}
+
 func (s *PostService) AddAttachment(postID uint, fileName, fileType string, fileSize int64, storagePath string) (*models.Attachment, error) {
 	attachment := &models.Attachment{
 		PostID:      postID,
