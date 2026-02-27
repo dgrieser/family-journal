@@ -91,21 +91,24 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append('text', text);
-    formData.append('date', date);
-    files.forEach(file => formData.append('attachments', file));
 
     try {
+      let postId = initialData?.id;
+
       if (initialData) {
-        await api.put(`/posts/${initialData.id}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const response = await api.put(`/posts/${initialData.id}`, { text, date });
+        postId = response.data.id;
       } else {
-        await api.post('/posts', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const response = await api.post('/posts', { text, date });
+        postId = response.data.id;
       }
+
+      if (postId && files.length > 0) {
+        const formData = new FormData();
+        files.forEach(file => formData.append('files', file));
+        await api.post(`/posts/${postId}/attachments`, formData);
+      }
+
       setText('');
       setFiles([]);
       onSuccess();

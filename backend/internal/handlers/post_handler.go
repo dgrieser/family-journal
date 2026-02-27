@@ -90,7 +90,12 @@ func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) error {
 		return nil // No files to upload
 	}
 
-	files := form.File["attachments"]
+	files := form.File["files"]
+	if len(files) == 0 {
+		// Backward compatibility for older clients.
+		files = form.File["attachments"]
+	}
+
 	for _, file := range files {
 		// Validate file extension
 		ext := strings.ToLower(filepath.Ext(file.Filename))
@@ -131,6 +136,38 @@ func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) error {
 		h.postService.AddAttachment(postID, file.Filename, contentType, file.Size, storagePath)
 	}
 	return nil
+}
+
+func (h *PostHandler) AddAttachments(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
+	}
+
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+
+	post, err := h.postService.GetPost(uint(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
+	}
+
+	if post.UserID != userID && c.Locals("role").(string) != "admin" {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
+	if err := h.handleFileUploads(c, post.ID); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	updatedPost, err := h.postService.GetPost(post.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(updatedPost.Attachments)
 }
 
 func (h *PostHandler) Create(c *fiber.Ctx) error {
