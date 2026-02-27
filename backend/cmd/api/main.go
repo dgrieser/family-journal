@@ -167,6 +167,7 @@ func main() {
 	protected.Get("/posts/:id", postHandler.GetPost)
 	protected.Post("/posts", postHandler.Create)
 	protected.Put("/posts/:id", postHandler.Update)
+	protected.Post("/posts/:id/attachments", postHandler.AddAttachments)
 	protected.Delete("/posts/:id", postHandler.Delete)
 
 	// Comments

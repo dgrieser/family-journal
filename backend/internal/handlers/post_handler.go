@@ -1,18 +1,40 @@
 package handlers
 
 import (
+	"fmt"
+	"io"
 	"log"
+	"mime/multipart"
+	"net/http"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/user/family-journal/internal/models"
 	"github.com/user/family-journal/internal/services"
 )
 
 type PostHandler struct {
 	postService *services.PostService
+}
+
+const maxAttachmentSize int64 = 5 * 1024 * 1024 // 5MB
+
+var allowedAttachmentExtByType = map[string]map[string]bool{
+	"image/jpeg": {
+		".jpg":  true,
+		".jpeg": true,
+	},
+	"image/png": {
+		".png": true,
+	},
+	"application/pdf": {
+		".pdf": true,
+	},
 }
 
 func NewPostHandler(postService *services.PostService) *PostHandler {
@@ -62,18 +84,13 @@ func (h *PostHandler) GetPost(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
 	}
 
-	userID, ok := c.Locals("user_id").(uint)
-	if !ok {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
-	}
-
 	post, err := h.postService.GetPost(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if post.UserID != userID && c.Locals("role").(string) != "admin" {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	if err := h.checkPostPermission(c, post); err != nil {
+		return err
 	}
 
 	return c.JSON(post)
@@ -84,53 +101,185 @@ type CreatePostRequest struct {
 	Text string `json:"text"`
 }
 
-func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) error {
-	form, err := c.MultipartForm()
-	if err != nil {
-		return nil // No files to upload
+type AttachmentResponse struct {
+	ID        uint      `json:"id"`
+	PostID    uint      `json:"post_id"`
+	FileName  string    `json:"file_name"`
+	FileType  string    `json:"file_type"`
+	FileSize  int64     `json:"file_size"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type uploadedAttachmentRecord struct {
+	ID          uint
+	StoragePath string
+}
+
+func toAttachmentResponse(a *models.Attachment) AttachmentResponse {
+	return AttachmentResponse{
+		ID:        a.ID,
+		PostID:    a.PostID,
+		FileName:  a.FileName,
+		FileType:  a.FileType,
+		FileSize:  a.FileSize,
+		CreatedAt: a.CreatedAt,
+	}
+}
+
+func isAdmin(c *fiber.Ctx) bool {
+	role, ok := c.Locals("role").(string)
+	return ok && role == "admin"
+}
+
+func (h *PostHandler) checkPostPermission(c *fiber.Ctx, post *models.Post) error {
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+	if post.UserID != userID && !isAdmin(c) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	}
+	return nil
+}
+
+func (h *PostHandler) respondUploadError(c *fiber.Ctx, postID uint, err error) error {
+	log.Printf("failed to upload attachments for post %d: %v", postID, err)
+	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
+}
+
+var unsafeFilenameChars = regexp.MustCompile(`[^a-zA-Z0-9._ -]+`)
+
+func sanitizeAttachmentFilename(name string) string {
+	normalized := strings.ReplaceAll(name, "\\", "/")
+	base := filepath.Base(normalized)
+	base = strings.TrimSpace(base)
+	base = unsafeFilenameChars.ReplaceAllString(base, "_")
+	base = strings.Trim(base, ". ")
+	if base == "" {
+		return "attachment"
+	}
+	if len(base) > 255 {
+		base = base[:255]
+	}
+	return base
+}
+
+func (h *PostHandler) rollbackUploadedAttachments(attachments []uploadedAttachmentRecord) {
+	for _, attachment := range attachments {
+		if err := h.postService.DeleteAttachment(attachment.ID); err != nil {
+			log.Printf("rollback failed deleting attachment row %d: %v", attachment.ID, err)
+		}
+		if err := os.Remove(attachment.StoragePath); err != nil && !os.IsNotExist(err) {
+			log.Printf("rollback failed deleting attachment file %s: %v", attachment.StoragePath, err)
+		}
+	}
+}
+
+func validateAttachmentFile(file *multipart.FileHeader) (string, bool, error) {
+	if file.Size <= 0 || file.Size > maxAttachmentSize {
+		return "", false, nil
 	}
 
-	files := form.File["attachments"]
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	src, err := file.Open()
+	if err != nil {
+		return "", false, fmt.Errorf("open file %q: %w", file.Filename, err)
+	}
+	defer src.Close()
+
+	header := make([]byte, 512)
+	n, err := io.ReadFull(src, header)
+	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
+		return "", false, fmt.Errorf("read file header %q: %w", file.Filename, err)
+	}
+
+	detectedType := http.DetectContentType(header[:n])
+	allowedExts, ok := allowedAttachmentExtByType[detectedType]
+	if !ok {
+		return "", false, nil
+	}
+	if !allowedExts[ext] {
+		return "", false, nil
+	}
+
+	return detectedType, true, nil
+}
+
+func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) ([]AttachmentResponse, error) {
+	if !strings.HasPrefix(c.Get(fiber.HeaderContentType), fiber.MIMEMultipartForm) {
+		return nil, nil
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		return nil, fmt.Errorf("invalid multipart form: %w", err)
+	}
+
+	files := form.File["files"]
+	if len(files) == 0 {
+		// Backward compatibility for older clients.
+		files = form.File["attachments"]
+	}
+
+	uploaded := make([]AttachmentResponse, 0, len(files))
+	uploadedRecords := make([]uploadedAttachmentRecord, 0, len(files))
 	for _, file := range files {
-		// Validate file extension
+		contentType, valid, err := validateAttachmentFile(file)
+		if err != nil {
+			h.rollbackUploadedAttachments(uploadedRecords)
+			return nil, err
+		}
+		if !valid {
+			continue
+		}
+
 		ext := strings.ToLower(filepath.Ext(file.Filename))
-		allowedExts := map[string]bool{
-			".jpg":  true,
-			".jpeg": true,
-			".png":  true,
-			".pdf":  true,
-		}
-		if !allowedExts[ext] {
-			continue
-		}
-
-		// Validate file type
-		contentType := file.Header.Get("Content-Type")
-		allowedTypes := map[string]bool{
-			"image/jpeg":      true,
-			"image/png":       true,
-			"application/pdf": true,
-		}
-		if !allowedTypes[contentType] {
-			continue
-		}
-
-		// Validate file size (e.g. 5MB)
-		if file.Size > 5*1024*1024 {
-			continue
-		}
-
 		newFileName := uuid.New().String() + ext
 		storagePath := filepath.Join("uploads", newFileName)
 
 		if err := c.SaveFile(file, storagePath); err != nil {
-			log.Printf("Error saving file %s: %v", file.Filename, err)
-			continue
+			h.rollbackUploadedAttachments(uploadedRecords)
+			return nil, fmt.Errorf("save file %q: %w", file.Filename, err)
 		}
 
-		h.postService.AddAttachment(postID, file.Filename, contentType, file.Size, storagePath)
+		safeFileName := sanitizeAttachmentFilename(file.Filename)
+		attachment, err := h.postService.AddAttachment(postID, safeFileName, contentType, file.Size, storagePath)
+		if err != nil {
+			// Best-effort cleanup to avoid orphaned files.
+			_ = os.Remove(storagePath)
+			h.rollbackUploadedAttachments(uploadedRecords)
+			return nil, fmt.Errorf("persist attachment %q: %w", file.Filename, err)
+		}
+		uploadedRecords = append(uploadedRecords, uploadedAttachmentRecord{
+			ID:          attachment.ID,
+			StoragePath: storagePath,
+		})
+		uploaded = append(uploaded, toAttachmentResponse(attachment))
 	}
-	return nil
+	return uploaded, nil
+}
+
+func (h *PostHandler) AddAttachments(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
+	}
+
+	post, err := h.postService.GetPost(uint(id))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
+	}
+
+	if err := h.checkPostPermission(c, post); err != nil {
+		return err
+	}
+
+	attachments, err := h.handleFileUploads(c, post.ID)
+	if err != nil {
+		return h.respondUploadError(c, post.ID, err)
+	}
+
+	return c.JSON(attachments)
 }
 
 func (h *PostHandler) Create(c *fiber.Ctx) error {
@@ -163,7 +312,9 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	h.handleFileUploads(c, post.ID)
+	if _, err := h.handleFileUploads(c, post.ID); err != nil {
+		return h.respondUploadError(c, post.ID, err)
+	}
 
 	return c.Status(fiber.StatusCreated).JSON(post)
 }
@@ -174,18 +325,13 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
 	}
 
-	userID, ok := c.Locals("user_id").(uint)
-	if !ok {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
-	}
-
 	existingPost, err := h.postService.GetPost(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if existingPost.UserID != userID && c.Locals("role").(string) != "admin" {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	if err := h.checkPostPermission(c, existingPost); err != nil {
+		return err
 	}
 
 	req := CreatePostRequest{
@@ -211,7 +357,9 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	h.handleFileUploads(c, post.ID)
+	if _, err := h.handleFileUploads(c, post.ID); err != nil {
+		return h.respondUploadError(c, post.ID, err)
+	}
 
 	return c.JSON(post)
 }
@@ -222,18 +370,13 @@ func (h *PostHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
 	}
 
-	userID, ok := c.Locals("user_id").(uint)
-	if !ok {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
-	}
-
 	existingPost, err := h.postService.GetPost(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if existingPost.UserID != userID && c.Locals("role").(string) != "admin" {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	if err := h.checkPostPermission(c, existingPost); err != nil {
+		return err
 	}
 
 	if err := h.postService.DeletePost(uint(id)); err != nil {
@@ -262,7 +405,7 @@ func (h *PostHandler) AddComment(c *fiber.Ctx) error {
 	}
 
 	// Verify post ownership or admin role
-	if post.UserID != userID && c.Locals("role").(string) != "admin" {
+	if post.UserID != userID && !isAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -295,7 +438,7 @@ func (h *PostHandler) DeleteComment(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "comment not found"})
 	}
 
-	if existingComment.UserID != userID && c.Locals("role").(string) != "admin" {
+	if existingComment.UserID != userID && !isAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -326,7 +469,7 @@ func (h *PostHandler) DownloadAttachment(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "associated post not found"})
 	}
 
-	if post.UserID != userID && c.Locals("role").(string) != "admin" {
+	if post.UserID != userID && !isAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 

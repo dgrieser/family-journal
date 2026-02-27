@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { AxiosError } from 'axios';
 import api from '../api';
 import { Send, Paperclip, X } from 'lucide-react';
 import type { Post, Hashtag, Person } from '../types';
@@ -19,6 +20,8 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [allHashtags, setAllHashtags] = useState<string[]>([]);
   const [allPersons, setAllPersons] = useState<string[]>([]);
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -91,26 +94,39 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append('text', text);
-    formData.append('date', date);
-    files.forEach(file => formData.append('attachments', file));
+    setSubmitError('');
+    setIsSubmitting(true);
+    let postSaved = false;
 
     try {
-      if (initialData) {
-        await api.put(`/posts/${initialData.id}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
-      } else {
-        await api.post('/posts', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+      const isUpdate = !!initialData;
+      const url = isUpdate ? `/posts/${initialData.id}` : '/posts';
+      const response = isUpdate ? await api.put(url, { text, date }) : await api.post(url, { text, date });
+      const postId = response.data.id;
+      postSaved = true;
+
+      if (postId && files.length > 0) {
+        const formData = new FormData();
+        files.forEach(file => formData.append('files', file));
+        await api.post(`/posts/${postId}/attachments`, formData);
       }
+
       setText('');
       setFiles([]);
       onSuccess();
     } catch (err) {
       console.error(err);
+      const apiErr = err as AxiosError<{ error?: string }>;
+      const backendMessage = apiErr.response?.data?.error;
+      if (backendMessage) {
+        setSubmitError(backendMessage);
+      } else if (postSaved) {
+        setSubmitError(t('post_partial_upload_error'));
+      } else {
+        setSubmitError(t('post_submit_error'));
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -160,6 +176,12 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
            ))}
         </div>
 
+        {submitError && (
+          <div className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
+
         <div className="flex items-center justify-between mt-3">
           <label className="cursor-pointer text-gray-500 hover:text-indigo-600 flex items-center gap-1">
             <Paperclip size={20} />
@@ -168,7 +190,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
           </label>
           <button
             type="submit"
-            disabled={!text.trim()}
+            disabled={!text.trim() || isSubmitting}
             className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
           >
             <Send size={18} />
