@@ -6,6 +6,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -206,6 +207,8 @@ func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) ([]Attachment
 
 		attachment, err := h.postService.AddAttachment(postID, file.Filename, contentType, file.Size, storagePath)
 		if err != nil {
+			// Best-effort cleanup to avoid orphaned files.
+			_ = os.Remove(storagePath)
 			return nil, fmt.Errorf("persist attachment %q: %w", file.Filename, err)
 		}
 		uploaded = append(uploaded, toAttachmentResponse(attachment))
