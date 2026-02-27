@@ -47,6 +47,8 @@ const resources = {
       "dont_have_account": "Don't have an account?",
       "already_have_account": "Already have an account?",
       "registration_success_login": "Registration successful. Please log in.",
+      "post_submit_error": "Could not save the post. Please try again.",
+      "post_partial_upload_error": "Post saved, but uploading attachments failed.",
     }
   },
   de: {
@@ -94,6 +96,8 @@ const resources = {
       "dont_have_account": "Noch kein Konto?",
       "already_have_account": "Schon ein Konto?",
       "registration_success_login": "Registrierung erfolgreich. Bitte anmelden.",
+      "post_submit_error": "Der Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.",
+      "post_partial_upload_error": "Eintrag gespeichert, aber das Hochladen der Anhänge ist fehlgeschlagen.",
     }
   }
 };

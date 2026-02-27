@@ -64,18 +64,13 @@ func (h *PostHandler) GetPost(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
 	}
 
-	userID, ok := c.Locals("user_id").(uint)
-	if !ok {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
-	}
-
 	post, err := h.postService.GetPost(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if post.UserID != userID && !isAdmin(c) {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	if err := h.checkPostPermission(c, post); err != nil {
+		return err
 	}
 
 	return c.JSON(post)
@@ -109,6 +104,22 @@ func toAttachmentResponse(a *models.Attachment) AttachmentResponse {
 func isAdmin(c *fiber.Ctx) bool {
 	role, ok := c.Locals("role").(string)
 	return ok && role == "admin"
+}
+
+func (h *PostHandler) checkPostPermission(c *fiber.Ctx, post *models.Post) error {
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
+	}
+	if post.UserID != userID && !isAdmin(c) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	}
+	return nil
+}
+
+func (h *PostHandler) respondUploadError(c *fiber.Ctx, postID uint, err error) error {
+	log.Printf("failed to upload attachments for post %d: %v", postID, err)
+	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
 }
 
 func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) ([]AttachmentResponse, error) {
@@ -179,24 +190,18 @@ func (h *PostHandler) AddAttachments(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
 	}
 
-	userID, ok := c.Locals("user_id").(uint)
-	if !ok {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
-	}
-
 	post, err := h.postService.GetPost(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if post.UserID != userID && !isAdmin(c) {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	if err := h.checkPostPermission(c, post); err != nil {
+		return err
 	}
 
 	attachments, err := h.handleFileUploads(c, post.ID)
 	if err != nil {
-		log.Printf("failed to upload attachments for post %d: %v", post.ID, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
+		return h.respondUploadError(c, post.ID, err)
 	}
 
 	return c.JSON(attachments)
@@ -233,8 +238,7 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 	}
 
 	if _, err := h.handleFileUploads(c, post.ID); err != nil {
-		log.Printf("failed to upload attachments for post %d: %v", post.ID, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
+		return h.respondUploadError(c, post.ID, err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(post)
@@ -246,18 +250,13 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
 	}
 
-	userID, ok := c.Locals("user_id").(uint)
-	if !ok {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
-	}
-
 	existingPost, err := h.postService.GetPost(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if existingPost.UserID != userID && !isAdmin(c) {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	if err := h.checkPostPermission(c, existingPost); err != nil {
+		return err
 	}
 
 	req := CreatePostRequest{
@@ -284,8 +283,7 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 	}
 
 	if _, err := h.handleFileUploads(c, post.ID); err != nil {
-		log.Printf("failed to upload attachments for post %d: %v", post.ID, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
+		return h.respondUploadError(c, post.ID, err)
 	}
 
 	return c.JSON(post)
@@ -297,18 +295,13 @@ func (h *PostHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id parameter"})
 	}
 
-	userID, ok := c.Locals("user_id").(uint)
-	if !ok {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
-	}
-
 	existingPost, err := h.postService.GetPost(uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if existingPost.UserID != userID && !isAdmin(c) {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
+	if err := h.checkPostPermission(c, existingPost); err != nil {
+		return err
 	}
 
 	if err := h.postService.DeletePost(uint(id)); err != nil {
