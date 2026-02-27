@@ -99,17 +99,11 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     let postSaved = false;
 
     try {
-      let postId = initialData?.id;
-
-      if (initialData) {
-        const response = await api.put(`/posts/${initialData.id}`, { text, date });
-        postId = response.data.id;
-        postSaved = true;
-      } else {
-        const response = await api.post('/posts', { text, date });
-        postId = response.data.id;
-        postSaved = true;
-      }
+      const isUpdate = !!initialData;
+      const url = isUpdate ? `/posts/${initialData.id}` : '/posts';
+      const response = isUpdate ? await api.put(url, { text, date }) : await api.post(url, { text, date });
+      const postId = response.data.id;
+      postSaved = true;
 
       if (postId && files.length > 0) {
         const formData = new FormData();
