@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/user/family-journal/internal/models"
 	"github.com/user/family-journal/internal/services"
 )
 
@@ -72,7 +74,7 @@ func (h *PostHandler) GetPost(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if post.UserID != userID && c.Locals("role").(string) != "admin" {
+	if post.UserID != userID && !isAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -84,10 +86,39 @@ type CreatePostRequest struct {
 	Text string `json:"text"`
 }
 
-func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) error {
+type AttachmentResponse struct {
+	ID        uint      `json:"id"`
+	PostID    uint      `json:"post_id"`
+	FileName  string    `json:"file_name"`
+	FileType  string    `json:"file_type"`
+	FileSize  int64     `json:"file_size"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func toAttachmentResponse(a *models.Attachment) AttachmentResponse {
+	return AttachmentResponse{
+		ID:        a.ID,
+		PostID:    a.PostID,
+		FileName:  a.FileName,
+		FileType:  a.FileType,
+		FileSize:  a.FileSize,
+		CreatedAt: a.CreatedAt,
+	}
+}
+
+func isAdmin(c *fiber.Ctx) bool {
+	role, ok := c.Locals("role").(string)
+	return ok && role == "admin"
+}
+
+func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) ([]AttachmentResponse, error) {
+	if !strings.HasPrefix(c.Get(fiber.HeaderContentType), fiber.MIMEMultipartForm) {
+		return nil, nil
+	}
+
 	form, err := c.MultipartForm()
 	if err != nil {
-		return nil // No files to upload
+		return nil, fmt.Errorf("invalid multipart form: %w", err)
 	}
 
 	files := form.File["files"]
@@ -96,6 +127,7 @@ func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) error {
 		files = form.File["attachments"]
 	}
 
+	uploaded := make([]AttachmentResponse, 0, len(files))
 	for _, file := range files {
 		// Validate file extension
 		ext := strings.ToLower(filepath.Ext(file.Filename))
@@ -129,13 +161,16 @@ func (h *PostHandler) handleFileUploads(c *fiber.Ctx, postID uint) error {
 		storagePath := filepath.Join("uploads", newFileName)
 
 		if err := c.SaveFile(file, storagePath); err != nil {
-			log.Printf("Error saving file %s: %v", file.Filename, err)
-			continue
+			return nil, fmt.Errorf("save file %q: %w", file.Filename, err)
 		}
 
-		h.postService.AddAttachment(postID, file.Filename, contentType, file.Size, storagePath)
+		attachment, err := h.postService.AddAttachment(postID, file.Filename, contentType, file.Size, storagePath)
+		if err != nil {
+			return nil, fmt.Errorf("persist attachment %q: %w", file.Filename, err)
+		}
+		uploaded = append(uploaded, toAttachmentResponse(attachment))
 	}
-	return nil
+	return uploaded, nil
 }
 
 func (h *PostHandler) AddAttachments(c *fiber.Ctx) error {
@@ -154,20 +189,17 @@ func (h *PostHandler) AddAttachments(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if post.UserID != userID && c.Locals("role").(string) != "admin" {
+	if post.UserID != userID && !isAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
-	if err := h.handleFileUploads(c, post.ID); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	updatedPost, err := h.postService.GetPost(post.ID)
+	attachments, err := h.handleFileUploads(c, post.ID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		log.Printf("failed to upload attachments for post %d: %v", post.ID, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
 	}
 
-	return c.JSON(updatedPost.Attachments)
+	return c.JSON(attachments)
 }
 
 func (h *PostHandler) Create(c *fiber.Ctx) error {
@@ -200,7 +232,10 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	h.handleFileUploads(c, post.ID)
+	if _, err := h.handleFileUploads(c, post.ID); err != nil {
+		log.Printf("failed to upload attachments for post %d: %v", post.ID, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
+	}
 
 	return c.Status(fiber.StatusCreated).JSON(post)
 }
@@ -221,7 +256,7 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if existingPost.UserID != userID && c.Locals("role").(string) != "admin" {
+	if existingPost.UserID != userID && !isAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -248,7 +283,10 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	h.handleFileUploads(c, post.ID)
+	if _, err := h.handleFileUploads(c, post.ID); err != nil {
+		log.Printf("failed to upload attachments for post %d: %v", post.ID, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
+	}
 
 	return c.JSON(post)
 }
@@ -269,7 +307,7 @@ func (h *PostHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "post not found"})
 	}
 
-	if existingPost.UserID != userID && c.Locals("role").(string) != "admin" {
+	if existingPost.UserID != userID && !isAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -299,7 +337,7 @@ func (h *PostHandler) AddComment(c *fiber.Ctx) error {
 	}
 
 	// Verify post ownership or admin role
-	if post.UserID != userID && c.Locals("role").(string) != "admin" {
+	if post.UserID != userID && !isAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -332,7 +370,7 @@ func (h *PostHandler) DeleteComment(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "comment not found"})
 	}
 
-	if existingComment.UserID != userID && c.Locals("role").(string) != "admin" {
+	if existingComment.UserID != userID && !isAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -363,7 +401,7 @@ func (h *PostHandler) DownloadAttachment(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "associated post not found"})
 	}
 
-	if post.UserID != userID && c.Locals("role").(string) != "admin" {
+	if post.UserID != userID && !isAdmin(c) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
