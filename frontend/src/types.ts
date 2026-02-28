@@ -49,7 +49,7 @@ export interface Post {
   date: string;
   text: string;
   hashtags: Hashtag[];
-  mentions: Person[];
+  persons: Person[];
   attachments: Attachment[];
   comments: Comment[];
   created_at: string;
