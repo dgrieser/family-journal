@@ -32,8 +32,8 @@ export const Admin = () => {
 
   const handleToggleActive = async (userId: number, isActive: boolean) => {
     try {
-      await api.patch(`/admin/users/${userId}/active`, { is_active: isActive });
-      fetchUsers();
+      const res = await api.patch(`/admin/users/${userId}/active`, { is_active: isActive });
+      setUsers(users.map(u => u.id === userId ? res.data : u));
     } catch (err) {
       console.error(err);
     }
