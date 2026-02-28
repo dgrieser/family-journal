@@ -10,20 +10,26 @@ export const Profile = () => {
   const { t } = useTranslation();
   const { user, setUser } = useAuthStore();
   const [email, setEmail] = useState(user?.email || '');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await api.put(API_ROUTES.AUTH_PROFILE, { email, password });
+      const res = await api.put(API_ROUTES.AUTH_PROFILE, {
+        email,
+        currentPassword,
+        newPassword: password,
+      });
       setUser(res.data);
       setMessage({ type: 'success', text: t('success') });
+      setCurrentPassword('');
       setPassword('');
     } catch (err: unknown) {
       let errorMsg = t('error');
       if (axios.isAxiosError(err)) {
-        errorMsg = err.response?.data?.error || t('error');
+        errorMsg = err.response?.data?.error || err.response?.data?.message || t('error');
       }
       setMessage({ type: 'error', text: errorMsg });
     }
@@ -51,6 +57,17 @@ export const Profile = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full border rounded-md px-3 py-2"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Current password</label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="mt-1 block w-full border rounded-md px-3 py-2"
+              placeholder="••••••••"
               required
             />
           </div>

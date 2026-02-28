@@ -8,6 +8,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var ErrInvalidCredentials = errors.New("invalid credentials")
+
 type AuthService struct {
 	userRepo *repository.UserRepository
 }
@@ -39,7 +41,7 @@ func (s *AuthService) Register(email, password string, role models.UserRole) (*m
 func (s *AuthService) Login(email, password string) (*models.User, error) {
 	user, err := s.userRepo.FindByEmail(email)
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, ErrInvalidCredentials
 	}
 
 	if !user.IsActive {
@@ -48,13 +50,13 @@ func (s *AuthService) Login(email, password string) (*models.User, error) {
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, ErrInvalidCredentials
 	}
 
 	return user, nil
 }
 
-func (s *AuthService) UpdateProfile(id uint, email, password string) (*models.User, error) {
+func (s *AuthService) UpdateProfile(id uint, email, currentPassword, newPassword string) (*models.User, error) {
 	user, err := s.userRepo.FindByID(id)
 	if err != nil {
 		return nil, err
@@ -64,8 +66,12 @@ func (s *AuthService) UpdateProfile(id uint, email, password string) (*models.Us
 		user.Email = email
 	}
 
-	if password != "" {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)); err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	if newPassword != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 		if err != nil {
 			return nil, err
 		}
