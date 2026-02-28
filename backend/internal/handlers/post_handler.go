@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -23,6 +24,8 @@ type PostHandler struct {
 }
 
 const maxAttachmentSize int64 = 5 * 1024 * 1024 // 5MB
+
+var errJSONBodyAlreadyHandled = errors.New("json body validation failed")
 
 var allowedAttachmentExtByType = map[string]map[string]bool{
 	"image/jpeg": {
@@ -149,10 +152,16 @@ func (h *PostHandler) respondUploadError(c *fiber.Ctx, postID uint, err error) e
 
 func (h *PostHandler) parseJSONBody(c *fiber.Ctx, req interface{}) error {
 	if !strings.HasPrefix(c.Get(fiber.HeaderContentType), fiber.MIMEApplicationJSON) {
-		return c.Status(fiber.StatusUnsupportedMediaType).JSON(fiber.Map{"error": "content type must be application/json"})
+		if err := c.Status(fiber.StatusUnsupportedMediaType).JSON(fiber.Map{"error": "content type must be application/json"}); err != nil {
+			return err
+		}
+		return errJSONBodyAlreadyHandled
 	}
 	if err := c.BodyParser(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+		if jsonErr := c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"}); jsonErr != nil {
+			return jsonErr
+		}
+		return errJSONBodyAlreadyHandled
 	}
 	return nil
 }
@@ -300,6 +309,9 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 
 	var req CreatePostRequest
 	if err := h.parseJSONBody(c, &req); err != nil {
+		if errors.Is(err, errJSONBodyAlreadyHandled) {
+			return nil
+		}
 		return err
 	}
 
@@ -337,6 +349,9 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 
 	var req CreatePostRequest
 	if err := h.parseJSONBody(c, &req); err != nil {
+		if errors.Is(err, errJSONBodyAlreadyHandled) {
+			return nil
+		}
 		return err
 	}
 
