@@ -11,7 +11,7 @@ type Post struct {
 	Date        time.Time    `gorm:"type:date;not null;index" json:"date"`
 	Text        string       `gorm:"type:text;not null" json:"text"`
 	Hashtags    []Hashtag    `gorm:"many2many:post_hashtags;" json:"hashtags"`
-	Mentions    []Person     `gorm:"many2many:mentions;" json:"persons"`
+	Persons     []Person     `gorm:"many2many:mentions;" json:"persons"`
 	Attachments []Attachment `gorm:"foreignKey:PostID" json:"attachments"`
 	Comments    []Comment    `gorm:"foreignKey:PostID" json:"comments"`
 	CreatedAt   time.Time    `json:"created_at"`
