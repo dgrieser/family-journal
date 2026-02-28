@@ -72,7 +72,7 @@ export const Profile = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">New password ({t('leave_blank')})</label>
+            <label className="block text-sm font-medium text-gray-700">{t('new_password')} ({t('leave_blank')})</label>
             <input
               type="password"
               value={newPassword}
