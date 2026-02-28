@@ -68,7 +68,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
             <Tag size={12} className="mr-1" /> {h.name}
           </span>
         ))}
-        {post.mentions?.map((p: Person) => (
+        {post.persons?.map((p: Person) => (
           <span key={p.id} className="bg-green-50 text-green-700 px-2 py-0.5 rounded text-xs flex items-center">
             <UserIcon size={12} className="mr-1" /> {p.name}
           </span>
