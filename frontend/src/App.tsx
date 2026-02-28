@@ -14,7 +14,7 @@ import './i18n';
 import { APP_ROUTES, APP_ROUTE_SEGMENTS, API_ROUTES } from './constants/routes';
 
 function App() {
-  const { user, setUser, setInitialized } = useAuthStore();
+  const { user, setUser } = useAuthStore();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -23,12 +23,10 @@ function App() {
         setUser(response.data);
       } catch (err) {
         setUser(null);
-      } finally {
-        setInitialized(true);
       }
     };
     checkAuth();
-  }, [setUser, setInitialized]);
+  }, [setUser]);
 
   return (
     <BrowserRouter>
