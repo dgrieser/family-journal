@@ -101,7 +101,9 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     try {
       const isUpdate = !!initialData;
       const url = isUpdate ? `/posts/${initialData.id}` : '/posts';
-      const response = isUpdate ? await api.put(url, { text, date }) : await api.post(url, { text, date });
+      const payload = { text, date };
+      const config = { headers: { 'Content-Type': 'application/json' } };
+      const response = await (isUpdate ? api.put(url, payload, config) : api.post(url, payload, config));
       const postId = response.data.id;
       postSaved = true;
 

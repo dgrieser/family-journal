@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -23,6 +24,8 @@ type PostHandler struct {
 }
 
 const maxAttachmentSize int64 = 5 * 1024 * 1024 // 5MB
+
+var errResponseSent = errors.New("sentinel error indicating that the HTTP response has been written")
 
 var allowedAttachmentExtByType = map[string]map[string]bool{
 	"image/jpeg": {
@@ -145,6 +148,22 @@ func (h *PostHandler) checkPostPermission(c *fiber.Ctx, post *models.Post) error
 func (h *PostHandler) respondUploadError(c *fiber.Ctx, postID uint, err error) error {
 	log.Printf("failed to upload attachments for post %d: %v", postID, err)
 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
+}
+
+func (h *PostHandler) parseJSONBody(c *fiber.Ctx, req interface{}) error {
+	if !strings.HasPrefix(c.Get(fiber.HeaderContentType), fiber.MIMEApplicationJSON) {
+		if err := c.Status(fiber.StatusUnsupportedMediaType).JSON(fiber.Map{"error": "content type must be application/json"}); err != nil {
+			return err
+		}
+		return errJSONBodyAlreadyHandled
+	}
+	if err := c.BodyParser(req); err != nil {
+		if jsonErr := c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"}); jsonErr != nil {
+			return jsonErr
+		}
+		return errJSONBodyAlreadyHandled
+	}
+	return nil
 }
 
 var unsafeFilenameChars = regexp.MustCompile(`[^a-zA-Z0-9._ -]+`)
@@ -288,14 +307,12 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
 	}
 
-	req := CreatePostRequest{
-		Text: c.FormValue("text"),
-		Date: c.FormValue("date"),
-	}
-
-	if req.Text == "" || req.Date == "" {
-		// Fallback to JSON if form values are empty (for backward compatibility or direct API usage)
-		_ = c.BodyParser(&req)
+	var req CreatePostRequest
+	if err := h.parseJSONBody(c, &req); err != nil {
+		if errors.Is(err, errJSONBodyAlreadyHandled) {
+			return nil
+		}
+		return err
 	}
 
 	if req.Text == "" || req.Date == "" {
@@ -310,10 +327,6 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 	post, err := h.postService.CreatePost(userID, date, req.Text)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	if _, err := h.handleFileUploads(c, post.ID); err != nil {
-		return h.respondUploadError(c, post.ID, err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(post)
@@ -334,13 +347,12 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 		return err
 	}
 
-	req := CreatePostRequest{
-		Text: c.FormValue("text"),
-		Date: c.FormValue("date"),
-	}
-
-	if req.Text == "" && req.Date == "" {
-		_ = c.BodyParser(&req)
+	var req CreatePostRequest
+	if err := h.parseJSONBody(c, &req); err != nil {
+		if errors.Is(err, errJSONBodyAlreadyHandled) {
+			return nil
+		}
+		return err
 	}
 
 	var postDate *time.Time
@@ -355,10 +367,6 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 	post, err := h.postService.UpdatePost(uint(id), req.Text, postDate)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	if _, err := h.handleFileUploads(c, post.ID); err != nil {
-		return h.respondUploadError(c, post.ID, err)
 	}
 
 	return c.JSON(post)
