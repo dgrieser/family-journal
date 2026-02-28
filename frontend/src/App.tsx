@@ -23,6 +23,7 @@ function App() {
         const response = await api.get(API_ROUTES.AUTH_PROFILE);
         setUser(response.data);
       } catch (err) {
+        console.error('Auth check failed:', err);
         setUser(null);
       }
     };
