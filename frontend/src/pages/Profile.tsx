@@ -61,7 +61,7 @@ export const Profile = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Current password</label>
+            <label className="block text-sm font-medium text-gray-700">{t('current_password')}</label>
             <input
               type="password"
               value={currentPassword}
