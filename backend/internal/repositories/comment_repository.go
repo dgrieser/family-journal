@@ -12,10 +12,10 @@ func (r *Repository) CreateComment(comment *models.Comment) error {
 	if err != nil {
 		return err
 	}
-	return r.DB.Get(comment, `SELECT c.id, c.post_id, c.user_id, c.text, c.created_at, c.updated_at, u.email AS author_email
-		FROM comments c
-		JOIN users u ON u.id = c.user_id
-		WHERE c.id = ?`, id)
+	if err := r.loadCommentWithAuthor(comment, id, nil); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *Repository) UpdateComment(comment *models.Comment, ownerFilter *int64) error {
@@ -25,8 +25,13 @@ func (r *Repository) UpdateComment(comment *models.Comment, ownerFilter *int64) 
 		query += ` AND user_id = ?`
 		args = append(args, *ownerFilter)
 	}
-	_, err := r.DB.Exec(query, args...)
-	return err
+	if _, err := r.DB.Exec(query, args...); err != nil {
+		return err
+	}
+	if err := r.loadCommentWithAuthor(comment, comment.ID, ownerFilter); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *Repository) DeleteComment(id int64, ownerFilter *int64) error {
@@ -38,4 +43,21 @@ func (r *Repository) DeleteComment(id int64, ownerFilter *int64) error {
 	}
 	_, err := r.DB.Exec(query, args...)
 	return err
+}
+
+func (r *Repository) loadCommentWithAuthor(comment *models.Comment, commentID int64, ownerFilter *int64) error {
+	query := `SELECT c.id, c.post_id, c.user_id, c.text, c.created_at, c.updated_at, u.email AS author_email
+		FROM comments c
+		JOIN users u ON u.id = c.user_id
+		WHERE c.id = ?`
+	args := []interface{}{commentID}
+	if ownerFilter != nil {
+		query += ` AND c.user_id = ?`
+		args = append(args, *ownerFilter)
+	}
+	if err := r.DB.Get(comment, query, args...); err != nil {
+		return err
+	}
+	comment.User = models.CommentUser{ID: comment.UserID, Email: comment.AuthorEmail}
+	return nil
 }
