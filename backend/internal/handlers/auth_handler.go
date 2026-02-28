@@ -102,8 +102,9 @@ func (h *AuthHandler) GetProfile(c *fiber.Ctx) error {
 }
 
 type UpdateProfileRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email           string `json:"email"`
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
 }
 
 func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
@@ -116,8 +117,15 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
 	}
 
-	user, err := h.authService.UpdateProfile(userID, req.Email, req.Password)
+	user, err := h.authService.UpdateProfile(userID, req.Email, req.CurrentPassword, req.NewPassword)
 	if err != nil {
+		if errors.Is(err, services.ErrInvalidCredentials) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
+		}
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "email already in use"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 

@@ -102,3 +102,22 @@ func TestFiltering(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, posts, 1)
 }
+
+func TestUpdateProfileRequiresCurrentPassword(t *testing.T) {
+	db := setupTestDB(t)
+	userRepo := repository.NewUserRepository(db)
+	authService := NewAuthService(userRepo)
+
+	user, err := authService.Register("test@example.com", "password123", models.RoleUser)
+	assert.NoError(t, err)
+
+	_, err = authService.UpdateProfile(user.ID, "updated@example.com", "wrongpassword", "newpassword")
+	assert.ErrorIs(t, err, ErrInvalidCredentials)
+
+	updatedUser, err := authService.UpdateProfile(user.ID, "updated@example.com", "password123", "newpassword")
+	assert.NoError(t, err)
+	assert.Equal(t, "updated@example.com", updatedUser.Email)
+
+	_, err = authService.Login("updated@example.com", "newpassword")
+	assert.NoError(t, err)
+}
