@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Timeline } from './pages/Timeline';
@@ -8,13 +8,14 @@ import { Admin } from './pages/Admin';
 import { Profile } from './pages/Profile';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminRoute } from './components/AdminRoute';
 import { useAuthStore } from './store';
 import api from './api';
 import './i18n';
 import { APP_ROUTES, APP_ROUTE_SEGMENTS, API_ROUTES } from './constants/routes';
 
 function App() {
-  const { user, setUser } = useAuthStore();
+  const { setUser } = useAuthStore();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -38,7 +39,7 @@ function App() {
           <Route index element={<Timeline />} />
           <Route path={APP_ROUTE_SEGMENTS.PERSONS} element={<Persons />} />
           <Route path={APP_ROUTE_SEGMENTS.PROFILE} element={<Profile />} />
-          <Route path={APP_ROUTE_SEGMENTS.ADMIN} element={user?.role === 'admin' ? <Admin /> : <Navigate to={APP_ROUTES.ROOT} />} />
+          <Route path={APP_ROUTE_SEGMENTS.ADMIN} element={<AdminRoute><Admin /></AdminRoute>} />
         </Route>
       </Routes>
     </BrowserRouter>
