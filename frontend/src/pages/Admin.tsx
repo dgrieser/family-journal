@@ -23,7 +23,7 @@ export const Admin = () => {
 
   const handleRoleChange = async (userId: number, newRole: string) => {
     try {
-      await api.put(`/admin/users/${userId}/role`, { role: newRole });
+      await api.patch(`/admin/users/${userId}/role`, { role: newRole });
       fetchUsers();
     } catch (err) {
       console.error(err);
@@ -32,7 +32,7 @@ export const Admin = () => {
 
   const handleToggleActive = async (userId: number, isActive: boolean) => {
     try {
-      await api.put(`/admin/users/${userId}/active`, { is_active: isActive });
+      await api.patch(`/admin/users/${userId}/active`, { is_active: isActive });
       fetchUsers();
     } catch (err) {
       console.error(err);
