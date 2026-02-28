@@ -23,8 +23,8 @@ export const Admin = () => {
 
   const handleRoleChange = async (userId: number, newRole: string) => {
     try {
-      await api.patch(`/admin/users/${userId}/role`, { role: newRole });
-      fetchUsers();
+      const res = await api.patch(`/admin/users/${userId}/role`, { role: newRole });
+      setUsers(users.map(u => u.id === userId ? res.data : u));
     } catch (err) {
       console.error(err);
     }
