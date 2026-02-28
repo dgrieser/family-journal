@@ -13,7 +13,6 @@ type Comment struct {
 	User        CommentUser `json:"user"`
 }
 
-// CommentUser contains the minimum author fields needed by comment responses.
 // HydrateUser sets the nested user payload from legacy flat author fields.
 func (c *Comment) HydrateUser() {
 	c.User = CommentUser{
@@ -22,6 +21,7 @@ func (c *Comment) HydrateUser() {
 	}
 }
 
+// CommentUser contains the minimum author fields needed by comment responses.
 type CommentUser struct {
 	ID    int64  `json:"id"`
 	Email string `json:"email"`

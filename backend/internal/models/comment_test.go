@@ -11,10 +11,10 @@ func TestCommentHydrateUser(t *testing.T) {
 	comment.HydrateUser()
 
 	if comment.User.ID != 42 {
-		t.Fatalf("expected User.ID 42, got %d", comment.User.ID)
+		t.Errorf("expected User.ID 42, got %d", comment.User.ID)
 	}
 	if comment.User.Email != "author@example.com" {
-		t.Fatalf("expected User.Email author@example.com, got %q", comment.User.Email)
+		t.Errorf("expected User.Email author@example.com, got %q", comment.User.Email)
 	}
 }
 
@@ -39,10 +39,10 @@ func TestCommentJSONOmitsLegacyAuthorFields(t *testing.T) {
 	}
 
 	if _, ok := payload["user_id"]; ok {
-		t.Fatalf("expected user_id to be omitted from json, got payload: %s", string(b))
+		t.Errorf("expected user_id to be omitted from json, got payload: %s", string(b))
 	}
 	if _, ok := payload["author_email"]; ok {
-		t.Fatalf("expected author_email to be omitted from json, got payload: %s", string(b))
+		t.Errorf("expected author_email to be omitted from json, got payload: %s", string(b))
 	}
 
 	userRaw, ok := payload["user"]
@@ -54,9 +54,9 @@ func TestCommentJSONOmitsLegacyAuthorFields(t *testing.T) {
 		t.Fatalf("expected user to be an object, got %T", userRaw)
 	}
 	if user["id"] != float64(3) {
-		t.Fatalf("expected user.id 3, got %v", user["id"])
+		t.Errorf("expected user.id 3, got %v", user["id"])
 	}
 	if user["email"] != "author@example.com" {
-		t.Fatalf("expected user.email author@example.com, got %v", user["email"])
+		t.Errorf("expected user.email author@example.com, got %v", user["email"])
 	}
 }
