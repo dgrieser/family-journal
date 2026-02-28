@@ -122,6 +122,10 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 		if errors.Is(err, services.ErrInvalidCredentials) {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
 		}
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "email already in use"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
