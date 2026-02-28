@@ -33,30 +33,28 @@ func TestCommentJSONOmitsLegacyAuthorFields(t *testing.T) {
 		t.Fatalf("marshal comment: %v", err)
 	}
 
-	var payload map[string]any
-	if err := json.Unmarshal(b, &payload); err != nil {
+	var result struct {
+		User struct {
+			ID    int64  `json:"id"`
+			Email string `json:"email"`
+		} `json:"user"`
+		UserID      *int64  `json:"user_id"`
+		AuthorEmail *string `json:"author_email"`
+	}
+	if err := json.Unmarshal(b, &result); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
 
-	if _, ok := payload["user_id"]; ok {
-		t.Errorf("expected user_id to be omitted from json, got payload: %s", string(b))
+	if result.UserID != nil {
+		t.Errorf("expected user_id to be omitted from json, but got: %d", *result.UserID)
 	}
-	if _, ok := payload["author_email"]; ok {
-		t.Errorf("expected author_email to be omitted from json, got payload: %s", string(b))
+	if result.AuthorEmail != nil {
+		t.Errorf("expected author_email to be omitted from json, but got: %q", *result.AuthorEmail)
 	}
-
-	userRaw, ok := payload["user"]
-	if !ok {
-		t.Fatalf("expected nested user field in json, got payload: %s", string(b))
+	if result.User.ID != 3 {
+		t.Errorf("expected user.id 3, got %d", result.User.ID)
 	}
-	user, ok := userRaw.(map[string]any)
-	if !ok {
-		t.Fatalf("expected user to be an object, got %T", userRaw)
-	}
-	if user["id"] != float64(3) {
-		t.Errorf("expected user.id 3, got %v", user["id"])
-	}
-	if user["email"] != "author@example.com" {
-		t.Errorf("expected user.email author@example.com, got %v", user["email"])
+	if result.User.Email != "author@example.com" {
+		t.Errorf("expected user.email \"author@example.com\", got %q", result.User.Email)
 	}
 }
