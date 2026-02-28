@@ -58,6 +58,6 @@ func (r *Repository) loadCommentWithAuthor(comment *models.Comment, commentID in
 	if err := r.DB.Get(comment, query, args...); err != nil {
 		return err
 	}
-	comment.User = models.CommentUser{ID: comment.UserID, Email: comment.AuthorEmail}
+	comment.HydrateUser()
 	return nil
 }

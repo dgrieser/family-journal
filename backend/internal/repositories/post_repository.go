@@ -212,10 +212,7 @@ func (r *Repository) ListPostComments(postID int64) ([]models.Comment, error) {
 		return nil, err
 	}
 	for i := range comments {
-		comments[i].User = models.CommentUser{
-			ID:    comments[i].UserID,
-			Email: comments[i].AuthorEmail,
-		}
+		comments[i].HydrateUser()
 	}
 	return comments, nil
 }
@@ -316,7 +313,7 @@ func (r *Repository) ListCommentsForPosts(postIDs []int64) (map[int64][]models.C
 		return nil, err
 	}
 	for _, item := range rows {
-		results[item.PostID] = append(results[item.PostID], models.Comment{
+		comment := models.Comment{
 			ID:          item.ID,
 			PostID:      item.PostID,
 			UserID:      item.UserID,
@@ -324,11 +321,9 @@ func (r *Repository) ListCommentsForPosts(postIDs []int64) (map[int64][]models.C
 			CreatedAt:   item.CreatedAt,
 			UpdatedAt:   item.UpdatedAt,
 			AuthorEmail: item.AuthorEmail,
-			User: models.CommentUser{
-				ID:    item.UserID,
-				Email: item.AuthorEmail,
-			},
-		})
+		}
+		comment.HydrateUser()
+		results[item.PostID] = append(results[item.PostID], comment)
 	}
 	return results, nil
 }
