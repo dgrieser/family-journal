@@ -25,7 +25,7 @@ type PostHandler struct {
 
 const maxAttachmentSize int64 = 5 * 1024 * 1024 // 5MB
 
-var errJSONBodyAlreadyHandled = errors.New("json body validation failed")
+var errResponseSent = errors.New("sentinel error indicating that the HTTP response has been written")
 
 var allowedAttachmentExtByType = map[string]map[string]bool{
 	"image/jpeg": {
