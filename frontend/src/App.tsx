@@ -7,26 +7,11 @@ import { Persons } from './pages/Persons';
 import { Admin } from './pages/Admin';
 import { Profile } from './pages/Profile';
 import { Layout } from './components/Layout';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuthStore } from './store';
 import api from './api';
 import './i18n';
 import { APP_ROUTES, APP_ROUTE_SEGMENTS, API_ROUTES } from './constants/routes';
-
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, initialized } = useAuthStore();
-
-  if (!initialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    );
-  }
-  if (user === null) {
-    return <Navigate to={APP_ROUTES.AUTH_LOGIN} />;
-  }
-  return <>{children}</>;
-};
 
 function App() {
   const { user, setUser, setInitialized } = useAuthStore();
