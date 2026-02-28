@@ -183,8 +183,8 @@ func main() {
 	// Admin routes
 	admin := protected.Use(middleware.AdminRequired())
 	admin.Get("/admin/users", adminHandler.GetAllUsers)
-	admin.Put("/admin/users/:id/role", adminHandler.UpdateUserRole)
-	admin.Put("/admin/users/:id/active", adminHandler.ToggleUserActive)
+	admin.Patch("/admin/users/:id/role", adminHandler.UpdateUserRole)
+	admin.Patch("/admin/users/:id/active", adminHandler.ToggleUserActive)
 
 	// Note: Uploads are served via protected /attachments/:id/download endpoint
 
