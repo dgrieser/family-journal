@@ -147,6 +147,16 @@ func (h *PostHandler) respondUploadError(c *fiber.Ctx, postID uint, err error) e
 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to process file upload"})
 }
 
+func (h *PostHandler) parseJSONBody(c *fiber.Ctx, req interface{}) error {
+	if !strings.HasPrefix(c.Get(fiber.HeaderContentType), fiber.MIMEApplicationJSON) {
+		return c.Status(fiber.StatusUnsupportedMediaType).JSON(fiber.Map{"error": "content type must be application/json"})
+	}
+	if err := c.BodyParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+	}
+	return nil
+}
+
 var unsafeFilenameChars = regexp.MustCompile(`[^a-zA-Z0-9._ -]+`)
 
 func sanitizeAttachmentFilename(name string) string {
@@ -288,14 +298,9 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user id in session"})
 	}
 
-	req := CreatePostRequest{
-		Text: c.FormValue("text"),
-		Date: c.FormValue("date"),
-	}
-
-	if req.Text == "" || req.Date == "" {
-		// Fallback to JSON if form values are empty (for backward compatibility or direct API usage)
-		_ = c.BodyParser(&req)
+	var req CreatePostRequest
+	if err := h.parseJSONBody(c, &req); err != nil {
+		return err
 	}
 
 	if req.Text == "" || req.Date == "" {
@@ -310,10 +315,6 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 	post, err := h.postService.CreatePost(userID, date, req.Text)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	if _, err := h.handleFileUploads(c, post.ID); err != nil {
-		return h.respondUploadError(c, post.ID, err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(post)
@@ -334,13 +335,9 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 		return err
 	}
 
-	req := CreatePostRequest{
-		Text: c.FormValue("text"),
-		Date: c.FormValue("date"),
-	}
-
-	if req.Text == "" && req.Date == "" {
-		_ = c.BodyParser(&req)
+	var req CreatePostRequest
+	if err := h.parseJSONBody(c, &req); err != nil {
+		return err
 	}
 
 	var postDate *time.Time
@@ -355,10 +352,6 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 	post, err := h.postService.UpdatePost(uint(id), req.Text, postDate)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	if _, err := h.handleFileUploads(c, post.ID); err != nil {
-		return h.respondUploadError(c, post.ID, err)
 	}
 
 	return c.JSON(post)
