@@ -6,7 +6,6 @@ interface AuthState {
   setUser: (user: User | null) => void;
   isAuthenticated: boolean;
   initialized: boolean;
-  setInitialized: (initialized: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -14,5 +13,4 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   initialized: false,
   setUser: (user) => set({ user, isAuthenticated: !!user, initialized: true }),
-  setInitialized: (initialized) => set({ initialized }),
 }));
