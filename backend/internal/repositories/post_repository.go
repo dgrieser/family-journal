@@ -211,6 +211,12 @@ func (r *Repository) ListPostComments(postID int64) ([]models.Comment, error) {
 	if err := r.DB.Select(&comments, query, postID); err != nil {
 		return nil, err
 	}
+	for i := range comments {
+		comments[i].User = models.CommentUser{
+			ID:    comments[i].UserID,
+			Email: comments[i].AuthorEmail,
+		}
+	}
 	return comments, nil
 }
 
@@ -318,6 +324,10 @@ func (r *Repository) ListCommentsForPosts(postIDs []int64) (map[int64][]models.C
 			CreatedAt:   item.CreatedAt,
 			UpdatedAt:   item.UpdatedAt,
 			AuthorEmail: item.AuthorEmail,
+			User: models.CommentUser{
+				ID:    item.UserID,
+				Email: item.AuthorEmail,
+			},
 		})
 	}
 	return results, nil
