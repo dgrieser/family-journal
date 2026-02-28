@@ -12,8 +12,24 @@ import api from './api';
 import './i18n';
 import { APP_ROUTES, APP_ROUTE_SEGMENTS, API_ROUTES } from './constants/routes';
 
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, initialized } = useAuthStore();
+
+  if (!initialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+  if (user === null) {
+    return <Navigate to={APP_ROUTES.AUTH_LOGIN} />;
+  }
+  return <>{children}</>;
+};
+
 function App() {
-  const { user, setUser, initialized, setInitialized } = useAuthStore();
+  const { user, setUser, setInitialized } = useAuthStore();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -28,20 +44,6 @@ function App() {
     };
     checkAuth();
   }, [setUser, setInitialized]);
-
-  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    if (!initialized) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-        </div>
-      );
-    }
-    if (user === null) {
-      return <Navigate to={APP_ROUTES.AUTH_LOGIN} />;
-    }
-    return <>{children}</>;
-  };
 
   return (
     <BrowserRouter>
