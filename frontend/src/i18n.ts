@@ -1,20 +1,32 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import en from './locales/en.json';
-import de from './locales/de.json';
+const resourcesBackend = {
+  type: 'backend' as const,
+  read(language: string, namespace: string, callback: (error: Error | null, data: unknown) => void) {
+    if (namespace !== 'translation') {
+      callback(null, {});
+      return;
+    }
 
-const resources = {
-  en: { translation: en },
-  de: { translation: de }
+    import(`./locales/${language}.json`)
+      .then((module) => {
+        callback(null, module.default);
+      })
+      .catch((error: unknown) => {
+        callback(error instanceof Error ? error : new Error('Failed to load locale'));
+      });
+  }
 };
 
 i18n
+  .use(resourcesBackend)
   .use(initReactI18next)
   .init({
-    resources,
     lng: 'de',
     fallbackLng: 'en',
+    defaultNS: 'translation',
+    ns: ['translation'],
     interpolation: {
       escapeValue: false
     }
