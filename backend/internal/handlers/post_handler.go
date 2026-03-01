@@ -155,13 +155,13 @@ func (h *PostHandler) parseJSONBody(c *fiber.Ctx, req interface{}) error {
 		if err := c.Status(fiber.StatusUnsupportedMediaType).JSON(fiber.Map{"error": "content type must be application/json"}); err != nil {
 			return err
 		}
-		return errJSONBodyAlreadyHandled
+		return errResponseSent
 	}
 	if err := c.BodyParser(req); err != nil {
 		if jsonErr := c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"}); jsonErr != nil {
 			return jsonErr
 		}
-		return errJSONBodyAlreadyHandled
+		return errResponseSent
 	}
 	return nil
 }
@@ -309,7 +309,7 @@ func (h *PostHandler) Create(c *fiber.Ctx) error {
 
 	var req CreatePostRequest
 	if err := h.parseJSONBody(c, &req); err != nil {
-		if errors.Is(err, errJSONBodyAlreadyHandled) {
+		if errors.Is(err, errResponseSent) {
 			return nil
 		}
 		return err
@@ -349,7 +349,7 @@ func (h *PostHandler) Update(c *fiber.Ctx) error {
 
 	var req CreatePostRequest
 	if err := h.parseJSONBody(c, &req); err != nil {
-		if errors.Is(err, errJSONBodyAlreadyHandled) {
+		if errors.Is(err, errResponseSent) {
 			return nil
 		}
 		return err
