@@ -1,6 +1,6 @@
 # Family Journal — Branch Comparison Review (Updated)
 
-> **Last updated:** 2026-02-26
+> **Last updated:** 2026-03-01
 > **Previous review:** See git history for the original comparison.
 > **Original prompt:** See [ORIGINAL_PROMPT.md](./ORIGINAL_PROMPT.md)
 
@@ -28,7 +28,7 @@ Both branches implement the same application: a full-stack family journal for do
 
 Since the initial comparison, **both branches have seen significant improvements**:
 
-**Codex** (30+ commits):
+**Codex** (35+ commits):
 - Models, repositories, and services have been **split into separate files per entity** (previously monolithic)
 - Added a **custom MySQL session store** (previously in-memory)
 - Added **encrypted cookies** (previously unencrypted)
@@ -37,13 +37,15 @@ Since the initial comparison, **both branches have seen significant improvements
 - Added **AccessScope pattern** with admin override for cross-user content management
 - Added **password change** UI and backend support
 - Added **attachment file cleanup** on post/upload failure
-- Added **path traversal protection** for attachment downloads
+- Added **path traversal protection** and **hardened security headers** for attachment downloads
 - Added **person duplicate name handling** with proper error messaging
 - Added **input validation** for required fields
 - Renamed `active` flag to `is_active` in User API (aligning with Gemini)
 - Removed `category` and `mood` fields from posts (migration 004)
+- Removed `url` field from `Attachment` model; replaced with **ID-based download endpoint** `GET /api/v1/attachments/:id/download` (PR #21/22)
+- **Embedded nested `user` object** (`{id, email}`) in comment responses via `CommentUser` struct (PR #25)
 
-**Gemini** (30+ commits):
+**Gemini** (35+ commits):
 - Added **registration success message** on login page
 - Improved **session secret handling** (minimum 32-char requirement)
 - Added **AUTO_MIGRATE toggle** via environment variable
@@ -53,6 +55,14 @@ Since the initial comparison, **both branches have seen significant improvements
 - Updated all frontend and backend dependencies to latest versions
 - Migrated API base path from `/api` to `/api/v1` (aligning with Codex)
 - Renamed auth routes to `/auth/*` namespace (aligning with Codex)
+- **PostForm** refactored to two-step submit: JSON post creation then separate multipart attachment upload (aligning with Codex)
+- **Admin.tsx** changed `PUT` → `PATCH` for role and active-state endpoints (aligning with Codex)
+- **Profile.tsx** updated to send `{ currentPassword, newPassword }` and expose backend error messages (aligning with Codex)
+- **types.ts** `Post.mentions` renamed to `Post.persons`; `PostCard.tsx` updated accordingly (aligning with Codex)
+- **ProtectedRoute** extracted to module-scope component in `components/ProtectedRoute.tsx` (PR #29)
+- **i18n translations** migrated from inline `i18n.ts` to separate `locales/de.json` and `locales/en.json` (PR #30)
+- `Attachment` type in `types.ts` aligned: no `url`/`storage_path` field; uses ID-based download URL
+- `Comment` type in `types.ts` now includes `user?: User`; `PostCard.tsx` renders `c.user?.email`
 
 ---
 
@@ -163,7 +173,7 @@ mysql/init.sql
 
 **Key Differences:**
 - Codex's `hydratePosts()` does batch loading (1 query per relation type for all posts), while Gemini relies on GORM's `Preload()` which may issue separate queries per post
-- Codex's Unicode regex (`\pL`) is essential for a German-language app; **Gemini's `\w+` still won't match names like "Muller" or "Schroder"** — this was flagged in the original review and remains unfixed
+- Codex's Unicode regex (`\pL`) is essential for a German-language app; **Gemini's backend `\w+` regex still won't match names like "Müller" or "Schröder"** — this was flagged in the original review and remains unfixed in Gemini's backend service layer
 - Gemini's `DeletePost()` cleans up physical attachment files; Codex also now cleans up files on upload failure and post deletion
 
 ### 2.4 Authentication & Security
@@ -239,7 +249,7 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 |-----------|-------------------|---------------------|
 | **ID type** | `BIGINT` | `INT` |
 | **Post fields** | No `category`/`mood` (removed in migration 004) | No `category`/`mood` |
-| **Attachment storage** | `url` column (relative URL path) | `storage_path` column (filesystem path) |
+| **Attachment storage** | ~~`url` column~~ removed (PR #21); files served via `GET /api/v1/attachments/:id/download` | `storage_path` column (filesystem path); UI uses ID-based download endpoint |
 | **Mention on person delete** | `SET NULL` (via migration 003) | `CASCADE` |
 | **Timestamps** | `DATETIME NOT NULL` (app-managed) | `TIMESTAMP DEFAULT CURRENT_TIMESTAMP` (DB-managed) |
 | **Person name constraint** | `UNIQUE (created_by_user_id, name)` | `UNIQUE (name, created_by_user_id)` |
@@ -322,17 +332,17 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 
 **Branch 1 (Codex):** Translations in separate JSON files (`locales/en.json`, `locales/de.json`). Default language: English. Dedicated `LanguageSwitcher` component. Comprehensive translations with nested key structure.
 
-**Branch 2 (Gemini):** Translations inline in `i18n.ts`. Default language: German. Language toggle integrated into the sidebar layout.
+**Branch 2 (Gemini):** ~~Translations inline in `i18n.ts`~~ Now migrated (PR #30) to `locales/de.json` and `locales/en.json`, loaded lazily via dynamic `import()` in `i18n.ts`. Default language: German. Language toggle integrated into the sidebar layout.
 
-**Verdict:** **Codex's approach with separate JSON files is more scalable** and follows i18next best practices. Separate files are easier to hand off to translators and don't bloat the i18n config.
+**Verdict:** **Both branches now use separate JSON locale files**, following i18next best practices. Approaches are equivalent.
 
 ### 4.6 Routing
 
 **Branch 1 (Codex):** Uses a `ProtectedRoute` wrapper component (defined outside component tree) with individual `<Route>` elements. Has dedicated routes for `/posts/new`, `/posts/:id`, `/posts/:id/edit`.
 
-**Branch 2 (Gemini):** Uses nested routes with `<Outlet />` in the Layout component. The timeline page handles post creation inline. Admin route has role-based redirect. However, `ProtectedRoute` is defined inside the `App` component, meaning it's **recreated on every render** — this was flagged in the original review and remains unfixed.
+**Branch 2 (Gemini):** Uses nested routes with `<Outlet />` in the Layout component. The timeline page handles post creation inline. Admin route has role-based redirect. `ProtectedRoute` has been extracted to `components/ProtectedRoute.tsx` at module scope (PR #29), and a separate `AdminRoute` component was added for role-gated routes.
 
-**Verdict:** Gemini's nested routing is cleaner and more idiomatic React Router. However, the `ProtectedRoute` re-creation issue is a performance concern. Codex correctly defines `ProtectedRoute` outside the component.
+**Verdict:** Gemini's nested routing is cleaner and more idiomatic React Router. The `ProtectedRoute` re-creation issue from the original review has been resolved. Both branches now define `ProtectedRoute` outside the component tree.
 
 ### 4.7 File Upload Handling
 
@@ -343,13 +353,13 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 - **Path traversal prevention** on download
 - **File cleanup** on upload failure
 
-**Branch 2 (Gemini):** Single-step process — post creation and file upload in one multipart form request. Files validated with:
+**Branch 2 (Gemini):** ~~Single-step process~~ Now also a two-step process (post JSON first, then separate attachment upload) — aligned with Codex after `PostForm.tsx` refactor. Files validated with:
 - Extension-based and Content-Type header validation (trusts client)
 - Hardcoded 5MB size limit
 - UUID-based filenames
 - Path traversal check on download (`filepath.Clean` + prefix check)
 
-**Verdict:** **Codex's file validation is more thorough** — content-type detection via `http.DetectContentType` actually inspects file bytes rather than trusting client-provided MIME headers. Codex also makes limits configurable. Gemini's single-request approach is better UX.
+**Verdict:** **Codex's file validation is more thorough** — content-type detection via `http.DetectContentType` actually inspects file bytes rather than trusting client-provided MIME headers. Codex also makes limits configurable. The upload flow is now identical between branches (two-step).
 
 ---
 
@@ -410,23 +420,29 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 8. **Frontend types duplicated** across page components — no shared `types.ts`
 9. **Older dependency versions** — React 18, Vite 5, Tailwind 3
 10. ~~**`category`/`mood` post fields absent from original spec**~~ **Resolved** — removed in migration 004
+11. ~~**No ID-based attachment download route**~~ **Fixed** (PR #21) — `GET /api/v1/attachments/:id/download` added; `url` field removed from model
+12. ~~**Comment responses lacked nested user object**~~ **Fixed** (PR #25) — `CommentUser{id, email}` embedded as `"user"` in comment JSON
 
 ### Branch 2 (Gemini)
 1. **No session regeneration on login** — session fixation vulnerability (unchanged from original review)
-2. **ASCII-only regex `\w+`** for hashtags/mentions — still won't match Unicode characters like German umlauts (unchanged from original review)
+2. **ASCII-only regex `\w+`** for hashtags/mentions in backend service — still won't match Unicode characters like German umlauts (unchanged from original review)
 3. ~~**`ptrInt` helper defined in two files**~~ Still present in `post_service.go` (only one instance now)
 4. **No connection retry logic** — backend may crash if DB isn't ready despite Docker healthcheck
-5. **`ProtectedRoute` defined inside component** — recreated on every render (unchanged from original review)
+5. ~~**`ProtectedRoute` defined inside component**~~ **Fixed** (PR #29) — extracted to `components/ProtectedRoute.tsx` at module scope
 6. **No input validation** on registration (email format, password length)
 7. **GORM `Save()` for updates** replaces entire records including associations — may cause unexpected data loss
 8. **`AUTO_MIGRATE` env var** defaults to not running — first-time setup requires manual configuration
 9. **`replace` directive in `go.mod`** — `github.com/gofiber/storage/testhelpers/tck` requires version override
-10. **Comment in code**: `"Need a way to save attachment. I'll add it to post repo or generic."` — unfinished thought left in production code
+10. ~~**Comment in code**: `"Need a way to save attachment. I'll add it to post repo or generic."`~~ Resolved — attachment handling was rearchitected
 11. **5xx errors expose raw error messages** to API consumers — security/info leakage concern
-12. **Password change doesn't require current password** — security concern
+12. ~~**Password change doesn't require current password**~~ **Fixed** (PR #28) — `Profile.tsx` now sends `{ currentPassword, newPassword }`; backend errors surfaced to UI
 13. **No health check endpoint** — harder to monitor in production
 14. ~~**API base URL `/api` diverged from Codex `/api/v1`**~~ **Fixed** — migrated to `/api/v1` (PR #15)
 15. ~~**Auth routes diverged from Codex `/auth/*`**~~ **Fixed** — renamed to `/auth/*` namespace (PR #18)
+16. ~~**Admin `PUT` instead of `PATCH` for role/active**~~ **Fixed** (PR #27) — `Admin.tsx` now uses `api.patch()`
+17. ~~**`Post.mentions` instead of `Post.persons`**~~ **Fixed** — `types.ts` and `PostCard.tsx` updated to use `persons`
+18. ~~**PostForm sending multipart FormData for post fields**~~ **Fixed** — two-step submit: JSON post then separate attachment upload
+19. ~~**i18n translations inline in `i18n.ts`**~~ **Fixed** (PR #30) — migrated to `locales/de.json` and `locales/en.json`
 
 ---
 
@@ -446,7 +462,7 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 | **Frontend UI/UX** | Basic, multi-page, no icons | Polished, single-page, icons, image preview | Gemini |
 | **Type safety (frontend)** | Inline types, duplicated | Centralized types.ts | Gemini |
 | **i18n approach** | Separate JSON files | Inline in code | Codex |
-| **Routing (frontend)** | Flat, ProtectedRoute outside component | Nested with Outlet, ProtectedRoute inside component | Tie |
+| **Routing (frontend)** | Flat, ProtectedRoute outside component | Nested with Outlet, ProtectedRoute outside component (fixed PR #29) | Gemini (nested routing) |
 | **DevOps** | Full healthchecks, migration runner, npm ci | Graceful shutdown, newer Go version | Codex (slight edge) |
 | **Code quality** | Clean, no TODOs | Has TODOs, unfinished comments, replace directive | Codex |
 | **Feature completeness** | Attachment validation, password change w/ verification | Admin overrides, image preview, attachment file cleanup | Tie |
@@ -479,12 +495,18 @@ The original review recommended **Gemini as the better starting point** primaril
 - Both use `/api/v1` as the base path (Gemini: PR #15)
 - Both use `/auth/*` for authentication routes (Gemini: PR #18)
 - Both use `is_active` in all User payloads
+- Both use `GET /api/v1/attachments/:id/download` for attachment access (Codex: PR #21)
+- Both expose comment `user: { id, email }` in comment responses (Codex: PR #25)
+- Both use `PATCH` for admin role/active endpoints (Gemini: PR #27)
+- Both use `{ currentPassword, newPassword }` for profile password change (Gemini: PR #28)
+- Both use `Post.persons` for person/mention arrays
+- Both use two-step post+attachment submission (JSON post then multipart upload)
 
-**Gemini's remaining key issues from the original review are still unaddressed:**
-- ASCII-only regex (`\w+`) still doesn't support German characters
-- No session regeneration on login
-- `ProtectedRoute` still defined inside component
-- Raw error messages still exposed in API responses
+**Gemini's remaining key issues from the original review:**
+- ASCII-only regex (`\w+`) in backend service still doesn't support German characters — **still open**
+- No session regeneration on login — **still open**
+- ~~`ProtectedRoute` still defined inside component~~ — **Fixed** (PR #29)
+- Raw error messages still exposed in API responses — **still open**
 
 ### Updated Recommendation
 
@@ -503,15 +525,18 @@ The original review recommended **Gemini as the better starting point** primaril
 
 ### Ideal Merge Strategy
 
-1. **Use Codex's backend** as the foundation (architecture, auth, migrations, error handling)
-2. **Adopt Gemini's frontend** as the UI base, then:
-   - Replace `axios` with Codex's `apiFetch` if preferred, or keep axios
-   - ~~Update API paths from `/api/` to `/api/v1/`~~ — already done in Gemini (PR #15)
-   - ~~Update auth routes to `/auth/*`~~ — already done in Gemini (PR #18)
-   - Add Codex's separate JSON translation files instead of inline i18n
-   - Move `ProtectedRoute` outside the component tree
-3. **Fix Gemini's remaining issues** immediately:
-   - Replace `\w+` regex with `[\pL\d_]+` for Unicode support
+1. **Use Codex's backend** as the foundation (architecture, auth, migrations, error handling) ✅ All integration blockers resolved
+2. **Adopt Gemini's frontend** as the UI base — all integration gaps with Codex's backend have been closed:
+   - ~~Update API paths from `/api/` to `/api/v1/`~~ — done (PR #15)
+   - ~~Update auth routes to `/auth/*`~~ — done (PR #18)
+   - ~~Switch PostForm to JSON + separate attachment upload~~ — done
+   - ~~Admin `PUT` → `PATCH`~~ — done (PR #27)
+   - ~~Profile password field names~~ — done (PR #28)
+   - ~~`post.mentions` → `post.persons`~~ — done
+   - ~~Separate JSON translation files~~ — done (PR #30)
+   - ~~`ProtectedRoute` outside component tree~~ — done (PR #29)
+3. **Fix Gemini's remaining backend issues** (not blocking integration, but should be addressed):
+   - Replace `\w+` regex with `[\pL\d_]+` in `post_service.go` for Unicode/German support
    - Add session regeneration on login
    - Add error masking for 5xx responses
 4. **Combine testing approaches** — unit tests with mocks AND integration tests

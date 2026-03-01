@@ -2,134 +2,91 @@
 
 Tasks required to run the **Gemini frontend** against the **Codex backend**.
 
-Grouped by severity. Within each group, items are ordered by the change location: backend (Codex) first, then frontend (Gemini).
+> **Status as of 2026-03-01:** All blockers and code-quality items have been resolved. The Gemini frontend and Codex backend are now fully compatible.
 
 ---
 
-## Blockers — features are broken without these
+## ✅ Resolved — Blockers
 
-### 1. [BACKEND] Add `GET /api/v1/attachments/:id/download` route
+### 1. [BACKEND] Add `GET /api/v1/attachments/:id/download` route ✅ DONE
 
-**What:** Gemini's `PostCard.tsx` constructs all attachment URLs as
+**What was needed:** Gemini's `PostCard.tsx` constructs attachment URLs as
 `${api.defaults.baseURL}/attachments/${a.id}/download`
 (i.e. `GET /api/v1/attachments/:id/download`, lookup by database ID).
 
-**Codex today:** serves `GET /uploads/:name` (lookup by filename, registered outside the `/api/v1` group in `main.go`). There is no ID-based attachment route.
+**Codex fix (PR #21):** Added `GET /api/v1/attachments/:id/download` handler (`DownloadAttachmentByID`) in `posts.go`. The `url` field was removed from the `Attachment` model entirely (no longer stored or returned); the ID-based download route is now the canonical way to serve files. A corresponding DB migration was added. Security headers are applied to download responses (PR #22).
 
-**Fix:** In `codex` branch, add a handler `GET /api/v1/attachments/:id` (or `…/:id/download`) that:
-1. Parses the attachment ID from the path.
-2. Looks up the attachment row by ID (already have `GetAttachmentForUser` by name; need a variant by ID, or expose ID-based lookup in the repository).
-3. Performs the same ownership + path-traversal check as the existing handler.
-4. Serves the file bytes with the correct `Content-Type`.
-
-**Files to change:** `backend/cmd/server/main.go`, `backend/internal/handlers/posts.go`, `backend/internal/repositories/attachment_repository.go` (add `GetAttachmentByID`).
-
-**Side task:** While touching the attachment model, rename the JSON field from `url` to `storage_path` (`json:"storage_path"`) to match Gemini's `Attachment` type. This requires updating the DB query aliases in `attachment_repository.go` and any place the `URL` field is set (attachment upload handler).
+**Side task (URL→storage_path rename):** Superseded — the `url`/`storage_path` field was removed from the model altogether in favour of ID-based downloads. The Gemini `Attachment` type in `types.ts` was aligned to match (no `url` or `storage_path` field).
 
 ---
 
-### 2. [FRONTEND] Post create/update: switch from FormData to JSON + separate upload
+### 2. [FRONTEND] Post create/update: switch from FormData to JSON + separate upload ✅ DONE
 
-**What:** Gemini's `PostForm.tsx` submits a single multipart `FormData` request that bundles post fields (`text`, `date`) and attachment files together.
+**What was needed:** Gemini's `PostForm.tsx` was sending a single multipart `FormData` request bundling post fields and files together. Codex's `POST /api/v1/posts` and `PUT /api/v1/posts/:id` expect JSON.
 
-Codex's backend:
-- `POST /api/v1/posts` and `PUT /api/v1/posts/:id` expect **JSON** (`Content-Type: application/json`) with `{ date, text }` only.
-- Files are uploaded separately via `POST /api/v1/posts/:id/attachments` as `FormData` with a repeated `files` field.
+**Gemini fix:** `handleSubmit` in `PostForm.tsx` now:
+1. POSTs/PUTs the post as JSON `{ text, date }` (with explicit `Content-Type: application/json` header).
+2. If files are selected, follows up with a multipart `POST /posts/${postId}/attachments` using `FormData` with `files` keys.
+3. Calls `onSuccess()` only after both steps complete.
 
-Sending FormData to the JSON endpoint causes Codex's `c.BodyParser` to fail and return `400 invalid payload`.
-
-**Fix:** In `gemini` branch in `PostForm.tsx`, change `handleSubmit` to:
-1. POST/PUT the post as JSON: `{ text, date }`.
-2. If `files.length > 0`, follow up with a multipart POST to `/posts/${postId}/attachments` using a `FormData` where each file is appended under the key `files`.
-3. Call `onSuccess()` only after both steps complete.
-
-The returned post object from step 1 contains the `id` needed for step 2.
-
-**File to change:** `frontend/src/components/PostForm.tsx`
+**File changed:** `frontend/src/components/PostForm.tsx`
 
 ---
 
-### 3. [FRONTEND] Admin actions: change `PUT` → `PATCH`
+### 3. [FRONTEND] Admin actions: change `PUT` → `PATCH` ✅ DONE
 
-**What:** Gemini's `Admin.tsx` calls:
-- `api.put(\`/admin/users/${userId}/role\`, { role })`
-- `api.put(\`/admin/users/${userId}/active\`, { is_active })`
+**What was needed:** Gemini's `Admin.tsx` was calling `api.put()` for role and active-state changes. Codex registers these as `PATCH`.
 
-Codex registers these as `PATCH` (see `admin.Patch("/users/:id/role", …)` in `main.go`). A `PUT` request returns `405 Method Not Allowed`.
+**Gemini fix (PR #27):** Both `api.put(…/role, …)` and `api.put(…/active, …)` replaced with `api.patch(…)`.
 
-**Fix:** In `gemini` branch in `Admin.tsx`, replace both `api.put(…)` calls with `api.patch(…)`.
-
-**File to change:** `frontend/src/pages/Admin.tsx` (2 lines)
+**File changed:** `frontend/src/pages/Admin.tsx`
 
 ---
 
-### 4. [FRONTEND] Profile update: align password-change field names
+### 4. [FRONTEND] Profile update: align password-change field names ✅ DONE
 
-**What:** Gemini's `Profile.tsx` sends `PUT /api/v1/auth/profile` with `{ email, password }`.
+**What was needed:** Gemini's `Profile.tsx` was sending `{ email, password }`. Codex's `UpdateProfile` handler reads `{ email, currentPassword, newPassword }`.
 
-Codex's `UpdateProfile` handler reads:
-```json
-{ "email": "…", "currentPassword": "…", "newPassword": "…" }
-```
-It requires `currentPassword` when `newPassword` is non-empty and returns `400 currentPassword required` otherwise. Gemini's `password` field is ignored entirely, so password changes silently do nothing.
+**Gemini fix (PR #28):** Added a "Current password" input. The payload now sends `{ email, currentPassword, newPassword }`. Backend error messages (e.g. "invalid credentials") are surfaced to the user.
 
-**Fix:** In `gemini` branch, update `Profile.tsx` to:
-1. Add a "Current password" input field (bound to a new `currentPassword` state variable).
-2. Send `{ email, currentPassword, newPassword }` instead of `{ email, password }` (use `password` state as `newPassword`).
-3. Show the error message returned by Codex (e.g. "invalid credentials" when the current password is wrong).
-
-**File to change:** `frontend/src/pages/Profile.tsx`
+**File changed:** `frontend/src/pages/Profile.tsx`
 
 ---
 
-### 5. [FRONTEND] Post card: use `post.persons` instead of `post.mentions`
+### 5. [FRONTEND] Post card: use `post.persons` instead of `post.mentions` ✅ DONE
 
-**What:** Codex's `Post` model serialises the persons/mentions array as `"persons"`:
-```go
-Persons []Person `json:"persons"`
-```
-Gemini's `types.ts` declares `mentions: Person[]` and `PostCard.tsx` iterates `post.mentions?.map(…)`. The `mentions` key is always `undefined` in Codex responses, so person badges never render.
+**What was needed:** Codex serialises the persons array as `"persons"`. Gemini had `mentions: Person[]` in `types.ts` and `post.mentions?.map` in `PostCard.tsx`.
 
-**Fix:** in `gemini` branch:
-- In `types.ts`: rename `mentions: Person[]` → `persons: Person[]` on the `Post` interface.
-- In `PostCard.tsx`: replace `post.mentions?.map` with `post.persons?.map`.
-- In `Timeline.tsx`, if `mentions` is referenced anywhere for filters: update similarly (a quick grep shows it is not — filters use `selectedPersons` string array, not the post field).
+**Gemini fix:**
+- `types.ts`: renamed `mentions: Person[]` → `persons: Person[]` on the `Post` interface.
+- `PostCard.tsx`: replaced `post.mentions?.map` with `post.persons?.map`.
 
-**Files to change:** `frontend/src/types.ts`, `frontend/src/components/PostCard.tsx`
+**Files changed:** `frontend/src/types.ts`, `frontend/src/components/PostCard.tsx`
 
 ---
 
-### 6. [BACKEND] Embed author email in comment responses
+### 6. [BACKEND] Embed author email in comment responses ✅ DONE
 
-**What:** Gemini's `PostCard.tsx` renders `c.user?.email` and its `Comment` type includes `user?: User`. Codex's `Comment` model returns a flat `author_email` string field instead of a nested user object, so `c.user` is always `undefined` and comment author names are blank.
+**What was needed:** Gemini's `PostCard.tsx` renders `c.user?.email` and its `Comment` type includes `user?: User`. Codex's `Comment` model previously returned a flat `author_email` string.
 
-**Fix:** In `codex` branch, change the `Comment` model and the query in `comment_repository.go` to embed a minimal user object:
-- Add a nested struct (or reuse `models.User`) with at least `id` and `email`, serialised as `"user"`.
-- Remove (or keep alongside) the flat `author_email` field — keeping it is fine for backwards compatibility, but the `user` key must be present for the Gemini frontend.
-- Update the SQL query in `ListCommentsForPosts` to JOIN `users` and scan the email into the nested struct.
+**Codex fix (PR #25):** Added `CommentUser` nested struct with `id` and `email` fields, serialised as `"user"`. The flat `author_email` field is kept in the DB scan but hidden from JSON (`json:"-"`). A `HydrateUser()` method populates the nested struct from the flat fields. The hydration is called on create, update, and list operations.
 
-**Files to change:** `backend/internal/models/comment.go`, `backend/internal/repositories/post_repository.go` (comment query).
+**Files changed:** `backend/internal/models/comment.go`, `backend/internal/repositories/post_repository.go`
 
 ---
 
-## Code quality — not breaking, but recommended before merging
+## ✅ Resolved — Code Quality
 
-### 8. [FRONTEND] Move `ProtectedRoute` outside the `App` component
+### 8. [FRONTEND] Move `ProtectedRoute` outside the `App` component ✅ DONE
 
-**What:** In `App.tsx`, `ProtectedRoute` is defined as a function inside the `App` component body. React recreates the function on every render of `App`, which means React treats it as a new component type each time and unmounts + remounts the entire subtree it wraps.
+**Gemini fix (PR #29):** `ProtectedRoute` extracted to `frontend/src/components/ProtectedRoute.tsx` (module scope). A separate `AdminRoute` component was also extracted. `App.tsx` imports both and no longer defines any routing components inline.
 
-**Fix:** In `gemini` branch, move the `ProtectedRoute` function definition outside of `App` (to module scope). It closes over `initialized` and `user` from the store, so switch those to `useAuthStore` calls inside the component itself.
-
-**File to change:** `frontend/src/App.tsx`
+**Files changed:** `frontend/src/App.tsx`; new `frontend/src/components/ProtectedRoute.tsx`
 
 ---
 
-### 9. [FRONTEND] Migrate i18n translations to separate JSON files
+### 9. [FRONTEND] Migrate i18n translations to separate JSON files ✅ DONE
 
-**What:** Gemini inlines all translations in `i18n.ts`. Codex uses separate `locales/en.json` and `locales/de.json`, which is the i18next best practice (easier to hand off to translators, better tree-shaking, no code changes needed to add strings).
+**Gemini fix (PR #30):** `i18n.ts` now uses a dynamic `import(`./locales/${language}.json`)` backend (lazy-loaded). `frontend/src/locales/de.json` and `frontend/src/locales/en.json` contain all translation keys.
 
-**Fix:** In `gemini` branch:
-1. Create `frontend/src/locales/en.json` and `frontend/src/locales/de.json` with the existing translation keys from `i18n.ts`.
-2. Update `i18n.ts` to load translations from the JSON files using i18next's `resources` or the `i18next-http-backend` / `i18next-resources-to-backend` approach.
-
-**Files to change:** `frontend/src/i18n.ts`; new files `frontend/src/locales/en.json`, `frontend/src/locales/de.json`
+**Files changed:** `frontend/src/i18n.ts`; new `frontend/src/locales/de.json`, `frontend/src/locales/en.json`

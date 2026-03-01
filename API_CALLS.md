@@ -1,6 +1,6 @@
 # Family Journal — API Calls (Codex vs Gemini, side-by-side)
 
-> **Current state snapshot:** 2026-02-26 (branch `compare/gemini-codex`)
+> **Current state snapshot:** 2026-03-01 (branch `compare/gemini-codex`)
 >
 > This document reflects the latest known API behavior of the `codex` and `gemini` code lines based on the comparison artifacts currently tracked in this branch.
 
@@ -12,10 +12,17 @@ This document compares equivalent frontend API actions ("things") in **one table
 
 ## Snapshot summary (current branch understanding)
 
-- Both branches now use the same API namespace (`/api/v1`) and the same auth route prefix (`/auth/*`) — the route naming gap has been fully closed.
-- Both branches now use `is_active` for the user active flag in all API payloads.
-- Neither branch exposes `category` or `mood` fields on posts: Codex removed them (migration 004), Gemini never had them.
-- The largest remaining integration gaps are the create/update post **payload format** (Codex sends JSON, Gemini sends multipart FormData with attachments included) and attachment **upload strategy** (Codex uses a separate upload endpoint; Gemini bundles files in the post form).
+> **2026-03-01 update:** All previously identified integration gaps between Gemini frontend and Codex backend have been resolved. The two branches are now fully compatible for the Codex backend + Gemini frontend convergence strategy.
+
+- Both branches use the same API namespace (`/api/v1`) and auth route prefix (`/auth/*`).
+- Both branches use `is_active` for the user active flag in all API payloads.
+- Neither branch exposes `category` or `mood` fields on posts.
+- **Post create/update payload:** now aligned — Gemini's `PostForm.tsx` sends JSON `{ date, text }` then a separate multipart upload, matching Codex's two-endpoint approach.
+- **Attachment download:** now aligned — Codex added `GET /api/v1/attachments/:id/download`; Gemini's `PostCard.tsx` uses this endpoint. The `url`/`storage_path` field was removed from the `Attachment` model in both codebases.
+- **Admin HTTP methods:** now aligned — Gemini's `Admin.tsx` uses `PATCH` for role and active-state changes, matching Codex's route registration.
+- **Profile password change:** now aligned — Gemini's `Profile.tsx` sends `{ currentPassword, newPassword }`, matching Codex's handler expectations.
+- **Comment `user` object:** now aligned — Codex embeds `"user": { "id", "email" }` in comment responses; Gemini's `Comment` type declares `user?: User` and `PostCard.tsx` renders `c.user?.email`.
+- **Post persons field:** now aligned — `Post.persons` is used in both Codex's JSON response and Gemini's `types.ts`/`PostCard.tsx`.
 
 ---
 
@@ -98,10 +105,10 @@ This document compares equivalent frontend API actions ("things") in **one table
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `PUT /api/v1/auth/profile` | `PUT /api/v1/auth/profile` |
-| Request payload | `{ currentPassword: string, newPassword: string }` | `{ email: string, password: string }` (same profile endpoint updates password) |
+| Request payload | `{ currentPassword: string, newPassword: string }` | `{ email: string, currentPassword: string, newPassword: string }` (**aligned**; PR #28) |
 | Success response body | success/updated user payload | updated user payload |
-| UI result on success | password form reset + success message | password input cleared + success message |
-| UI result on error | thrown message shown (e.g., wrong current password) | axios error shown |
+| UI result on success | password form reset + success message | password form cleared + success message |
+| UI result on error | thrown message shown (e.g., wrong current password) | backend error message (`error.response?.data?.error`) shown in Profile page |
 
 ---
 
@@ -134,10 +141,10 @@ This document compares equivalent frontend API actions ("things") in **one table
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `POST /api/v1/posts` | `POST /api/v1/posts` |
-| Request payload | JSON: `{ date: string, text: string }` | `FormData`: `text`, `date`, `attachments` (0..n files) |
-| Success response body | created `Post` object (contains `id` used for follow-up attachment upload) | success payload; UI calls `onSuccess()` and refreshes timeline |
-| UI result on success | save post then optional separate upload call | clear form + refresh list |
-| UI result on error | thrown message in editor | axios error shown in form |
+| Request payload | JSON: `{ date: string, text: string }` | JSON: `{ date: string, text: string }` with explicit `Content-Type: application/json` (**aligned**) |
+| Success response body | created `Post` object (contains `id` used for follow-up attachment upload) | created `Post` object; `id` used for separate attachment upload if files are selected |
+| UI result on success | save post then optional separate upload call | clear form + refresh list (after optional attachment upload) |
+| UI result on error | thrown message in editor | axios error shown in form (`backendMessage` or partial-upload message) |
 
 ---
 
@@ -146,7 +153,7 @@ This document compares equivalent frontend API actions ("things") in **one table
 | Item | Codex | Gemini |
 |---|---|---|
 | Method + endpoint | `PUT /api/v1/posts/:id` | `PUT /api/v1/posts/:id` |
-| Request payload | JSON: `{ date: string, text: string }` | `FormData`: `text`, `date`, `attachments` (0..n files) |
+| Request payload | JSON: `{ date: string, text: string }` | JSON: `{ date: string, text: string }` (**aligned**; same two-step flow as create) |
 | Success response body | updated post payload / success status | success payload; UI calls `onSuccess()` |
 | UI result on success | return to timeline/detail with updated data | clear edit form + refresh list |
 | UI result on error | thrown message in editor | axios error shown in edit form |
@@ -171,7 +178,7 @@ This document compares equivalent frontend API actions ("things") in **one table
 |---|---|---|
 | Method + endpoint | `POST /api/v1/posts/:id/comments` | `POST /api/v1/posts/:id/comments` |
 | Request payload | `{ text: string }` | `{ text: string }` |
-| Success response body | `Comment { id, text, author_email, created_at }` | success payload; UI refreshes via callback |
+| Success response body | `Comment { id, post_id, text, created_at, updated_at, user: { id, email } }` (**aligned**; PR #25 added `user` object) | expects `c.user?.email` from `Comment.user` — now matched by Codex response |
 | UI result on success | clears input and re-fetches post detail | clears input and calls `onUpdate()` |
 | UI result on error | thrown message in detail page | axios error in post card |
 
@@ -193,11 +200,11 @@ This document compares equivalent frontend API actions ("things") in **one table
 
 | Item | Codex | Gemini |
 |---|---|---|
-| Method + endpoint | `POST /api/v1/posts/:id/attachments` | no separate upload route in normal UI flow |
-| Request payload | `FormData` with repeated `files` field | files sent inline in post create/update `FormData` as `attachments` |
-| Success response body | `Attachment[] { id, file_name, file_type, file_size, url }` | attachment metadata included in returned post/list payloads |
-| UI result on success | attachments linked after post save | post card shows attachments directly |
-| UI result on error | thrown upload error shown in editor | axios error on post form submit |
+| Method + endpoint | `POST /api/v1/posts/:id/attachments` | `POST /api/v1/posts/:id/attachments` (**aligned**; separate upload step after post save) |
+| Request payload | `FormData` with repeated `files` field | `FormData` with repeated `files` field (**aligned**) |
+| Success response body | `Attachment[] { id, post_id, file_name, file_type, file_size, created_at }` (no `url`/`storage_path` field) | attachment metadata used to render post card after `onSuccess()` refresh |
+| UI result on success | attachments linked after post save | post card refreshed via `onSuccess()` callback |
+| UI result on error | thrown upload error shown in editor | `post_partial_upload_error` i18n key shown (post was already saved) |
 
 ---
 
@@ -205,11 +212,11 @@ This document compares equivalent frontend API actions ("things") in **one table
 
 | Item | Codex | Gemini |
 |---|---|---|
-| Method + endpoint | direct static path via browser (`GET /uploads/:name`) | `GET /api/v1/attachments/:id/download` |
-| Request payload | none | none |
-| Success response body | binary file stream/static asset | binary file stream via API |
-| UI behavior | anchor navigation from post detail | images inline (`<img src=...>`), files via links |
-| Error behavior | browser-level 404/403 | failed image/link load or axios/browser error |
+| Method + endpoint | `GET /api/v1/attachments/:id/download` (**aligned**; PR #21 replaced static `/uploads/:name` route) | `GET /api/v1/attachments/:id/download` |
+| Request payload | none (session cookie auth required) | none (session cookie auth required) |
+| Success response body | binary file stream with hardened security headers (PR #22) | binary file stream |
+| UI behavior | images inline (`<img src=...>`), files via links — both using `${api.defaults.baseURL}/attachments/${a.id}/download` | images inline (`<img src=...>`), files via links |
+| Error behavior | browser-level error / JSON error if auth fails | failed image/link load or browser error |
 
 ---
 
@@ -289,8 +296,8 @@ This document compares equivalent frontend API actions ("things") in **one table
 
 | Item | Codex | Gemini |
 |---|---|---|
-| Method + endpoint | `PATCH /api/v1/admin/users/:id/role` | `PUT /api/v1/admin/users/:id/role` |
-| Request payload | `{ role: "admin" | "user" }` | `{ role: "admin" | "user" }` |
+| Method + endpoint | `PATCH /api/v1/admin/users/:id/role` | `PATCH /api/v1/admin/users/:id/role` (**aligned**; PR #27) |
+| Request payload | `{ role: "admin" \| "user" }` | `{ role: "admin" \| "user" }` |
 | Success response body | `204 No Content` (UI can optimistic-update) | success status; then `fetchUsers()` |
 | UI result on success | role toggled in table | list reloaded |
 | UI result on error | thrown message in admin page | axios error shown |
@@ -301,7 +308,7 @@ This document compares equivalent frontend API actions ("things") in **one table
 
 | Item | Codex | Gemini |
 |---|---|---|
-| Method + endpoint | `PATCH /api/v1/admin/users/:id/active` | `PUT /api/v1/admin/users/:id/active` |
+| Method + endpoint | `PATCH /api/v1/admin/users/:id/active` | `PATCH /api/v1/admin/users/:id/active` (**aligned**; PR #27) |
 | Request payload | `{ is_active: boolean }` | `{ is_active: boolean }` |
 | Success response body | `204 No Content` (UI can optimistic-update) | success status; then `fetchUsers()` |
 | UI result on success | active badge/button state updated | list reloaded |
