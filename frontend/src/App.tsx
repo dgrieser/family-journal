@@ -40,7 +40,7 @@ function App() {
           <Route index element={<Timeline />} />
           <Route path={APP_ROUTE_SEGMENTS.PERSONS} element={<Persons />} />
           <Route path={APP_ROUTE_SEGMENTS.PROFILE} element={<Profile />} />
-          <Route path={APP_ROUTE_SEGMENTS.ADMIN} element={<AdminRoute><Admin /></AdminRoute>} />
+          <Route path={APP_ROUTE_SEGMENTS.ADMIN} element={<ProtectedRoute><AdminRoute><Admin /></AdminRoute></ProtectedRoute>} />
         </Route>
       </Routes>
     </BrowserRouter>
