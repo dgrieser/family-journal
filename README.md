@@ -124,3 +124,5 @@ Run backend tests:
 cd backend
 GOFLAGS=-mod=mod go test ./...
 ```
+
+The backend test suite now includes both unit-style tests (fake repositories and focused package tests) and app-level integration tests that exercise the production Fiber middleware stack.
