@@ -1,0 +1,76 @@
+{
+  "appName": "FamilyJournal",
+  "nav": {
+    "timeline": "Zeitstrahl",
+    "newPost": "Neuer Pflegeeintrag",
+    "persons": "Personen",
+    "profile": "Profil",
+    "admin": "Admin",
+    "logout": "Abmelden"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "createAccount": "Konto erstellen",
+    "haveAccount": "Schon ein Konto?",
+    "noAccount": "Noch kein Konto?",
+    "signIn": "Einloggen",
+    "signOut": "Abmelden",
+    "registerSuccess": "Konto erfolgreich erstellt. Bitte jetzt einloggen."
+  },
+  "timeline": {
+    "heading": "Heute",
+    "date": "Datum",
+    "search": "Suche",
+    "filters": "Filter",
+    "hashtags": "Hashtags",
+    "persons": "Personen",
+    "empty": "Noch keine Einträge",
+    "addEntry": "Eintrag hinzufügen"
+  },
+  "post": {
+    "title": "Pflegeeintrag",
+    "text": "Eintragstext",
+    "save": "Speichern",
+    "update": "Aktualisieren",
+    "attachments": "Anhänge",
+    "comments": "Kommentare",
+    "addComment": "Kommentar hinzufügen",
+    "upload": "Dateien hochladen"
+  },
+  "persons": {
+    "title": "Personen",
+    "name": "Name",
+    "description": "Beschreibung",
+    "add": "Person hinzufügen",
+    "edit": "Bearbeiten",
+    "save": "Speichern",
+    "delete": "Löschen"
+  },
+  "admin": {
+    "title": "Benutzerverwaltung",
+    "role": "Rolle",
+    "active": "Aktiv",
+    "deactivate": "Deaktivieren",
+    "activate": "Aktivieren"
+  },
+  "profile": {
+    "title": "Mein Profil",
+    "update": "Profil aktualisieren",
+    "passwordTitle": "Passwort ändern",
+    "currentPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "changePassword": "Passwort ändern",
+    "updateSuccess": "Profil aktualisiert",
+    "passwordSuccess": "Passwort geändert"
+  },
+  "validation": {
+    "personExists": "Eine Person mit diesem Namen existiert bereits",
+    "nameRequired": "Name ist erforderlich",
+    "textRequired": "Text ist erforderlich",
+    "commentRequired": "Kommentartext ist erforderlich",
+    "fileTooLarge": "Eine oder mehrere Dateien überschreiten das Limit von 25 MB"
+  }
+}

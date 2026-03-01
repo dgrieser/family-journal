@@ -1,0 +1,76 @@
+{
+  "appName": "FamilyJournal",
+  "nav": {
+    "timeline": "Timeline",
+    "newPost": "New entry",
+    "persons": "Persons",
+    "profile": "Profile",
+    "admin": "Admin",
+    "logout": "Logout"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "createAccount": "Create account",
+    "haveAccount": "Already have an account?",
+    "noAccount": "Need an account?",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "registerSuccess": "Account created successfully. Please sign in."
+  },
+  "timeline": {
+    "heading": "Today",
+    "date": "Date",
+    "search": "Search",
+    "filters": "Filters",
+    "hashtags": "Hashtags",
+    "persons": "Persons",
+    "empty": "No entries yet",
+    "addEntry": "Add entry"
+  },
+  "post": {
+    "title": "Care entry",
+    "text": "Entry text",
+    "save": "Save",
+    "update": "Update",
+    "attachments": "Attachments",
+    "comments": "Comments",
+    "addComment": "Add comment",
+    "upload": "Upload files"
+  },
+  "persons": {
+    "title": "Persons",
+    "name": "Name",
+    "description": "Description",
+    "add": "Add person",
+    "edit": "Edit",
+    "save": "Save",
+    "delete": "Delete"
+  },
+  "admin": {
+    "title": "User management",
+    "role": "Role",
+    "active": "Active",
+    "deactivate": "Deactivate",
+    "activate": "Activate"
+  },
+  "profile": {
+    "title": "My profile",
+    "update": "Update profile",
+    "passwordTitle": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "changePassword": "Change password",
+    "updateSuccess": "Profile updated",
+    "passwordSuccess": "Password changed"
+  },
+  "validation": {
+    "personExists": "A person with this name already exists",
+    "nameRequired": "Name is required",
+    "textRequired": "Text is required",
+    "commentRequired": "Comment text is required",
+    "fileTooLarge": "One or more files exceed the 25 MB limit"
+  }
+}
