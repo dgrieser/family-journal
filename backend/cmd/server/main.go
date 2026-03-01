@@ -77,6 +77,11 @@ func main() {
 	app.Use(recover.New())
 	app.Use(logger.New())
 	if len(cfg.CORSOrigins) > 0 {
+		for _, origin := range cfg.CORSOrigins {
+			if origin == "*" {
+				log.Fatal("CORS_ALLOW_ORIGINS cannot contain '*' when AllowCredentials is true")
+			}
+		}
 		app.Use(cors.New(cors.Config{
 			AllowOrigins:     strings.Join(cfg.CORSOrigins, ","),
 			AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
