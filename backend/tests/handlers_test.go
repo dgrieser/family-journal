@@ -274,7 +274,7 @@ func TestRegisterLoginSession(t *testing.T) {
 	repo := newFakeRepo()
 	service := services.New(repo, repo, repo, repo, repo, repo)
 	store := session.New()
-	app := fiber.New()
+	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
 	h := &handlers.AuthHandler{Service: service, Store: store}
 	app.Post("/register", h.Register)
 	app.Post("/login", h.Login)
@@ -314,6 +314,39 @@ func TestRegisterLoginSession(t *testing.T) {
 	profileResp, err = app.Test(profileReq)
 	if err != nil || profileResp.StatusCode != http.StatusOK {
 		t.Fatalf("profile failed right after login: %v", err)
+	}
+}
+
+func TestRegisterRejectsInvalidEmail(t *testing.T) {
+	repo := newFakeRepo()
+	service := services.New(repo, repo, repo, repo, repo, repo)
+	store := session.New()
+	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
+	h := &handlers.AuthHandler{Service: service, Store: store}
+	app.Post("/register", h.Register)
+
+	payload, _ := json.Marshal(map[string]string{"email": "not-an-email", "password": "secret"})
+	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("register request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+
+	var got map[string]string
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("expected json error response, got %q: %v", string(body), err)
+	}
+	if got["error"] != services.ErrInvalidEmail.Error() {
+		t.Fatalf("expected %q, got %#v", services.ErrInvalidEmail.Error(), got)
 	}
 }
 
