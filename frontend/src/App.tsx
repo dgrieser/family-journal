@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Timeline } from './pages/Timeline';
@@ -7,13 +7,15 @@ import { Persons } from './pages/Persons';
 import { Admin } from './pages/Admin';
 import { Profile } from './pages/Profile';
 import { Layout } from './components/Layout';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminRoute } from './components/AdminRoute';
 import { useAuthStore } from './store';
 import api from './api';
 import './i18n';
 import { APP_ROUTES, APP_ROUTE_SEGMENTS, API_ROUTES } from './constants/routes';
 
 function App() {
-  const { user, setUser, initialized, setInitialized } = useAuthStore();
+  const { setUser } = useAuthStore();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -21,27 +23,12 @@ function App() {
         const response = await api.get(API_ROUTES.AUTH_PROFILE);
         setUser(response.data);
       } catch (err) {
+        console.error('Auth check failed:', err);
         setUser(null);
-      } finally {
-        setInitialized(true);
       }
     };
     checkAuth();
-  }, [setUser, setInitialized]);
-
-  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    if (!initialized) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-        </div>
-      );
-    }
-    if (user === null) {
-      return <Navigate to={APP_ROUTES.AUTH_LOGIN} />;
-    }
-    return <>{children}</>;
-  };
+  }, [setUser]);
 
   return (
     <BrowserRouter>
@@ -53,7 +40,7 @@ function App() {
           <Route index element={<Timeline />} />
           <Route path={APP_ROUTE_SEGMENTS.PERSONS} element={<Persons />} />
           <Route path={APP_ROUTE_SEGMENTS.PROFILE} element={<Profile />} />
-          <Route path={APP_ROUTE_SEGMENTS.ADMIN} element={user?.role === 'admin' ? <Admin /> : <Navigate to={APP_ROUTES.ROOT} />} />
+          <Route path={APP_ROUTE_SEGMENTS.ADMIN} element={<AdminRoute><Admin /></AdminRoute>} />
         </Route>
       </Routes>
     </BrowserRouter>
