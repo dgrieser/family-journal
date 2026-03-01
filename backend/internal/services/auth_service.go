@@ -10,7 +10,7 @@ import (
 )
 
 func (s *Service) Register(email, password string) (*models.User, error) {
-	email = strings.TrimSpace(email)
+email = strings.ToLower(strings.TrimSpace(email))
 	addr, err := mail.ParseAddress(email)
 	if err != nil || addr.Address != email {
 		return nil, ErrInvalidEmail
