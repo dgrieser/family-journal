@@ -12,6 +12,7 @@ type Config struct {
 	Port          string
 	DatabaseDSN   string
 	SessionSecret string
+	CORSOrigins   []string
 	CookieSecure  bool
 	UploadDir     string
 	MaxUploadMB   int64
@@ -29,6 +30,7 @@ func Load() Config {
 		Port:          getEnv("PORT", "8080"),
 		DatabaseDSN:   getEnv("MYSQL_DSN", ""),
 		SessionSecret: getEnv("SESSION_SECRET", ""),
+		CORSOrigins:   getEnvList("CORS_ALLOW_ORIGINS", nil),
 		CookieSecure:  getEnv("COOKIE_SECURE", "false") == "true",
 		UploadDir:     getEnv("UPLOAD_DIR", "./uploads"),
 		MaxUploadMB:   getEnvInt("MAX_UPLOAD_MB", 25),
