@@ -20,6 +20,7 @@ import (
 	"familyjournal/backend/internal/sessionstore"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/middleware/encryptcookie"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
@@ -75,6 +76,14 @@ func main() {
 	})
 	app.Use(recover.New())
 	app.Use(logger.New())
+	if len(cfg.CORSOrigins) > 0 {
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     strings.Join(cfg.CORSOrigins, ","),
+			AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+			AllowHeaders:     "Origin,Content-Type,Accept,X-CSRF-Token",
+			AllowCredentials: true,
+		}))
+	}
 	app.Use(encryptcookie.New(encryptcookie.Config{
 		Key: deriveCookieKey(cfg.SessionSecret),
 		// Keep CSRF cookie readable by the browser so the SPA can send it in X-CSRF-Token.

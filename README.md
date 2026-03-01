@@ -38,6 +38,7 @@ Services:
 | `PORT` | API port | `8080` |
 | `MYSQL_DSN` | MySQL connection string | **required** |
 | `SESSION_SECRET` | Session secret | **required** |
+| `CORS_ALLOW_ORIGINS` | Comma-separated exact origins allowed for cross-origin browser requests | `http://localhost:5173` |
 | `COOKIE_SECURE` | Use secure cookies | `false` |
 | `UPLOAD_DIR` | Uploads directory | `./uploads` |
 | `MAX_UPLOAD_MB` | Maximum upload size | `25` |
@@ -51,6 +52,8 @@ Services:
 ### Frontend
 
 No frontend-specific environment variables are required for the default Docker setup. The production Docker setup serves the frontend behind nginx and proxies `/api`, `/uploads`, and `/healthz` to the backend container. For local Vite development, the frontend also uses `/api` and `/uploads` proxies (see `frontend/vite.config.ts`).
+
+For cross-origin backend access outside Docker, set `CORS_ALLOW_ORIGINS` to the exact browser origins that should be allowed. Because the app uses session cookies, wildcard origins are not appropriate.
 
 ## Database migrations
 
