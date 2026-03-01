@@ -32,7 +32,7 @@ A full-stack web application to document daily care activities for children.
    ```bash
    cp .env.example .env
    ```
-   Ensure you set a secure `SESSION_SECRET` (at least 32 characters).
+   For local Docker use, the compose file now falls back to a development-only session secret if `.env` is missing. You should still set your own `SESSION_SECRET` (at least 32 characters) in `.env` for any real use.
 3. Run the following command:
    ```bash
    docker-compose up --build
