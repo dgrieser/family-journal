@@ -14,7 +14,7 @@ const resourcesBackend = {
         callback(null, module.default);
       })
       .catch((error: unknown) => {
-        callback(error instanceof Error ? error : new Error('Failed to load locale'));
+        callback(error instanceof Error ? error : new Error('Failed to load locale'), null);
       });
   }
 };
