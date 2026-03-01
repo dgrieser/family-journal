@@ -81,7 +81,7 @@ func main() {
 	})
 
 	app := fiber.New(fiber.Config{
-		BodyLimit: 10 * 1024 * 1024, // 10MB limit
+		BodyLimit: 25 * 1024 * 1024, // 25MB limit
 	})
 
 	app.Use(logger.New())

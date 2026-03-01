@@ -23,7 +23,7 @@ type PostHandler struct {
 	postService *services.PostService
 }
 
-const maxAttachmentSize int64 = 5 * 1024 * 1024 // 5MB
+const maxAttachmentSize int64 = 25 * 1024 * 1024 // 25MB
 
 var errResponseSent = errors.New("sentinel error indicating that the HTTP response has been written")
 
