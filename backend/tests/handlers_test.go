@@ -270,7 +270,7 @@ func TestJSONErrorHandlerUsesStatusTextForClientErrorsWithoutMessage(t *testing.
 	}
 }
 
-func TestRegisterLoginSession(t *testing.T) {
+func newAuthTestApp() *fiber.App {
 	repo := newFakeRepo()
 	service := services.New(repo, repo, repo, repo, repo, repo)
 	store := session.New()
@@ -279,8 +279,16 @@ func TestRegisterLoginSession(t *testing.T) {
 	app.Post("/register", h.Register)
 	app.Post("/login", h.Login)
 	app.Get("/profile", h.Profile)
+	return app
+}
 
-	payload, _ := json.Marshal(map[string]string{"email": "test@example.com", "password": "secret"})
+func TestRegisterLoginSession(t *testing.T) {
+	app := newAuthTestApp()
+
+	payload, err := json.Marshal(map[string]string{"email": "test@example.com", "password": "secret"})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
@@ -318,14 +326,12 @@ func TestRegisterLoginSession(t *testing.T) {
 }
 
 func TestRegisterRejectsInvalidEmail(t *testing.T) {
-	repo := newFakeRepo()
-	service := services.New(repo, repo, repo, repo, repo, repo)
-	store := session.New()
-	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
-	h := &handlers.AuthHandler{Service: service, Store: store}
-	app.Post("/register", h.Register)
+	app := newAuthTestApp()
 
-	payload, _ := json.Marshal(map[string]string{"email": "not-an-email", "password": "secret"})
+	payload, err := json.Marshal(map[string]string{"email": "not-an-email", "password": "secret"})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
