@@ -35,7 +35,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./backend/uploads:/app/uploads
+      - uploads_data:/app/uploads
 
   frontend:
     build: ./frontend
@@ -47,3 +47,4 @@ services:
 
 volumes:
   db_data:
+  uploads_data:

@@ -23,7 +23,7 @@ A full-stack web application to document daily care activities for children.
 
 ### Prerequisites
 
-- Docker and Docker Compose
+- Docker with the Compose v2 plugin (`docker compose`)
 
 ### Running the Application
 
@@ -35,8 +35,9 @@ A full-stack web application to document daily care activities for children.
    For local Docker use, the compose file now falls back to a development-only session secret if `.env` is missing. You should still set your own `SESSION_SECRET` (at least 32 characters) in `.env` for any real use.
 3. Run the following command:
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
+   Avoid the legacy `docker-compose` v1 binary. On current Docker versions it can fail during container recreation with errors like `KeyError: 'ContainerConfig'`.
 4. The application will be available at `http://localhost:3000`.
 5. The backend API is at `http://localhost:8080/api/v1`.
 
