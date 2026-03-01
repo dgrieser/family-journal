@@ -33,6 +33,8 @@
   "inactive": "Inaktiv",
   "profile": "Profil",
   "update": "Aktualisieren",
+  "current_password": "Aktuelles Passwort",
+  "new_password": "Neues Passwort",
   "leave_blank": "leer lassen um nicht zu ändern",
   "success": "Erfolg",
   "error": "Fehler",
