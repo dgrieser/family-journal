@@ -1,57 +1,84 @@
-import { NavLink } from 'react-router-dom';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import LanguageSwitcher from './LanguageSwitcher';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../store';
+import api from '../api';
+import { LayoutDashboard, Users, UserCog, User, LogOut, Languages } from 'lucide-react';
+import { APP_ROUTES, API_ROUTES } from '../constants/routes';
 
-interface Props {
-  children: React.ReactNode;
-}
+export const Layout = () => {
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const { user, setUser } = useAuthStore();
 
-const Layout = ({ children }: Props) => {
-  const { t } = useTranslation();
-  const { user, logout } = useAuthStore();
+  const handleLogout = async () => {
+    try {
+      await api.post(API_ROUTES.AUTH_LOGOUT);
+      setUser(null);
+      navigate(APP_ROUTES.AUTH_LOGIN);
+    } catch (err) {
+      console.error('Logout failed', err);
+    }
+  };
+
+  const toggleLanguage = () => {
+    i18n.changeLanguage(i18n.language === 'de' ? 'en' : 'de');
+  };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-5xl mx-auto flex items-center justify-between px-4 py-3">
-          <h1 className="text-lg font-semibold">{t('appName')}</h1>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher />
-            {user && (
-              <button className="text-sm text-slate-600" onClick={() => void logout()}>
-                {t('nav.logout')}
-              </button>
-            )}
+    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
+      {/* Sidebar / Topbar */}
+      <nav className="bg-indigo-700 text-white w-full md:w-64 flex-shrink-0">
+        <div className="p-4 flex items-center justify-between">
+          <span className="text-xl font-bold">{t('app_name')}</span>
+          <button onClick={toggleLanguage} className="md:hidden p-1 hover:bg-indigo-600 rounded">
+            <Languages size={20} />
+          </button>
+        </div>
+
+        <div className="flex md:flex-col overflow-x-auto md:overflow-y-auto">
+          <Link to={APP_ROUTES.ROOT} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
+            <LayoutDashboard size={20} />
+            <span>{t('timeline')}</span>
+          </Link>
+          <Link to={APP_ROUTES.PERSONS} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
+            <Users size={20} />
+            <span>{t('persons')}</span>
+          </Link>
+          <Link to={APP_ROUTES.PROFILE} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
+            <User size={20} />
+            <span>{t('profile')}</span>
+          </Link>
+          {user?.role === 'admin' && (
+            <Link to={APP_ROUTES.ADMIN} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
+              <UserCog size={20} />
+              <span>{t('admin')}</span>
+            </Link>
+          )}
+
+          <div className="mt-auto hidden md:block">
+             <button onClick={toggleLanguage} className="flex items-center space-x-2 p-4 hover:bg-indigo-600 w-full text-left">
+                <Languages size={20} />
+                <span>{i18n.language.toUpperCase()}</span>
+             </button>
+             <button onClick={handleLogout} className="flex items-center space-x-2 p-4 hover:bg-indigo-600 w-full text-left">
+                <LogOut size={20} />
+                <span>{t('logout')}</span>
+             </button>
           </div>
         </div>
-        {user && (
-          <nav className="border-t">
-            <div className="max-w-5xl mx-auto flex gap-4 px-4 py-2 text-sm">
-              <NavLink to="/" className="text-slate-600" end>
-                {t('nav.timeline')}
-              </NavLink>
-              <NavLink to="/posts/new" className="text-slate-600">
-                {t('nav.newPost')}
-              </NavLink>
-              <NavLink to="/persons" className="text-slate-600">
-                {t('nav.persons')}
-              </NavLink>
-              <NavLink to="/profile" className="text-slate-600">
-                {t('nav.profile')}
-              </NavLink>
-              {user.role === 'admin' && (
-                <NavLink to="/admin" className="text-slate-600">
-                  {t('nav.admin')}
-                </NavLink>
-              )}
-            </div>
-          </nav>
-        )}
-      </header>
-      <main className="flex-1">{children}</main>
+      </nav>
+
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+        <Outlet />
+      </main>
+
+      {/* Mobile Logout Button */}
+      <div className="md:hidden bg-white border-t p-2 flex justify-around">
+          <button onClick={handleLogout} className="flex flex-col items-center text-gray-600 p-2">
+            <LogOut size={20} />
+            <span className="text-xs">{t('logout')}</span>
+          </button>
+      </div>
     </div>
   );
 };
-
-export default Layout;

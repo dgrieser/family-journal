@@ -1,10 +1,10 @@
 # FamilyJournal
 
-FamilyJournal is a full-stack application for documenting daily care activities for children with officially recognized care levels. It ships with a Go/Fiber backend, a React (Vite + TypeScript) frontend, and a MySQL database via Docker Compose.
+FamilyJournal is a full-stack application for documenting daily care activities for children with officially recognized care levels. This branch uses the Codex Go/Fiber backend together with the Gemini React frontend, plus a MySQL database via Docker Compose.
 
 ## Tech stack
 
-- **Frontend:** React + TypeScript, Vite, TailwindCSS, Zustand, React Router, react-i18next (de/en).
+- **Frontend:** React + TypeScript, Vite, TailwindCSS, Zustand, React Router, react-i18next (de/en), served by nginx.
 - **Backend:** Go + Fiber with session-based authentication and CSRF protection.
 - **Database:** MySQL with migrations.
 - **Deployment:** Docker Compose for local development.
@@ -25,7 +25,7 @@ docker compose up --build
 
 Services:
 
-- Frontend: `http://localhost:5173`
+- Frontend: `http://localhost:3000`
 - Backend API: `http://localhost:8080/api/v1`
 - MySQL: `localhost:3306`
 
@@ -40,7 +40,7 @@ Services:
 | `SESSION_SECRET` | Session secret | **required** |
 | `COOKIE_SECURE` | Use secure cookies | `false` |
 | `UPLOAD_DIR` | Uploads directory | `./uploads` |
-| `MAX_UPLOAD_MB` | Maximum upload size | `10` |
+| `MAX_UPLOAD_MB` | Maximum upload size | `25` |
 | `ALLOWED_UPLOAD_TYPES` | Comma-separated allowed MIME types | `image/jpeg,image/png,application/pdf` |
 | `DB_MAX_OPEN` | Max open DB connections | `10` |
 | `DB_MAX_IDLE` | Max idle DB connections | `5` |
@@ -50,7 +50,7 @@ Services:
 
 ### Frontend
 
-The frontend uses `/api` and `/uploads` proxies in development (see `vite.config.ts`).
+No frontend-specific environment variables are required for the default Docker setup. The production Docker setup serves the frontend behind nginx and proxies `/api`, `/uploads`, and `/healthz` to the backend container. For local Vite development, the frontend also uses `/api` and `/uploads` proxies (see `frontend/vite.config.ts`).
 
 ## Database migrations
 
@@ -66,7 +66,7 @@ mysql -u root -p familyjournal < backend/migrations/002_session_store.sql
 All endpoints are namespaced under `/api/v1`.
 Error responses are JSON in the form `{ "error": "message" }`.
 
-### Auth
+### Auth (`/api/v1/auth`)
 - `POST /auth/register`
 - `POST /auth/login`
 - `POST /auth/logout`
@@ -99,6 +99,11 @@ Error responses are JSON in the form `{ "error": "message" }`.
 ### Other routes
 - `GET /healthz`
 - `GET /api/v1/attachments/:id/download` (requires authentication)
+
+## Frontend notes
+
+- The integrated frontend is the Gemini UI implementation, mounted at the root path `/`.
+- Browser requests should go through the frontend origin in Docker (`http://localhost:3000`), which forwards API and upload traffic to the backend.
 
 ### Access scope
 - Non-admin users can only read and modify their own posts, comments, persons, and hashtags.
