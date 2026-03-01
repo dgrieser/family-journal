@@ -61,8 +61,8 @@ func TestPostCreationWithHashtagsAndMentions(t *testing.T) {
 	post, err := postService.CreatePost(user.ID, time.Now(), text)
 	assert.NoError(t, err)
 	assert.Len(t, post.Hashtags, 2)
-	assert.Len(t, post.Mentions, 1)
-	assert.Equal(t, "child1", post.Mentions[0].Name) // Wait, I didn't lowercase name in parseText but let's check.
+	assert.Len(t, post.Persons, 1)
+	assert.Equal(t, "child1", post.Persons[0].Name) // Wait, I didn't lowercase name in parseText but let's check.
 }
 
 func TestFiltering(t *testing.T) {

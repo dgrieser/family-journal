@@ -23,7 +23,7 @@ func NewPostService(postRepo *repository.PostRepository, personRepo *repository.
 }
 
 func (s *PostService) CreatePost(userID uint, date time.Time, text string) (*models.Post, error) {
-	hashtags, mentions, err := s.parseText(text, userID)
+	hashtags, persons, err := s.parseText(text, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (s *PostService) CreatePost(userID uint, date time.Time, text string) (*mod
 		Date:     date,
 		Text:     text,
 		Hashtags: hashtags,
-		Mentions: mentions,
+		Persons:  persons,
 	}
 
 	err = s.postRepo.Create(post)
@@ -51,13 +51,13 @@ func (s *PostService) UpdatePost(postID uint, text string, date *time.Time) (*mo
 	}
 
 	if strings.TrimSpace(text) != "" {
-		hashtags, mentions, err := s.parseText(text, post.UserID)
+		hashtags, persons, err := s.parseText(text, post.UserID)
 		if err != nil {
 			return nil, err
 		}
 		post.Text = text
 		post.Hashtags = hashtags
-		post.Mentions = mentions
+		post.Persons = persons
 	}
 	if date != nil {
 		post.Date = *date
@@ -118,7 +118,7 @@ func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []m
 		}
 	}
 
-	var mentions []models.Person
+	var persons []models.Person
 	if len(uniqueMentionNames) > 0 {
 		// Security: Only find persons created by THIS user to avoid information leak
 		existingPersons, err := s.personRepo.FindByNames(userID, uniqueMentionNames)
@@ -132,9 +132,9 @@ func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []m
 
 		for _, name := range uniqueMentionNames {
 			if p, ok := existingMap[strings.ToLower(name)]; ok {
-				mentions = append(mentions, p)
+				persons = append(persons, p)
 			} else {
-				mentions = append(mentions, models.Person{
+				persons = append(persons, models.Person{
 					Name:            name,
 					CreatedByUserID: ptrInt(int(userID)),
 				})
@@ -142,7 +142,7 @@ func (s *PostService) parseText(text string, userID uint) ([]models.Hashtag, []m
 		}
 	}
 
-	return hashtags, mentions, nil
+	return hashtags, persons, nil
 }
 
 func (s *PostService) GetPosts(userID uint, date *time.Time, hashtags []string, persons []string, search string) ([]models.Post, error) {

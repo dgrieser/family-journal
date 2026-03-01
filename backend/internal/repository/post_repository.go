@@ -30,7 +30,7 @@ func (r *PostRepository) Delete(id uint) error {
 
 func (r *PostRepository) FindByID(id uint) (*models.Post, error) {
 	var post models.Post
-	err := r.db.Preload("User").Preload("Hashtags").Preload("Mentions").Preload("Attachments").Preload("Comments.User").First(&post, id).Error
+	err := r.db.Preload("User").Preload("Hashtags").Preload("Persons").Preload("Attachments").Preload("Comments.User").First(&post, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (r *PostRepository) CreateHashtag(hashtag *models.Hashtag) error {
 }
 
 func (r *PostRepository) GetFiltered(userID uint, date *time.Time, hashtags []string, persons []string, search string) ([]models.Post, error) {
-	query := r.db.Preload("User").Preload("Hashtags").Preload("Mentions").Preload("Attachments").Preload("Comments.User")
+	query := r.db.Preload("User").Preload("Hashtags").Preload("Persons").Preload("Attachments").Preload("Comments.User")
 
 	query = query.Where("posts.user_id = ?", userID)
 
