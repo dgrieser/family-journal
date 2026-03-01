@@ -206,5 +206,6 @@ Use these requirements to generate:
 - Both branches implement the requested stack shape (Fiber + React + MySQL + Docker Compose), with different architectural tradeoffs.
 - Codex aligns better with backend robustness and modularity goals in this prompt (interface-based repositories, tracked SQL migrations, centralized error handling, AccessScope authorization pattern).
 - Gemini aligns better with frontend polish and modern tooling (React 19, Vite 7, Tailwind 4, icons, image previews, responsive layout).
-- All integration blockers between the Codex backend and Gemini frontend have been resolved — the two branches are now fully API-compatible.
-- The active convergence strategy is: **Codex backend + Gemini frontend**. See `TODO.md` for the full resolution log.
+- All integration blockers between the Codex backend and Gemini frontend have been resolved — the two code lines are fully API-compatible.
+- The Codex implementation has been merged into `main`; the `codex` branch no longer exists.
+- The active convergence strategy is: **Codex backend (`main`) + Gemini frontend**. See `TODO.md` for the full resolution log.

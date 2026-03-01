@@ -2,7 +2,7 @@
 
 > **Current state snapshot:** 2026-03-01 (branch `compare/gemini-codex`)
 >
-> This document reflects the latest known API behavior of the `codex` and `gemini` code lines based on the comparison artifacts currently tracked in this branch.
+> This document reflects the latest known API behavior of the `main` (Codex) and `gemini` code lines based on the comparison artifacts currently tracked in this branch.
 
 This document compares equivalent frontend API actions ("things") in **one table per thing**, with concrete request/response field names and error behavior.
 

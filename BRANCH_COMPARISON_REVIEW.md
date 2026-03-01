@@ -10,7 +10,7 @@
 
 | Label | Branch Name | Shorthand |
 |-------|-------------|-----------|
-| **Branch 1** | `codex` | **Codex** |
+| **Branch 1** | `main` (merged from former `codex` branch) | **Codex** |
 | **Branch 2** | `gemini` | **Gemini** |
 
 Both branches implement the same application: a full-stack family journal for documenting daily care activities for children. They share the same tech stack at a high level (Go + Fiber backend, React + TypeScript + Vite frontend, MySQL database, Docker Compose deployment) but differ significantly in architectural decisions, code quality, and completeness.
@@ -20,7 +20,7 @@ Both branches implement the same application: a full-stack family journal for do
 
 - **Codex** remains the stronger backend baseline (modular architecture, SQL-first control, hardened session and error handling).
 - **Gemini** remains the stronger frontend baseline for velocity (leaner UI flow, simpler axios client, updated dependencies).
-- The practical integration direction is still: **Codex backend + Gemini frontend via compatibility layer**.
+- The practical integration direction: **Codex backend (`main`) + Gemini frontend**. The `codex` branch has been merged into `main`.
 
 ---
 
