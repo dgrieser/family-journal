@@ -31,7 +31,7 @@ func Load() Config {
 		SessionSecret: getEnv("SESSION_SECRET", ""),
 		CookieSecure:  getEnv("COOKIE_SECURE", "false") == "true",
 		UploadDir:     getEnv("UPLOAD_DIR", "./uploads"),
-		MaxUploadMB:   getEnvInt("MAX_UPLOAD_MB", 10),
+		MaxUploadMB:   getEnvInt("MAX_UPLOAD_MB", 25),
 		DBMaxOpen:     int(getEnvInt("DB_MAX_OPEN", 10)),
 		DBMaxIdle:     int(getEnvInt("DB_MAX_IDLE", 5)),
 		DBMaxLifetime: int(getEnvInt("DB_MAX_LIFETIME_MINUTES", 5)),

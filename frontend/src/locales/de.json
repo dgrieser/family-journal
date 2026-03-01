@@ -70,6 +70,7 @@
     "personExists": "Eine Person mit diesem Namen existiert bereits",
     "nameRequired": "Name ist erforderlich",
     "textRequired": "Text ist erforderlich",
-    "commentRequired": "Kommentartext ist erforderlich"
+    "commentRequired": "Kommentartext ist erforderlich",
+    "fileTooLarge": "Eine oder mehrere Dateien überschreiten das Limit von 25 MB"
   }
 }

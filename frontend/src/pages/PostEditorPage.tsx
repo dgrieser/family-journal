@@ -119,7 +119,16 @@ const PostEditorPage = () => {
             className="mt-2"
             type="file"
             multiple
-            onChange={(event) => setFiles(Array.from(event.target.files || []))}
+            onChange={(event) => {
+              const selected = Array.from(event.target.files || []);
+              const oversized = selected.filter((f) => f.size > 25 * 1024 * 1024);
+              if (oversized.length > 0) {
+                setError(t('validation.fileTooLarge'));
+                event.target.value = '';
+                return;
+              }
+              setFiles(selected);
+            }}
           />
           {files.length > 0 && (
             <ul className="text-xs text-slate-500 mt-2">

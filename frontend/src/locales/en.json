@@ -70,6 +70,7 @@
     "personExists": "A person with this name already exists",
     "nameRequired": "Name is required",
     "textRequired": "Text is required",
-    "commentRequired": "Comment text is required"
+    "commentRequired": "Comment text is required",
+    "fileTooLarge": "One or more files exceed the 25 MB limit"
   }
 }
