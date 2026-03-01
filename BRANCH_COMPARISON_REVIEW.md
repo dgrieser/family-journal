@@ -509,10 +509,10 @@ The original review recommended **Gemini as the better starting point** primaril
 - Both use two-step post+attachment submission (JSON post then multipart upload)
 
 **Gemini's remaining key issues from the original review:**
-- ASCII-only regex (`\w+`) in backend service still doesn't support German characters — **still open**
-- No session regeneration on login — **still open**
+- ~~ASCII-only regex (`\w+`) in backend service still doesn't support German characters~~ — **moot** (Gemini backend is discarded; Codex uses `[\pL\d_]+`)
+- ~~No session regeneration on login~~ — **moot** (Codex already regenerates sessions on login)
 - ~~`ProtectedRoute` still defined inside component~~ — **Fixed** (PR #29)
-- Raw error messages still exposed in API responses — **still open**
+- ~~Raw error messages still exposed in API responses~~ — **moot** (Codex already masks 5xx errors centrally)
 
 ### Updated Recommendation
 
@@ -532,7 +532,7 @@ The original review recommended **Gemini as the better starting point** primaril
 ### Ideal Merge Strategy
 
 1. **Use Codex's backend** as the foundation (architecture, auth, migrations, error handling) ✅ All integration blockers resolved
-2. **Adopt Gemini's frontend** as the UI base — all integration gaps with Codex's backend have been closed:
+2. **Adopt Gemini's frontend** as the UI base — all integration gaps with Codex's backend have been closed: ✅
    - ~~Update API paths from `/api/` to `/api/v1/`~~ — done (PR #15)
    - ~~Update auth routes to `/auth/*`~~ — done (PR #18)
    - ~~Switch PostForm to JSON + separate attachment upload~~ — done
@@ -541,8 +541,12 @@ The original review recommended **Gemini as the better starting point** primaril
    - ~~`post.mentions` → `post.persons`~~ — done
    - ~~Separate JSON translation files~~ — done (PR #30)
    - ~~`ProtectedRoute` outside component tree~~ — done (PR #29)
-3. **Fix Gemini's remaining backend issues** (not blocking integration, but should be addressed):
-   - Replace `\w+` regex with `[\pL\d_]+` in `post_service.go` for Unicode/German support
-   - Add session regeneration on login
-   - Add error masking for 5xx responses
-4. **Combine testing approaches** — unit tests with mocks AND integration tests
+3. **Physical integration** — not yet done:
+   - Copy Gemini's `frontend/` into the Codex repo (replacing Codex's own frontend)
+   - Update `docker-compose.yml` to wire Gemini's frontend build with Codex's backend
+   - Verify Gemini's `nginx.conf` proxies all Codex backend routes correctly
+4. **Add CORS to Codex backend** — Codex relies on nginx for same-origin; without it, local development outside Docker fails. A CORS middleware (configurable origin) needs to be added to Fiber setup.
+5. **Combine testing approaches** — unit tests with mocks (Codex style) AND integration tests (Gemini style)
+6. **Nice-to-have** (not blocking):
+   - Add pagination to `GET /api/v1/posts` and `GET /api/v1/persons` — could be an issue at scale
+   - Add email-format validation on registration in Codex backend
