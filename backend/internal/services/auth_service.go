@@ -1,12 +1,21 @@
 package services
 
 import (
+	"net/mail"
+	"strings"
+
 	"familyjournal/backend/internal/models"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 func (s *Service) Register(email, password string) (*models.User, error) {
+email = strings.ToLower(strings.TrimSpace(email))
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
+		return nil, ErrInvalidEmail
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err

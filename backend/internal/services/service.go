@@ -11,6 +11,7 @@ import (
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInactiveUser       = errors.New("user is inactive")
+	ErrInvalidEmail       = errors.New("invalid email address")
 	ErrInvalidPassword    = errors.New("password must be between 6 and 72 characters")
 )
 
