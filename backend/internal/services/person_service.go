@@ -2,12 +2,16 @@ package services
 
 import "familyjournal/backend/internal/models"
 
-func (s *Service) ListPersons(scope AccessScope) ([]models.Person, error) {
-	persons, err := s.Persons.ListPersons(scope.OwnerFilter())
+func (s *Service) ListPersons(scope AccessScope, pagination PaginationParams) (PaginatedResponse[models.Person], error) {
+	totalItems, err := s.Persons.CountPersons(scope.OwnerFilter())
 	if err != nil {
-		return nil, err
+		return PaginatedResponse[models.Person]{}, err
 	}
-	return ensureSlice(persons), nil
+	persons, err := s.Persons.ListPersons(scope.OwnerFilter(), pagination.PageSize, pagination.Offset())
+	if err != nil {
+		return PaginatedResponse[models.Person]{}, err
+	}
+	return NewPaginatedResponse(ensureSlice(persons), totalItems, pagination), nil
 }
 
 func (s *Service) CreatePerson(userID int64, name string, description *string) (*models.Person, error) {

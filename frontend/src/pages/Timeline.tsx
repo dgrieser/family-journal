@@ -4,11 +4,14 @@ import api from '../api';
 import { PostForm } from '../components/PostForm';
 import { PostCard } from '../components/PostCard';
 import { Calendar, ChevronLeft, ChevronRight, Search, Filter, X } from 'lucide-react';
-import type { Post, Hashtag, Person } from '../types';
+import type { Post, Hashtag, PaginatedResponse, PaginationMeta, Person } from '../types';
+
+const PAGE_SIZE = 20;
 
 export const Timeline = () => {
   const { t } = useTranslation();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: PAGE_SIZE, totalItems: 0, totalPages: 0 });
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [search, setSearch] = useState('');
   const [selectedHashtags, setSelectedHashtags] = useState<string[]>([]);
@@ -18,25 +21,29 @@ export const Timeline = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get('/posts', {
+      const response = await api.get<PaginatedResponse<Post>>('/posts', {
         params: {
+          page,
+          pageSize: PAGE_SIZE,
           date,
           search,
           hashtags: selectedHashtags.join(','),
           persons: selectedPersons.join(',')
         }
       });
-      setPosts(response.data);
+      setPosts(response.data.items);
+      setPagination(response.data.pagination);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [date, search, selectedHashtags, selectedPersons]);
+  }, [date, page, search, selectedHashtags, selectedPersons]);
 
   useEffect(() => {
     fetchPosts();
@@ -47,10 +54,10 @@ export const Timeline = () => {
       try {
         const [hRes, pRes] = await Promise.all([
           api.get('/hashtags'),
-          api.get('/persons')
+          api.get<PaginatedResponse<Person>>('/persons', { params: { page: 1, pageSize: 100 } })
         ]);
         setAllHashtags(hRes.data.map((h: Hashtag) => h.name));
-        setAllPersons(pRes.data.map((p: Person) => p.name));
+        setAllPersons(pRes.data.items.map((p: Person) => p.name));
       } catch (err) {
         console.error(err);
       }
@@ -61,6 +68,7 @@ export const Timeline = () => {
   const changeDate = (days: number) => {
     const d = new Date(date);
     d.setDate(d.getDate() + days);
+    setPage(1);
     setDate(d.toISOString().split('T')[0]);
   };
 
@@ -77,7 +85,10 @@ export const Timeline = () => {
               <input
                 type="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(e) => {
+                  setPage(1);
+                  setDate(e.target.value);
+                }}
                 className="outline-none text-sm font-medium"
               />
             </div>
@@ -92,7 +103,10 @@ export const Timeline = () => {
               <input
                 type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setPage(1);
+                  setSearch(e.target.value);
+                }}
                 placeholder={t('search')}
                 className="w-full pl-10 pr-4 py-2 border rounded-md shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
               />
@@ -115,7 +129,10 @@ export const Timeline = () => {
                 {allHashtags.map(h => (
                   <button
                     key={h}
-                    onClick={() => setSelectedHashtags(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h])}
+                    onClick={() => {
+                      setPage(1);
+                      setSelectedHashtags(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
+                    }}
                     className={`px-3 py-1 rounded-full text-xs transition ${selectedHashtags.includes(h) ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     #{h}
@@ -129,7 +146,10 @@ export const Timeline = () => {
                 {allPersons.map(p => (
                   <button
                     key={p}
-                    onClick={() => setSelectedPersons(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])}
+                    onClick={() => {
+                      setPage(1);
+                      setSelectedPersons(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+                    }}
                     className={`px-3 py-1 rounded-full text-xs transition ${selectedPersons.includes(p) ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     @{p}
@@ -139,7 +159,11 @@ export const Timeline = () => {
             </div>
             {(selectedHashtags.length > 0 || selectedPersons.length > 0) && (
               <button
-                onClick={() => { setSelectedHashtags([]); setSelectedPersons([]); }}
+                onClick={() => {
+                  setPage(1);
+                  setSelectedHashtags([]);
+                  setSelectedPersons([]);
+                }}
                 className="text-xs text-red-500 flex items-center gap-1 hover:underline"
               >
                 <X size={14} /> {t('clear_filters')}
@@ -176,6 +200,30 @@ export const Timeline = () => {
               }}
             />
           ))}
+        </div>
+      )}
+
+      {pagination.totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between rounded-lg border bg-white px-4 py-3 text-sm text-gray-600">
+          <span>{t('page_status', { page: pagination.page, total: pagination.totalPages })}</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={pagination.page <= 1}
+              className="rounded border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t('previous')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
+              disabled={pagination.page >= pagination.totalPages}
+              className="rounded border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t('next')}
+            </button>
+          </div>
         </div>
       )}
     </div>

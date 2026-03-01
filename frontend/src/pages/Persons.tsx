@@ -2,23 +2,30 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { User, Plus, Trash2, Edit2, Check } from 'lucide-react';
-import type { Person } from '../types';
+import type { PaginatedResponse, PaginationMeta, Person } from '../types';
+
+const PAGE_SIZE = 20;
 
 export const Persons = () => {
   const { t } = useTranslation();
   const [persons, setPersons] = useState<Person[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: PAGE_SIZE, totalItems: 0, totalPages: 0 });
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
 
-  const fetchPersons = async () => {
-    const res = await api.get('/persons');
-    setPersons(res.data);
+  const fetchPersons = async (nextPage = page) => {
+    const res = await api.get<PaginatedResponse<Person>>('/persons', {
+      params: { page: nextPage, pageSize: PAGE_SIZE }
+    });
+    setPersons(res.data.items);
+    setPagination(res.data.pagination);
   };
 
   useEffect(() => {
     fetchPersons();
-  }, []);
+  }, [page]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -30,7 +37,7 @@ export const Persons = () => {
     setName('');
     setDescription('');
     setEditingId(null);
-    fetchPersons();
+    setPage(1);
   };
 
   const handleEdit = (p: Person) => {
@@ -123,6 +130,30 @@ export const Persons = () => {
           </tbody>
         </table>
       </div>
+
+      {pagination.totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between rounded-lg border bg-white px-4 py-3 text-sm text-gray-600">
+          <span>{t('page_status', { page: pagination.page, total: pagination.totalPages })}</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={pagination.page <= 1}
+              className="rounded border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t('previous')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
+              disabled={pagination.page >= pagination.totalPages}
+              className="rounded border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t('next')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

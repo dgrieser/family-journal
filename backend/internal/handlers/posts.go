@@ -66,8 +66,12 @@ func (h *PostsHandler) List(c *fiber.Ctx) error {
 	tags := splitQueryList(c.Query("hashtags"))
 	persons := splitQueryList(c.Query("persons"))
 	search := c.Query("search")
+	pagination, err := parsePagination(c)
+	if err != nil {
+		return err
+	}
 	scope := services.NewAccessScope(userID, role)
-	posts, err := h.Service.ListPosts(scope, date, tags, persons, search)
+	posts, err := h.Service.ListPosts(scope, date, tags, persons, search, pagination)
 	if err != nil {
 		log.Printf("list posts error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to list posts")
@@ -88,6 +92,18 @@ func splitQueryList(value string) []string {
 		}
 	}
 	return cleaned
+}
+
+func parsePagination(c *fiber.Ctx) (services.PaginationParams, error) {
+	page := c.QueryInt("page", 1)
+	pageSize := c.QueryInt("pageSize", services.DefaultPageSize)
+	if page < 1 {
+		return services.PaginationParams{}, fiber.NewError(fiber.StatusBadRequest, "invalid page")
+	}
+	if pageSize < 1 {
+		return services.PaginationParams{}, fiber.NewError(fiber.StatusBadRequest, "invalid pageSize")
+	}
+	return services.NewPagination(page, pageSize), nil
 }
 
 func (h *PostsHandler) Create(c *fiber.Ctx) error {

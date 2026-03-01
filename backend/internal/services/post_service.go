@@ -49,12 +49,20 @@ func (s *Service) CreateOrUpdatePost(scope AccessScope, post *models.Post) error
 	return s.Posts.SavePostWithRelations(ownerID, scope.OwnerFilter(), post, tags, persons)
 }
 
-func (s *Service) ListPosts(scope AccessScope, date time.Time, hashtags, persons []string, search string) ([]models.Post, error) {
-	posts, err := s.Posts.ListPosts(scope.OwnerFilter(), date, hashtags, persons, search)
+func (s *Service) ListPosts(scope AccessScope, date time.Time, hashtags, persons []string, search string, pagination PaginationParams) (PaginatedResponse[models.Post], error) {
+	totalItems, err := s.Posts.CountPosts(scope.OwnerFilter(), date, hashtags, persons, search)
 	if err != nil {
-		return nil, err
+		return PaginatedResponse[models.Post]{}, err
 	}
-	return s.hydratePosts(ensureSlice(posts))
+	posts, err := s.Posts.ListPosts(scope.OwnerFilter(), date, hashtags, persons, search, pagination.PageSize, pagination.Offset())
+	if err != nil {
+		return PaginatedResponse[models.Post]{}, err
+	}
+	hydrated, err := s.hydratePosts(ensureSlice(posts))
+	if err != nil {
+		return PaginatedResponse[models.Post]{}, err
+	}
+	return NewPaginatedResponse(hydrated, totalItems, pagination), nil
 }
 
 func (s *Service) GetPost(scope AccessScope, postID int64) (*models.Post, error) {

@@ -48,7 +48,7 @@ func (r *Repository) DeletePerson(id int64, ownerFilter *int64) error {
 	return err
 }
 
-func (r *Repository) ListPersons(ownerFilter *int64) ([]models.Person, error) {
+func (r *Repository) ListPersons(ownerFilter *int64, limit, offset int) ([]models.Person, error) {
 	var persons []models.Person
 	query := `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons`
 	args := []interface{}{}
@@ -56,11 +56,26 @@ func (r *Repository) ListPersons(ownerFilter *int64) ([]models.Person, error) {
 		query += ` WHERE created_by_user_id = ?`
 		args = append(args, *ownerFilter)
 	}
-	query += ` ORDER BY name ASC`
+	query += ` ORDER BY name ASC LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
 	if err := r.DB.Select(&persons, query, args...); err != nil {
 		return nil, err
 	}
 	return persons, nil
+}
+
+func (r *Repository) CountPersons(ownerFilter *int64) (int, error) {
+	var total int
+	query := `SELECT COUNT(*) FROM persons`
+	args := []interface{}{}
+	if ownerFilter != nil {
+		query += ` WHERE created_by_user_id = ?`
+		args = append(args, *ownerFilter)
+	}
+	if err := r.DB.Get(&total, query, args...); err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 func (r *Repository) FindOrCreatePerson(userID int64, name string) (*models.Person, error) {

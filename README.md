@@ -68,6 +68,19 @@ mysql -u root -p familyjournal < backend/migrations/002_session_store.sql
 
 All endpoints are namespaced under `/api/v1`.
 Error responses are JSON in the form `{ "error": "message" }`.
+List endpoints for posts and persons support `page` and `pageSize` query params and return:
+
+```json
+{
+  "items": [],
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "totalItems": 0,
+    "totalPages": 0
+  }
+}
+```
 
 ### Auth (`/api/v1/auth`)
 - `POST /auth/register`
@@ -77,7 +90,7 @@ Error responses are JSON in the form `{ "error": "message" }`.
 - `PUT /auth/profile` (update email and/or password; password change requires `currentPassword` and `newPassword`)
 
 ### Posts
-- `GET /posts?date=YYYY-MM-DD&hashtags=tag1,tag2&persons=name1,name2&search=query`
+- `GET /posts?date=YYYY-MM-DD&hashtags=tag1,tag2&persons=name1,name2&search=query&page=1&pageSize=20`
 - `POST /posts`
 - `GET /posts/:id`
 - `PUT /posts/:id`
@@ -88,7 +101,7 @@ Error responses are JSON in the form `{ "error": "message" }`.
 - `POST /posts/:id/attachments`
 
 ### Persons and hashtags
-- `GET /persons`
+- `GET /persons?page=1&pageSize=20`
 - `POST /persons`
 - `PUT /persons/:id`
 - `DELETE /persons/:id`

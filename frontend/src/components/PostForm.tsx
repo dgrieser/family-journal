@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { AxiosError } from 'axios';
 import api from '../api';
 import { Send, Paperclip, X } from 'lucide-react';
-import type { Post, Hashtag, Person } from '../types';
+import type { Post, Hashtag, PaginatedResponse, Person } from '../types';
 
 interface PostFormProps {
   onSuccess: () => void;
@@ -41,10 +41,10 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
        try {
          const [hRes, pRes] = await Promise.all([
            api.get('/hashtags'),
-           api.get('/persons')
+           api.get<PaginatedResponse<Person>>('/persons', { params: { page: 1, pageSize: 100 } })
          ]);
          setAllHashtags(hRes.data.map((h: Hashtag) => h.name));
-         setAllPersons(pRes.data.map((p: Person) => p.name));
+         setAllPersons(pRes.data.items.map((p: Person) => p.name));
        } catch (err) {
          console.error(err);
        }

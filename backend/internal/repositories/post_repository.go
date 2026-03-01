@@ -139,9 +139,38 @@ func (r *Repository) GetPost(id int64, ownerFilter *int64) (*models.Post, error)
 	return &post, nil
 }
 
-func (r *Repository) ListPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error) {
-	base := `SELECT DISTINCT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at
-		FROM posts p
+func (r *Repository) ListPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error) {
+	base, args := buildPostListQuery(ownerFilter, date, hashtags, persons, search)
+	base += " ORDER BY p.created_at DESC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+	var posts []models.Post
+	if err := r.DB.Select(&posts, base, args...); err != nil {
+		return nil, err
+	}
+	return posts, nil
+}
+
+func (r *Repository) CountPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (int, error) {
+	query, args := buildPostCountQuery(ownerFilter, date, hashtags, persons, search)
+	var total int
+	if err := r.DB.Get(&total, query, args...); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func buildPostListQuery(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (string, []interface{}) {
+	base, args := buildPostQueryBase(ownerFilter, date, hashtags, persons, search)
+	return `SELECT DISTINCT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at ` + base, args
+}
+
+func buildPostCountQuery(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (string, []interface{}) {
+	base, args := buildPostQueryBase(ownerFilter, date, hashtags, persons, search)
+	return `SELECT COUNT(DISTINCT p.id) ` + base, args
+}
+
+func buildPostQueryBase(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (string, []interface{}) {
+	base := `FROM posts p
 		LEFT JOIN post_hashtags ph ON ph.post_id = p.id
 		LEFT JOIN hashtags h ON h.id = ph.hashtag_id
 		LEFT JOIN mentions m ON m.post_id = p.id
@@ -172,12 +201,7 @@ func (r *Repository) ListPosts(ownerFilter *int64, date time.Time, hashtags, per
 		base += " AND p.text LIKE ?"
 		args = append(args, "%"+search+"%")
 	}
-	base += " ORDER BY p.created_at DESC"
-	var posts []models.Post
-	if err := r.DB.Select(&posts, base, args...); err != nil {
-		return nil, err
-	}
-	return posts, nil
+	return base, args
 }
 
 func (r *Repository) ReplacePostTags(postID int64, tags []models.Hashtag) error {
