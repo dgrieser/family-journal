@@ -2,7 +2,7 @@
 
 The following prompt was used to generate the two rivaling implementations (Codex and Gemini branches) of the FamilyJournal application.
 
-> **Current-state note (2026-02-26):** This is the original generation prompt. For the latest implementation status of the `codex` and `gemini` branches, see `BRANCH_COMPARISON_REVIEW.md` and `API_CALLS.md`.
+> **Current-state note (2026-03-01):** This is the original generation prompt. For the latest implementation status of the `codex` and `gemini` branches, see `BRANCH_COMPARISON_REVIEW.md` and `API_CALLS.md`.
 
 ---
 
@@ -201,9 +201,10 @@ Use these requirements to generate:
 
 ---
 
-## Current implementation status against this prompt (summary)
+## Current implementation status against this prompt (summary, 2026-03-01)
 
 - Both branches implement the requested stack shape (Fiber + React + MySQL + Docker Compose), with different architectural tradeoffs.
-- Codex currently aligns better with backend robustness and modularity goals in this prompt.
-- Gemini currently aligns better with lightweight frontend iteration velocity.
-- The active convergence strategy remains to preserve Codex backend strengths while adding compatibility for Gemini frontend request/response expectations.
+- Codex aligns better with backend robustness and modularity goals in this prompt (interface-based repositories, tracked SQL migrations, centralized error handling, AccessScope authorization pattern).
+- Gemini aligns better with frontend polish and modern tooling (React 19, Vite 7, Tailwind 4, icons, image previews, responsive layout).
+- All integration blockers between the Codex backend and Gemini frontend have been resolved — the two branches are now fully API-compatible.
+- The active convergence strategy is: **Codex backend + Gemini frontend**. See `TODO.md` for the full resolution log.

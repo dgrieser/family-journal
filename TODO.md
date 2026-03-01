@@ -90,3 +90,33 @@ Tasks required to run the **Gemini frontend** against the **Codex backend**.
 **Gemini fix (PR #30):** `i18n.ts` now uses a dynamic `import(`./locales/${language}.json`)` backend (lazy-loaded). `frontend/src/locales/de.json` and `frontend/src/locales/en.json` contain all translation keys.
 
 **Files changed:** `frontend/src/i18n.ts`; new `frontend/src/locales/de.json`, `frontend/src/locales/en.json`
+
+---
+
+## ✅ Additional — Backend Improvements (PR #23)
+
+These items were not integration blockers but were resolved in `gemini` via PR #23.
+
+### 10. [BACKEND/GEMINI] Attachment filename sanitization ✅ DONE
+
+**Fix:** `sanitizeAttachmentFilename()` strips characters outside `[a-zA-Z0-9._ -]` from the original filename before it is stored. Unsafe characters in uploaded filenames can no longer reach the filesystem.
+
+**File changed:** `backend/internal/handlers/post_handler.go`
+
+---
+
+### 11. [BACKEND/GEMINI] Atomic rollback on partial upload failure ✅ DONE
+
+**Fix:** `rollbackUploadedAttachments()` is called whenever any file in a batch upload fails. It deletes both the already-inserted DB rows and the already-written files, preventing orphaned data on the filesystem or in the database.
+
+**File changed:** `backend/internal/handlers/post_handler.go`
+
+---
+
+### 12. [BACKEND/GEMINI] Upload size limit raised ✅ DONE
+
+**What was needed:** The original Gemini handler had a hardcoded 5 MB limit.
+
+**Fix:** Body limit set to 25 MB in Fiber config; `maxAttachmentSize` constant in the handler also set to 25 MB, matching Codex's default.
+
+**File changed:** `backend/cmd/api/main.go`, `backend/internal/handlers/post_handler.go`

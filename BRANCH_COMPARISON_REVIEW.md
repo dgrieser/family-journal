@@ -28,7 +28,7 @@ Both branches implement the same application: a full-stack family journal for do
 
 Since the initial comparison, **both branches have seen significant improvements**:
 
-**Codex** (35+ commits):
+**Codex** (80+ commits):
 - Models, repositories, and services have been **split into separate files per entity** (previously monolithic)
 - Added a **custom MySQL session store** (previously in-memory)
 - Added **encrypted cookies** (previously unencrypted)
@@ -45,7 +45,7 @@ Since the initial comparison, **both branches have seen significant improvements
 - Removed `url` field from `Attachment` model; replaced with **ID-based download endpoint** `GET /api/v1/attachments/:id/download` (PR #21/22)
 - **Embedded nested `user` object** (`{id, email}`) in comment responses via `CommentUser` struct (PR #25)
 
-**Gemini** (35+ commits):
+**Gemini** (90+ commits):
 - Added **registration success message** on login page
 - Improved **session secret handling** (minimum 32-char requirement)
 - Added **AUTO_MIGRATE toggle** via environment variable
@@ -63,6 +63,9 @@ Since the initial comparison, **both branches have seen significant improvements
 - **i18n translations** migrated from inline `i18n.ts` to separate `locales/de.json` and `locales/en.json` (PR #30)
 - `Attachment` type in `types.ts` aligned: no `url`/`storage_path` field; uses ID-based download URL
 - `Comment` type in `types.ts` now includes `user?: User`; `PostCard.tsx` renders `c.user?.email`
+- Attachment filename sanitization (unsafe characters stripped) and full rollback of partial upload failures (DB rows + files cleaned up atomically)
+- Increased upload size limit from hardcoded 5 MB to 25 MB
+- Docker Compose updated to v2 with named volume for uploads (`uploads_data`)
 
 ---
 
@@ -86,7 +89,8 @@ backend/
       access_scope.go, attachment_service.go, auth_service.go, comment_service.go,
       person_service.go, post_service.go, service.go, user_service.go
     sessionstore/mysql_store.go, mysql_store_test.go
-  migrations/001_init.sql, 002_session_store.sql, 003_mentions_person_on_delete_set_null.sql
+  migrations/001_init.sql, 002_session_store.sql, 003_mentions_person_on_delete_set_null.sql,
+             004_remove_post_category_mood.sql, 005_remove_attachment_url_column.sql
   tests/handlers_test.go
 frontend/
   src/
@@ -255,7 +259,7 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 | **Person name constraint** | `UNIQUE (created_by_user_id, name)` | `UNIQUE (name, created_by_user_id)` |
 | **Mentions PK** | `id BIGINT AUTO_INCREMENT` + unique constraint | Composite `PRIMARY KEY (post_id, person_id)` |
 | **Additional tables** | `session_store` (for custom session management) | None (uses Fiber storage adapter's auto-created table) |
-| **Migration tracking** | `schema_migrations` table; 4 migration files applied incrementally | No tracking (relies on `AutoMigrate` idempotency) |
+| **Migration tracking** | `schema_migrations` table; 5 migration files applied incrementally | No tracking (relies on `AutoMigrate` idempotency) |
 
 **Analysis:**
 - **Codex's `BIGINT` IDs** are more future-proof for high-volume usage
@@ -263,7 +267,7 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 - **Codex's `SET NULL` on person deletion** is safer — posts aren't lost when a person is removed. Gemini uses `CASCADE` which would delete mentions (and potentially orphan data)
 - **Gemini's DB-managed timestamps** are more reliable and consistent
 - **Codex's separate `id` on mentions** allows for independent addressing of mentions if needed later
-- **Codex's incremental migrations** are superior for production — you can track schema changes, roll forward, and handle complex alterations
+- **Codex's incremental migrations** are superior for production — you can track schema changes, roll forward, and handle complex alterations. Codex now has 5 migration files (001 init, 002 session store, 003 mentions SET NULL, 004 remove category/mood, 005 remove attachment URL column)
 
 ---
 
@@ -355,11 +359,12 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 
 **Branch 2 (Gemini):** ~~Single-step process~~ Now also a two-step process (post JSON first, then separate attachment upload) — aligned with Codex after `PostForm.tsx` refactor. Files validated with:
 - Extension-based and Content-Type header validation (trusts client)
-- Hardcoded 5MB size limit
-- UUID-based filenames
+- ~~Hardcoded 5MB size limit~~ Now hardcoded at 25 MB (body limit + per-file check); not configurable via env var
+- UUID-based filenames + `sanitizeAttachmentFilename()` strips unsafe characters from original filename
 - Path traversal check on download (`filepath.Clean` + prefix check)
+- **Full rollback on partial upload failure** — `rollbackUploadedAttachments()` deletes both DB rows and files if any attachment in a batch fails
 
-**Verdict:** **Codex's file validation is more thorough** — content-type detection via `http.DetectContentType` actually inspects file bytes rather than trusting client-provided MIME headers. Codex also makes limits configurable. The upload flow is now identical between branches (two-step).
+**Verdict:** **Codex's file validation is more thorough** — content-type detection via `http.DetectContentType` actually inspects file bytes rather than trusting client-provided MIME headers. Codex also makes limits configurable via environment variables (default 25 MB), while Gemini hardcodes 25 MB. Both branches now implement upload rollback on failure; the upload flow is identical (two-step).
 
 ---
 
@@ -389,7 +394,7 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 | **Go version** | 1.22 | 1.24 |
 | **Backend Dockerfile** | Multi-stage, Go 1.22, Alpine 3.19, non-root user | Multi-stage, Go 1.24, Alpine latest, non-root user+group |
 | **Frontend Dockerfile** | Multi-stage, Node 20, nginx 1.25 | Multi-stage, Node 20, nginx alpine |
-| **Docker Compose** | MySQL 8.3, healthchecks on all 3 services, named volumes for uploads, `start_period` | MySQL 8, healthcheck on DB only, bind mount for uploads |
+| **Docker Compose** | MySQL 8.3, healthchecks on all 3 services, named volumes for uploads, `start_period` | MySQL 8, healthcheck on DB only, named volume for uploads (`uploads_data`) |
 | **Frontend port** | 5173 | 3000 |
 | **Health endpoint** | `/healthz` on backend | None |
 | **Init SQL** | Via migration runner in Go code (tracked; 4 migration files) | Via Docker entrypoint (`/docker-entrypoint-initdb.d/`) |
@@ -400,7 +405,7 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 - **Codex** has healthchecks on all three services and a dedicated `/healthz` endpoint — essential for production orchestration
 - **Codex** uses `npm ci` (deterministic installs) vs Gemini's `npm install`
 - **Gemini** uses a newer Go version (1.24 vs 1.22) and more current Alpine images
-- **Gemini's** bind mount for uploads (`./backend/uploads:/app/uploads`) is simpler for development but less portable than Codex's named volume
+- **Gemini** now also uses a named volume (`uploads_data`) for uploads after its Docker Compose v2 update — previously used a bind mount
 - **Codex's** migration runner with `schema_migrations` tracking is more robust for production deployments
 - **Gemini** pins Alpine versions less precisely (`alpine:latest` is not reproducible)
 - **Codex's** frontend nginx config also proxies `/uploads/*` requests — needed for attachment downloads
@@ -437,6 +442,7 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 11. **5xx errors expose raw error messages** to API consumers — security/info leakage concern
 12. ~~**Password change doesn't require current password**~~ **Fixed** (PR #28) — `Profile.tsx` now sends `{ currentPassword, newPassword }`; backend errors surfaced to UI
 13. **No health check endpoint** — harder to monitor in production
+20. ~~**Attachment upload: hardcoded 5 MB limit, no filename sanitization, no upload rollback**~~ **Fixed** (PR #23) — limit raised to 25 MB, `sanitizeAttachmentFilename()` strips unsafe characters, `rollbackUploadedAttachments()` provides atomic cleanup
 14. ~~**API base URL `/api` diverged from Codex `/api/v1`**~~ **Fixed** — migrated to `/api/v1` (PR #15)
 15. ~~**Auth routes diverged from Codex `/auth/*`**~~ **Fixed** — renamed to `/auth/*` namespace (PR #18)
 16. ~~**Admin `PUT` instead of `PATCH` for role/active**~~ **Fixed** (PR #27) — `Admin.tsx` now uses `api.patch()`
@@ -461,11 +467,11 @@ Both branches have the same core tables: `users`, `persons`, `posts`, `comments`
 | **Security overall** | Session regen, error masking, content-type detection, path traversal protection | Cookie encryption, active user checks, CORS config, secret length enforcement | Codex (slight edge) |
 | **Frontend UI/UX** | Basic, multi-page, no icons | Polished, single-page, icons, image preview | Gemini |
 | **Type safety (frontend)** | Inline types, duplicated | Centralized types.ts | Gemini |
-| **i18n approach** | Separate JSON files | Inline in code | Codex |
+| **i18n approach** | Separate JSON files | Separate JSON files (PR #30) | Tie |
 | **Routing (frontend)** | Flat, ProtectedRoute outside component | Nested with Outlet, ProtectedRoute outside component (fixed PR #29) | Gemini (nested routing) |
-| **DevOps** | Full healthchecks, migration runner, npm ci | Graceful shutdown, newer Go version | Codex (slight edge) |
+| **DevOps** | Full healthchecks, migration runner, npm ci | Graceful shutdown, newer Go version, Docker Compose v2, named volumes | Codex (slight edge) |
 | **Code quality** | Clean, no TODOs | Has TODOs, unfinished comments, replace directive | Codex |
-| **Feature completeness** | Attachment validation, password change w/ verification | Admin overrides, image preview, attachment file cleanup | Tie |
+| **Feature completeness** | Attachment validation, password change w/ verification, configurable upload limits | Admin overrides, image preview, attachment file cleanup, upload rollback, filename sanitization | Tie |
 | **Modern tooling** | React 18, Vite 5, Tailwind 3 | React 19, Vite 7, Tailwind 4, ESLint | Gemini |
 | **Dependency health** | Older but stable versions | Latest versions, one `replace` workaround | Gemini (slight edge) |
 

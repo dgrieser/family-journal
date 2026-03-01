@@ -203,6 +203,9 @@ This document compares equivalent frontend API actions ("things") in **one table
 | Method + endpoint | `POST /api/v1/posts/:id/attachments` | `POST /api/v1/posts/:id/attachments` (**aligned**; separate upload step after post save) |
 | Request payload | `FormData` with repeated `files` field | `FormData` with repeated `files` field (**aligned**) |
 | Success response body | `Attachment[] { id, post_id, file_name, file_type, file_size, created_at }` (no `url`/`storage_path` field) | attachment metadata used to render post card after `onSuccess()` refresh |
+| Max upload size | configurable via `MAX_UPLOAD_MB` env var (default 25 MB) | hardcoded 25 MB body limit + per-file check |
+| Filename handling | crypto/rand-based unique names; path traversal check on download | UUID-based names; `sanitizeAttachmentFilename()` strips unsafe chars; path traversal check on download |
+| Failure handling | file cleaned up on upload error | `rollbackUploadedAttachments()` deletes DB rows + files atomically on any batch failure |
 | UI result on success | attachments linked after post save | post card refreshed via `onSuccess()` callback |
 | UI result on error | thrown upload error shown in editor | `post_partial_upload_error` i18n key shown (post was already saved) |
 
