@@ -37,7 +37,11 @@ export const Persons = () => {
     setName('');
     setDescription('');
     setEditingId(null);
-    setPage(1);
+    if (page === 1) {
+      await fetchPersons(1);
+    } else {
+      setPage(1);
+    }
   };
 
   const handleEdit = (p: Person) => {

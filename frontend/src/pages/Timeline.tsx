@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
+import { fetchAllPersons } from '../persons';
 import { PostForm } from '../components/PostForm';
 import { PostCard } from '../components/PostCard';
 import { Calendar, ChevronLeft, ChevronRight, Search, Filter, X } from 'lucide-react';
@@ -52,12 +53,12 @@ export const Timeline = () => {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const [hRes, pRes] = await Promise.all([
+        const [hRes, persons] = await Promise.all([
           api.get('/hashtags'),
-          api.get<PaginatedResponse<Person>>('/persons', { params: { page: 1, pageSize: 100 } })
+          fetchAllPersons()
         ]);
         setAllHashtags(hRes.data.map((h: Hashtag) => h.name));
-        setAllPersons(pRes.data.items.map((p: Person) => p.name));
+        setAllPersons(persons.map((p: Person) => p.name));
       } catch (err) {
         console.error(err);
       }

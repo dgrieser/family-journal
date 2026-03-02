@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AxiosError } from 'axios';
 import api from '../api';
+import { fetchAllPersons } from '../persons';
 import { Send, Paperclip, X } from 'lucide-react';
-import type { Post, Hashtag, PaginatedResponse, Person } from '../types';
+import type { Post, Hashtag, Person } from '../types';
 
 interface PostFormProps {
   onSuccess: () => void;
@@ -39,12 +40,12 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     // Fetch hashtags and persons for autocomplete
     const fetchData = async () => {
        try {
-         const [hRes, pRes] = await Promise.all([
+         const [hRes, persons] = await Promise.all([
            api.get('/hashtags'),
-           api.get<PaginatedResponse<Person>>('/persons', { params: { page: 1, pageSize: 100 } })
+           fetchAllPersons()
          ]);
          setAllHashtags(hRes.data.map((h: Hashtag) => h.name));
-         setAllPersons(pRes.data.items.map((p: Person) => p.name));
+         setAllPersons(persons.map((p: Person) => p.name));
        } catch (err) {
          console.error(err);
        }
