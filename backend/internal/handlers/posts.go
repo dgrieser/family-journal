@@ -94,18 +94,6 @@ func splitQueryList(value string) []string {
 	return cleaned
 }
 
-func parsePagination(c *fiber.Ctx) (services.PaginationParams, error) {
-	page := c.QueryInt("page", 1)
-	pageSize := c.QueryInt("pageSize", services.DefaultPageSize)
-	if page < 1 {
-		return services.PaginationParams{}, fiber.NewError(fiber.StatusBadRequest, "invalid page")
-	}
-	if pageSize < 1 {
-		return services.PaginationParams{}, fiber.NewError(fiber.StatusBadRequest, "invalid pageSize")
-	}
-	return services.NewPagination(page, pageSize), nil
-}
-
 func (h *PostsHandler) Create(c *fiber.Ctx) error {
 	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {

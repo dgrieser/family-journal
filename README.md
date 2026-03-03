@@ -68,7 +68,9 @@ mysql -u root -p familyjournal < backend/migrations/002_session_store.sql
 
 All endpoints are namespaced under `/api/v1`.
 Error responses are JSON in the form `{ "error": "message" }`.
-List endpoints for posts and persons support `page` and `pageSize` query params and return:
+List endpoints for posts and persons support `page` and `pageSize` query params.
+`pageSize` defaults to `20` when omitted and is capped at `100`.
+These endpoints return:
 
 ```json
 {
