@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { User, Plus, Trash2, Edit2, Check } from 'lucide-react';
@@ -15,17 +15,17 @@ export const Persons = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
 
-  const fetchPersons = async (nextPage = page) => {
+  const fetchPersons = useCallback(async (nextPage = page) => {
     const res = await api.get<PaginatedResponse<Person>>('/persons', {
       params: { page: nextPage, pageSize: PAGE_SIZE }
     });
     setPersons(res.data.items);
     setPagination(res.data.pagination);
-  };
+  }, [page]);
 
   useEffect(() => {
-    fetchPersons();
-  }, [page]);
+    void fetchPersons();
+  }, [fetchPersons]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -53,7 +53,7 @@ export const Persons = () => {
   const handleDelete = async (id: number) => {
     if (window.confirm(t('delete') + '?')) {
       await api.delete(`/persons/${id}`);
-      fetchPersons();
+      void fetchPersons();
     }
   };
 

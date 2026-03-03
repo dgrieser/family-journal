@@ -49,11 +49,10 @@ func (r *Repository) DeletePerson(id int64, ownerFilter *int64) error {
 	return err
 }
 
-func (r *Repository) ListPersons(ownerFilter *int64, search string, limit, offset int) ([]models.Person, error) {
-	var persons []models.Person
-	query := `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons`
-	args := []interface{}{}
+func buildPersonQuery(ownerFilter *int64, search string) (string, []interface{}) {
 	var conditions []string
+	args := []interface{}{}
+
 	if ownerFilter != nil {
 		conditions = append(conditions, `created_by_user_id = ?`)
 		args = append(args, *ownerFilter)
@@ -62,9 +61,17 @@ func (r *Repository) ListPersons(ownerFilter *int64, search string, limit, offse
 		conditions = append(conditions, `name LIKE ?`)
 		args = append(args, "%"+trimmed+"%")
 	}
-	if len(conditions) > 0 {
-		query += ` WHERE ` + strings.Join(conditions, ` AND `)
+	if len(conditions) == 0 {
+		return "", args
 	}
+
+	return ` WHERE ` + strings.Join(conditions, ` AND `), args
+}
+
+func (r *Repository) ListPersons(ownerFilter *int64, search string, limit, offset int) ([]models.Person, error) {
+	var persons []models.Person
+	whereClause, args := buildPersonQuery(ownerFilter, search)
+	query := `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons` + whereClause
 	query += ` ORDER BY name ASC LIMIT ? OFFSET ?`
 	args = append(args, limit, offset)
 	if err := r.DB.Select(&persons, query, args...); err != nil {
@@ -75,20 +82,8 @@ func (r *Repository) ListPersons(ownerFilter *int64, search string, limit, offse
 
 func (r *Repository) CountPersons(ownerFilter *int64, search string) (int, error) {
 	var total int
-	query := `SELECT COUNT(*) FROM persons`
-	args := []interface{}{}
-	var conditions []string
-	if ownerFilter != nil {
-		conditions = append(conditions, `created_by_user_id = ?`)
-		args = append(args, *ownerFilter)
-	}
-	if trimmed := strings.TrimSpace(search); trimmed != "" {
-		conditions = append(conditions, `name LIKE ?`)
-		args = append(args, "%"+trimmed+"%")
-	}
-	if len(conditions) > 0 {
-		query += ` WHERE ` + strings.Join(conditions, ` AND `)
-	}
+	whereClause, args := buildPersonQuery(ownerFilter, search)
+	query := `SELECT COUNT(*) FROM persons` + whereClause
 	if err := r.DB.Get(&total, query, args...); err != nil {
 		return 0, err
 	}
