@@ -15,17 +15,17 @@ export const Persons = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
 
-  const fetchPersons = useCallback(async (nextPage = page) => {
+  const fetchPersons = useCallback(async (nextPage: number) => {
     const res = await api.get<PaginatedResponse<Person>>('/persons', {
       params: { page: nextPage, pageSize: PAGE_SIZE }
     });
     setPersons(res.data.items);
     setPagination(res.data.pagination);
-  }, [page]);
+  }, []);
 
   useEffect(() => {
-    void fetchPersons();
-  }, [fetchPersons]);
+    void fetchPersons(page);
+  }, [fetchPersons, page]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -53,7 +53,7 @@ export const Persons = () => {
   const handleDelete = async (id: number) => {
     if (window.confirm(t('delete') + '?')) {
       await api.delete(`/persons/${id}`);
-      void fetchPersons();
+      void fetchPersons(page);
     }
   };
 

@@ -25,17 +25,23 @@ export const Timeline = () => {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
 
-  const fetchPosts = useCallback(async () => {
+  const fetchPosts = useCallback(async (params: {
+    page: number;
+    date: string;
+    search: string;
+    selectedHashtags: string[];
+    selectedPersons: string[];
+  }) => {
     setLoading(true);
     try {
       const response = await api.get<PaginatedResponse<Post>>('/posts', {
         params: {
-          page,
+          page: params.page,
           pageSize: PAGE_SIZE,
-          date,
-          search,
-          hashtags: selectedHashtags.join(','),
-          persons: selectedPersons.join(',')
+          date: params.date,
+          search: params.search,
+          hashtags: params.selectedHashtags.join(','),
+          persons: params.selectedPersons.join(',')
         }
       });
       setPosts(response.data.items);
@@ -45,11 +51,11 @@ export const Timeline = () => {
     } finally {
       setLoading(false);
     }
-  }, [date, page, search, selectedHashtags, selectedPersons]);
+  }, []);
 
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+    void fetchPosts({ page, date, search, selectedHashtags, selectedPersons });
+  }, [date, fetchPosts, page, search, selectedHashtags, selectedPersons]);
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -226,7 +232,7 @@ export const Timeline = () => {
 
       <PostForm
         onSuccess={() => {
-          fetchPosts();
+          void fetchPosts({ page, date, search, selectedHashtags, selectedPersons });
           setEditingPost(null);
         }}
         initialData={editingPost}
@@ -244,7 +250,7 @@ export const Timeline = () => {
             <PostCard
               key={post.id}
               post={post}
-              onUpdate={fetchPosts}
+              onUpdate={() => void fetchPosts({ page, date, search, selectedHashtags, selectedPersons })}
               onEdit={(p) => {
                 setEditingPost(p);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
