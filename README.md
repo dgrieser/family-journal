@@ -70,6 +70,7 @@ All endpoints are namespaced under `/api/v1`.
 Error responses are JSON in the form `{ "error": "message" }`.
 List endpoints for posts and persons support `page` and `pageSize` query params.
 `pageSize` defaults to `20` when omitted and is capped at `100`.
+`GET /persons` also supports `search` to filter by partial person name matches.
 These endpoints return:
 
 ```json
@@ -103,7 +104,7 @@ These endpoints return:
 - `POST /posts/:id/attachments`
 
 ### Persons and hashtags
-- `GET /persons?page=1&pageSize=20`
+- `GET /persons?page=1&pageSize=20&search=lena`
 - `POST /persons`
 - `PUT /persons/:id`
 - `DELETE /persons/:id`

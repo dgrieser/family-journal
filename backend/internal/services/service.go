@@ -33,8 +33,8 @@ type PersonRepository interface {
 	CreatePerson(person *models.Person) error
 	UpdatePerson(person *models.Person, ownerFilter *int64) error
 	DeletePerson(id int64, ownerFilter *int64) error
-	ListPersons(ownerFilter *int64, limit, offset int) ([]models.Person, error)
-	CountPersons(ownerFilter *int64) (int, error)
+	ListPersons(ownerFilter *int64, search string, limit, offset int) ([]models.Person, error)
+	CountPersons(ownerFilter *int64, search string) (int, error)
 	FindOrCreatePerson(userID int64, name string) (*models.Person, error)
 }
 

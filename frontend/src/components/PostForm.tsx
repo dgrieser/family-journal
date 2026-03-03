@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AxiosError } from 'axios';
 import api from '../api';
-import { fetchAllPersons } from '../persons';
+import { searchPersons } from '../persons';
 import { Send, Paperclip, X } from 'lucide-react';
-import type { Post, Hashtag, Person } from '../types';
+import type { Post, Hashtag } from '../types';
 
 interface PostFormProps {
   onSuccess: () => void;
@@ -20,11 +20,11 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
   const [showPersonSuggestions, setShowPersonSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [allHashtags, setAllHashtags] = useState<string[]>([]);
-  const [allPersons, setAllPersons] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const personRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (initialData) {
@@ -37,21 +37,34 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
   }, [initialData]);
 
   useEffect(() => {
-    // Fetch hashtags and persons for autocomplete
+    // Fetch hashtags for autocomplete.
     const fetchData = async () => {
        try {
-         const [hRes, persons] = await Promise.all([
-           api.get('/hashtags'),
-           fetchAllPersons()
-         ]);
+         const hRes = await api.get('/hashtags');
          setAllHashtags(hRes.data.map((h: Hashtag) => h.name));
-         setAllPersons(persons.map((p: Person) => p.name));
        } catch (err) {
          console.error(err);
        }
     };
     fetchData();
   }, []);
+
+  const fetchPersonSuggestions = async (query: string) => {
+    const requestId = personRequestIdRef.current + 1;
+    personRequestIdRef.current = requestId;
+
+    try {
+      const persons = await searchPersons(query);
+      if (personRequestIdRef.current === requestId) {
+        setSuggestions(persons.map((person) => person.name));
+      }
+    } catch (err) {
+      console.error(err);
+      if (personRequestIdRef.current === requestId) {
+        setSuggestions([]);
+      }
+    }
+  };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -61,6 +74,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     const lastWord = words[words.length - 1];
 
     if (lastWord.startsWith('#')) {
+      personRequestIdRef.current += 1;
       const query = lastWord.slice(1).toLowerCase();
       setShowHashtagSuggestions(true);
       setShowPersonSuggestions(false);
@@ -69,10 +83,12 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
       const query = lastWord.slice(1).toLowerCase();
       setShowPersonSuggestions(true);
       setShowHashtagSuggestions(false);
-      setSuggestions(allPersons.filter(p => p.toLowerCase().includes(query)));
+      void fetchPersonSuggestions(query);
     } else {
+      personRequestIdRef.current += 1;
       setShowHashtagSuggestions(false);
       setShowPersonSuggestions(false);
+      setSuggestions([]);
     }
   };
 

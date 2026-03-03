@@ -23,12 +23,13 @@ func (h *PersonsHandler) List(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
+	search := strings.TrimSpace(c.Query("search"))
 	pagination, err := parsePagination(c)
 	if err != nil {
 		return err
 	}
 	scope := services.NewAccessScope(userID, role)
-	persons, err := h.Service.ListPersons(scope, pagination)
+	persons, err := h.Service.ListPersons(scope, search, pagination)
 	if err != nil {
 		log.Printf("list persons error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to list persons")

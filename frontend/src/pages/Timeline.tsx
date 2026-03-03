@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
-import { fetchAllPersons } from '../persons';
+import { searchPersons } from '../persons';
 import { PostForm } from '../components/PostForm';
 import { PostCard } from '../components/PostCard';
 import { Calendar, ChevronLeft, ChevronRight, Search, Filter, X } from 'lucide-react';
-import type { Post, Hashtag, PaginatedResponse, PaginationMeta, Person } from '../types';
+import type { Post, Hashtag, PaginatedResponse, PaginationMeta } from '../types';
 
 const PAGE_SIZE = 20;
 
@@ -18,7 +18,8 @@ export const Timeline = () => {
   const [selectedHashtags, setSelectedHashtags] = useState<string[]>([]);
   const [selectedPersons, setSelectedPersons] = useState<string[]>([]);
   const [allHashtags, setAllHashtags] = useState<string[]>([]);
-  const [allPersons, setAllPersons] = useState<string[]>([]);
+  const [personSearch, setPersonSearch] = useState('');
+  const [matchingPersons, setMatchingPersons] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,18 +54,42 @@ export const Timeline = () => {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const [hRes, persons] = await Promise.all([
-          api.get('/hashtags'),
-          fetchAllPersons()
-        ]);
+        const hRes = await api.get('/hashtags');
         setAllHashtags(hRes.data.map((h: Hashtag) => h.name));
-        setAllPersons(persons.map((p: Person) => p.name));
       } catch (err) {
         console.error(err);
       }
     };
     fetchFilters();
   }, []);
+
+  useEffect(() => {
+    if (!showFilters) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchMatchingPersons = async () => {
+      try {
+        const persons = await searchPersons(personSearch, 12);
+        if (!cancelled) {
+          setMatchingPersons(persons.map((person) => person.name));
+        }
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setMatchingPersons([]);
+        }
+      }
+    };
+
+    void fetchMatchingPersons();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [personSearch, showFilters]);
 
   const changeDate = (days: number) => {
     const d = new Date(date);
@@ -143,15 +168,40 @@ export const Timeline = () => {
             </div>
             <div>
               <h4 className="text-sm font-semibold text-gray-700 mb-2">{t('persons')}</h4>
+              <input
+                type="text"
+                value={personSearch}
+                onChange={(e) => setPersonSearch(e.target.value)}
+                placeholder={t('search')}
+                className="mb-3 w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              {selectedPersons.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {selectedPersons.map(p => (
+                    <button
+                      key={p}
+                      onClick={() => {
+                        setPage(1);
+                        setSelectedPersons(prev => prev.filter(x => x !== p));
+                      }}
+                      className="rounded-full bg-green-600 px-3 py-1 text-xs text-white transition hover:bg-green-700"
+                    >
+                      @{p}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
-                {allPersons.map(p => (
+                {matchingPersons
+                  .filter((p) => !selectedPersons.includes(p))
+                  .map(p => (
                   <button
                     key={p}
                     onClick={() => {
                       setPage(1);
-                      setSelectedPersons(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+                      setSelectedPersons(prev => [...prev, p]);
                     }}
-                    className={`px-3 py-1 rounded-full text-xs transition ${selectedPersons.includes(p) ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    className="px-3 py-1 rounded-full text-xs transition bg-gray-100 text-gray-600 hover:bg-gray-200"
                   >
                     @{p}
                   </button>
