@@ -89,6 +89,13 @@ func (f *fakeRepo) ListPersons(ownerFilter *int64, search string, limit, offset 
 	f.listPersonsArgs.offset = offset
 	return f.personsToList, nil
 }
+func (f *fakeRepo) ListPersonsPaginated(ownerFilter *int64, search string, limit, offset int) ([]models.Person, int, error) {
+	persons, err := f.ListPersons(ownerFilter, search, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	return persons, f.totalPersons, nil
+}
 func (f *fakeRepo) CountPersons(ownerFilter *int64, search string) (int, error) {
 	f.listPersonsArgs.search = search
 	return f.totalPersons, nil
@@ -128,6 +135,13 @@ func (f *fakeRepo) ListPosts(ownerFilter *int64, date time.Time, hashtags, perso
 	f.listPostsArgs.limit = limit
 	f.listPostsArgs.offset = offset
 	return nil, nil
+}
+func (f *fakeRepo) ListPostsPaginated(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, int, error) {
+	posts, err := f.ListPosts(ownerFilter, date, hashtags, persons, search, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	return posts, f.totalPosts, nil
 }
 func (f *fakeRepo) CountPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (int, error) {
 	return f.totalPosts, nil

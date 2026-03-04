@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 
@@ -22,6 +23,13 @@ func lastInsertID(result sql.Result) (int64, error) {
 
 func New(db *sqlx.DB) *Repository {
 	return &Repository{DB: db}
+}
+
+func (r *Repository) beginReadSnapshotTx() (*sqlx.Tx, error) {
+	return r.DB.BeginTxx(context.Background(), &sql.TxOptions{
+		Isolation: sql.LevelRepeatableRead,
+		ReadOnly:  true,
+	})
 }
 
 func isDuplicateKeyError(err error) bool {

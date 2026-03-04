@@ -50,11 +50,7 @@ func (s *Service) CreateOrUpdatePost(scope AccessScope, post *models.Post) error
 }
 
 func (s *Service) ListPosts(scope AccessScope, date time.Time, hashtags, persons []string, search string, pagination PaginationParams) (PaginatedResponse[models.Post], error) {
-	totalItems, err := s.Posts.CountPosts(scope.OwnerFilter(), date, hashtags, persons, search)
-	if err != nil {
-		return PaginatedResponse[models.Post]{}, err
-	}
-	posts, err := s.Posts.ListPosts(scope.OwnerFilter(), date, hashtags, persons, search, pagination.PageSize, pagination.Offset())
+	posts, totalItems, err := s.Posts.ListPostsPaginated(scope.OwnerFilter(), date, hashtags, persons, search, pagination.PageSize, pagination.Offset())
 	if err != nil {
 		return PaginatedResponse[models.Post]{}, err
 	}

@@ -33,6 +33,7 @@ type PersonRepository interface {
 	CreatePerson(person *models.Person) error
 	UpdatePerson(person *models.Person, ownerFilter *int64) error
 	DeletePerson(id int64, ownerFilter *int64) error
+	ListPersonsPaginated(ownerFilter *int64, search string, limit, offset int) ([]models.Person, int, error)
 	ListPersons(ownerFilter *int64, search string, limit, offset int) ([]models.Person, error)
 	CountPersons(ownerFilter *int64, search string) (int, error)
 	FindOrCreatePerson(userID int64, name string) (*models.Person, error)
@@ -47,6 +48,7 @@ type HashtagRepository interface {
 type PostRepository interface {
 	DeletePost(id int64, ownerFilter *int64) error
 	GetPost(id int64, ownerFilter *int64) (*models.Post, error)
+	ListPostsPaginated(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, int, error)
 	ListPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error)
 	CountPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (int, error)
 	ListPersonsForPosts(postIDs []int64) (map[int64][]models.Person, error)
