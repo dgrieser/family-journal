@@ -27,6 +27,14 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
   const personRequestIdRef = useRef(0);
   const personSearchTimeoutRef = useRef<number | null>(null);
 
+  const cancelPendingPersonSearch = () => {
+    if (personSearchTimeoutRef.current !== null) {
+      window.clearTimeout(personSearchTimeoutRef.current);
+      personSearchTimeoutRef.current = null;
+    }
+    personRequestIdRef.current += 1;
+  };
+
   useEffect(() => {
     if (initialData) {
       setText(initialData.text);
@@ -83,11 +91,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     const lastWord = words[words.length - 1];
 
     if (lastWord.startsWith('#')) {
-      if (personSearchTimeoutRef.current !== null) {
-        window.clearTimeout(personSearchTimeoutRef.current);
-        personSearchTimeoutRef.current = null;
-      }
-      personRequestIdRef.current += 1;
+      cancelPendingPersonSearch();
       const query = lastWord.slice(1).toLowerCase();
       setShowHashtagSuggestions(true);
       setShowPersonSuggestions(false);
@@ -103,11 +107,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
         void fetchPersonSuggestions(query);
       }, 300);
     } else {
-      if (personSearchTimeoutRef.current !== null) {
-        window.clearTimeout(personSearchTimeoutRef.current);
-        personSearchTimeoutRef.current = null;
-      }
-      personRequestIdRef.current += 1;
+      cancelPendingPersonSearch();
       setShowHashtagSuggestions(false);
       setShowPersonSuggestions(false);
       setSuggestions([]);
@@ -122,10 +122,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     setText(words.join(' '));
     setShowHashtagSuggestions(false);
     setShowPersonSuggestions(false);
-    if (personSearchTimeoutRef.current !== null) {
-      window.clearTimeout(personSearchTimeoutRef.current);
-      personSearchTimeoutRef.current = null;
-    }
+    cancelPendingPersonSearch();
     textareaRef.current?.focus();
   };
 
