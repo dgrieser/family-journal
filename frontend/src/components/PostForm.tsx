@@ -25,6 +25,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const personRequestIdRef = useRef(0);
+  const personSearchTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -47,6 +48,14 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
        }
     };
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (personSearchTimeoutRef.current !== null) {
+        window.clearTimeout(personSearchTimeoutRef.current);
+      }
+    };
   }, []);
 
   const fetchPersonSuggestions = async (query: string) => {
@@ -74,6 +83,10 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     const lastWord = words[words.length - 1];
 
     if (lastWord.startsWith('#')) {
+      if (personSearchTimeoutRef.current !== null) {
+        window.clearTimeout(personSearchTimeoutRef.current);
+        personSearchTimeoutRef.current = null;
+      }
       personRequestIdRef.current += 1;
       const query = lastWord.slice(1).toLowerCase();
       setShowHashtagSuggestions(true);
@@ -83,8 +96,17 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
       const query = lastWord.slice(1).toLowerCase();
       setShowPersonSuggestions(true);
       setShowHashtagSuggestions(false);
-      void fetchPersonSuggestions(query);
+      if (personSearchTimeoutRef.current !== null) {
+        window.clearTimeout(personSearchTimeoutRef.current);
+      }
+      personSearchTimeoutRef.current = window.setTimeout(() => {
+        void fetchPersonSuggestions(query);
+      }, 300);
     } else {
+      if (personSearchTimeoutRef.current !== null) {
+        window.clearTimeout(personSearchTimeoutRef.current);
+        personSearchTimeoutRef.current = null;
+      }
       personRequestIdRef.current += 1;
       setShowHashtagSuggestions(false);
       setShowPersonSuggestions(false);
@@ -100,6 +122,10 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     setText(words.join(' '));
     setShowHashtagSuggestions(false);
     setShowPersonSuggestions(false);
+    if (personSearchTimeoutRef.current !== null) {
+      window.clearTimeout(personSearchTimeoutRef.current);
+      personSearchTimeoutRef.current = null;
+    }
     textareaRef.current?.focus();
   };
 

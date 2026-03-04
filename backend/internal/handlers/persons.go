@@ -24,10 +24,7 @@ func (h *PersonsHandler) List(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
 	search := strings.TrimSpace(c.Query("search"))
-	pagination, err := parsePagination(c)
-	if err != nil {
-		return err
-	}
+	pagination := parsePagination(c)
 	scope := services.NewAccessScope(userID, role)
 	persons, err := h.Service.ListPersons(scope, search, pagination)
 	if err != nil {

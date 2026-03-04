@@ -66,10 +66,7 @@ func (h *PostsHandler) List(c *fiber.Ctx) error {
 	tags := splitQueryList(c.Query("hashtags"))
 	persons := splitQueryList(c.Query("persons"))
 	search := c.Query("search")
-	pagination, err := parsePagination(c)
-	if err != nil {
-		return err
-	}
+	pagination := parsePagination(c)
 	scope := services.NewAccessScope(userID, role)
 	posts, err := h.Service.ListPosts(scope, date, tags, persons, search, pagination)
 	if err != nil {

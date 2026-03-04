@@ -6,8 +6,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func parsePagination(c *fiber.Ctx) (services.PaginationParams, error) {
+func parsePagination(c *fiber.Ctx) services.PaginationParams {
 	page := c.QueryInt("page", 1)
 	pageSize := c.QueryInt("pageSize", services.DefaultPageSize)
-	return services.NewPagination(page, pageSize), nil
+	return services.NewPagination(page, pageSize)
 }

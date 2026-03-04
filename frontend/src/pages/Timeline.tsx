@@ -75,25 +75,27 @@ export const Timeline = () => {
     }
 
     let cancelled = false;
-
-    const fetchMatchingPersons = async () => {
-      try {
-        const persons = await searchPersons(personSearch, 12);
-        if (!cancelled) {
-          setMatchingPersons(persons.map((person) => person.name));
+    const timeoutId = window.setTimeout(() => {
+      const fetchMatchingPersons = async () => {
+        try {
+          const persons = await searchPersons(personSearch, 12);
+          if (!cancelled) {
+            setMatchingPersons(persons.map((person) => person.name));
+          }
+        } catch (err) {
+          console.error(err);
+          if (!cancelled) {
+            setMatchingPersons([]);
+          }
         }
-      } catch (err) {
-        console.error(err);
-        if (!cancelled) {
-          setMatchingPersons([]);
-        }
-      }
-    };
+      };
 
-    void fetchMatchingPersons();
+      void fetchMatchingPersons();
+    }, 300);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
   }, [personSearch, showFilters]);
 
