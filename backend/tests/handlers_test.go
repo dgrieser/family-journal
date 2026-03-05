@@ -27,14 +27,24 @@ type fakeRepo struct {
 	personsCreated []string
 	postToReturn   *models.Post
 	attachmentByID *models.Attachment
+	personsToList  []models.Person
 	deletedPostID  int64
 	deletedUserID  int64
 	ownerFilterNil bool
+	totalPosts     int
+	totalPersons   int
 	listPostsArgs  struct {
 		date     time.Time
 		hashtags []string
 		persons  []string
 		search   string
+		limit    int
+		offset   int
+	}
+	listPersonsArgs struct {
+		search string
+		limit  int
+		offset int
 	}
 }
 
@@ -73,7 +83,23 @@ func (f *fakeRepo) UpdateUserActive(id int64, active bool) error                
 func (f *fakeRepo) CreatePerson(person *models.Person) error                     { return nil }
 func (f *fakeRepo) UpdatePerson(person *models.Person, ownerFilter *int64) error { return nil }
 func (f *fakeRepo) DeletePerson(id int64, ownerFilter *int64) error              { return nil }
-func (f *fakeRepo) ListPersons(ownerFilter *int64) ([]models.Person, error)      { return nil, nil }
+func (f *fakeRepo) ListPersons(ownerFilter *int64, search string, limit, offset int) ([]models.Person, error) {
+	f.listPersonsArgs.search = search
+	f.listPersonsArgs.limit = limit
+	f.listPersonsArgs.offset = offset
+	return f.personsToList, nil
+}
+func (f *fakeRepo) ListPersonsPaginated(ownerFilter *int64, search string, limit, offset int) ([]models.Person, int, error) {
+	persons, err := f.ListPersons(ownerFilter, search, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	return persons, f.totalPersons, nil
+}
+func (f *fakeRepo) CountPersons(ownerFilter *int64, search string) (int, error) {
+	f.listPersonsArgs.search = search
+	return f.totalPersons, nil
+}
 func (f *fakeRepo) FindOrCreatePerson(userID int64, name string) (*models.Person, error) {
 	f.personsCreated = append(f.personsCreated, name)
 	return &models.Person{ID: int64(len(f.personsCreated)), Name: name}, nil
@@ -101,12 +127,24 @@ func (f *fakeRepo) GetPost(id int64, ownerFilter *int64) (*models.Post, error) {
 	}
 	return &models.Post{}, nil
 }
-func (f *fakeRepo) ListPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) ([]models.Post, error) {
+func (f *fakeRepo) ListPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error) {
 	f.listPostsArgs.date = date
 	f.listPostsArgs.hashtags = hashtags
 	f.listPostsArgs.persons = persons
 	f.listPostsArgs.search = search
+	f.listPostsArgs.limit = limit
+	f.listPostsArgs.offset = offset
 	return nil, nil
+}
+func (f *fakeRepo) ListPostsPaginated(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, int, error) {
+	posts, err := f.ListPosts(ownerFilter, date, hashtags, persons, search, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	return posts, f.totalPosts, nil
+}
+func (f *fakeRepo) CountPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (int, error) {
+	return f.totalPosts, nil
 }
 func (f *fakeRepo) ReplacePostTags(postID int64, tags []models.Hashtag) error       { return nil }
 func (f *fakeRepo) ReplacePostMentions(postID int64, persons []models.Person) error { return nil }
@@ -373,6 +411,7 @@ func TestCreatePostParsesTagsAndPersons(t *testing.T) {
 
 func TestListPostsFilters(t *testing.T) {
 	repo := newFakeRepo()
+	repo.totalPosts = 42
 	service := services.New(repo, repo, repo, repo, repo, repo)
 	store := session.New()
 	app := fiber.New()
@@ -387,7 +426,7 @@ func TestListPostsFilters(t *testing.T) {
 	app.Get("/posts", postsHandler.List)
 
 	date := time.Now().Format("2006-01-02")
-	req := httptest.NewRequest(http.MethodGet, "/posts?date="+date+"&hashtags=care,food&persons=Lena&search=note", nil)
+	req := httptest.NewRequest(http.MethodGet, "/posts?date="+date+"&hashtags=care,food&persons=Lena&search=note&page=2&pageSize=10", nil)
 	resp, err := app.Test(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		t.Fatalf("list posts failed: %v", err)
@@ -396,8 +435,18 @@ func TestListPostsFilters(t *testing.T) {
 	if readErr != nil {
 		t.Fatalf("read list posts response: %v", readErr)
 	}
-	if string(body) != "[]" {
-		t.Fatalf("expected empty array response, got %s", string(body))
+	var got struct {
+		Items      []models.Post           `json:"items"`
+		Pagination services.PaginationMeta `json:"pagination"`
+	}
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("decode paginated response: %v", err)
+	}
+	if len(got.Items) != 0 {
+		t.Fatalf("expected no posts, got %#v", got.Items)
+	}
+	if got.Pagination.Page != 2 || got.Pagination.PageSize != 10 || got.Pagination.TotalItems != 42 || got.Pagination.TotalPages != 5 {
+		t.Fatalf("unexpected pagination: %#v", got.Pagination)
 	}
 	if repo.listPostsArgs.search != "note" {
 		t.Fatalf("expected search param")
@@ -407,6 +456,56 @@ func TestListPostsFilters(t *testing.T) {
 	}
 	if len(repo.listPostsArgs.persons) != 1 {
 		t.Fatalf("expected persons")
+	}
+	if repo.listPostsArgs.limit != 10 || repo.listPostsArgs.offset != 10 {
+		t.Fatalf("expected limit/offset 10/10, got %d/%d", repo.listPostsArgs.limit, repo.listPostsArgs.offset)
+	}
+}
+
+func TestListPersonsFilters(t *testing.T) {
+	repo := newFakeRepo()
+	repo.totalPersons = 3
+	repo.personsToList = []models.Person{{ID: 1, Name: "Lena"}}
+	service := services.New(repo, repo, repo, repo, repo, repo)
+	store := session.New()
+	app := fiber.New()
+	personsHandler := &handlers.PersonsHandler{Service: service, Store: store}
+	app.Use(func(c *fiber.Ctx) error {
+		sess, _ := store.Get(c)
+		sess.Set("user_id", int64(1))
+		sess.Set("role", "user")
+		_ = sess.Save()
+		return c.Next()
+	})
+	app.Get("/persons", personsHandler.List)
+
+	req := httptest.NewRequest(http.MethodGet, "/persons?search=len&page=2&pageSize=1", nil)
+	resp, err := app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("list persons failed: %v", err)
+	}
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		t.Fatalf("read list persons response: %v", readErr)
+	}
+	var got struct {
+		Items      []models.Person         `json:"items"`
+		Pagination services.PaginationMeta `json:"pagination"`
+	}
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("decode paginated response: %v", err)
+	}
+	if len(got.Items) != 1 || got.Items[0].Name != "Lena" {
+		t.Fatalf("unexpected persons: %#v", got.Items)
+	}
+	if got.Pagination.Page != 2 || got.Pagination.PageSize != 1 || got.Pagination.TotalItems != 3 || got.Pagination.TotalPages != 3 {
+		t.Fatalf("unexpected pagination: %#v", got.Pagination)
+	}
+	if repo.listPersonsArgs.search != "len" {
+		t.Fatalf("expected search param")
+	}
+	if repo.listPersonsArgs.limit != 1 || repo.listPersonsArgs.offset != 1 {
+		t.Fatalf("expected limit/offset 1/1, got %d/%d", repo.listPersonsArgs.limit, repo.listPersonsArgs.offset)
 	}
 }
 
@@ -620,11 +719,11 @@ func TestServiceNormalizesNilSlices(t *testing.T) {
 		t.Fatalf("expected users slice to be non-nil")
 	}
 
-	persons, err := service.ListPersons(services.NewAccessScope(1, models.RoleUser))
+	personsPage, err := service.ListPersons(services.NewAccessScope(1, models.RoleUser), "", services.NewPagination(1, 20))
 	if err != nil {
 		t.Fatalf("list persons: %v", err)
 	}
-	if persons == nil {
+	if personsPage.Items == nil {
 		t.Fatalf("expected persons slice to be non-nil")
 	}
 
@@ -636,11 +735,11 @@ func TestServiceNormalizesNilSlices(t *testing.T) {
 		t.Fatalf("expected hashtags slice to be non-nil")
 	}
 
-	posts, err := service.ListPosts(services.NewAccessScope(1, models.RoleUser), time.Now(), nil, nil, "")
+	postsPage, err := service.ListPosts(services.NewAccessScope(1, models.RoleUser), time.Now(), nil, nil, "", services.NewPagination(1, 20))
 	if err != nil {
 		t.Fatalf("list posts: %v", err)
 	}
-	if posts == nil {
+	if postsPage.Items == nil {
 		t.Fatalf("expected posts slice to be non-nil")
 	}
 

@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AxiosError } from 'axios';
 import api from '../api';
+import { searchPersons } from '../persons';
 import { Send, Paperclip, X } from 'lucide-react';
-import type { Post, Hashtag, Person } from '../types';
+import type { Post, Hashtag } from '../types';
 
 interface PostFormProps {
   onSuccess: () => void;
@@ -19,11 +20,20 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
   const [showPersonSuggestions, setShowPersonSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [allHashtags, setAllHashtags] = useState<string[]>([]);
-  const [allPersons, setAllPersons] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const personRequestIdRef = useRef(0);
+  const personSearchTimeoutRef = useRef<number | null>(null);
+
+  const cancelPendingPersonSearch = () => {
+    if (personSearchTimeoutRef.current !== null) {
+      window.clearTimeout(personSearchTimeoutRef.current);
+      personSearchTimeoutRef.current = null;
+    }
+    personRequestIdRef.current += 1;
+  };
 
   useEffect(() => {
     if (initialData) {
@@ -36,21 +46,42 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
   }, [initialData]);
 
   useEffect(() => {
-    // Fetch hashtags and persons for autocomplete
+    // Fetch hashtags for autocomplete.
     const fetchData = async () => {
        try {
-         const [hRes, pRes] = await Promise.all([
-           api.get('/hashtags'),
-           api.get('/persons')
-         ]);
+         const hRes = await api.get('/hashtags');
          setAllHashtags(hRes.data.map((h: Hashtag) => h.name));
-         setAllPersons(pRes.data.map((p: Person) => p.name));
        } catch (err) {
          console.error(err);
        }
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (personSearchTimeoutRef.current !== null) {
+        window.clearTimeout(personSearchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const fetchPersonSuggestions = async (query: string) => {
+    const requestId = personRequestIdRef.current + 1;
+    personRequestIdRef.current = requestId;
+
+    try {
+      const persons = await searchPersons(query);
+      if (personRequestIdRef.current === requestId) {
+        setSuggestions(persons.map((person) => person.name));
+      }
+    } catch (err) {
+      console.error(err);
+      if (personRequestIdRef.current === requestId) {
+        setSuggestions([]);
+      }
+    }
+  };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -60,6 +91,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     const lastWord = words[words.length - 1];
 
     if (lastWord.startsWith('#')) {
+      cancelPendingPersonSearch();
       const query = lastWord.slice(1).toLowerCase();
       setShowHashtagSuggestions(true);
       setShowPersonSuggestions(false);
@@ -68,10 +100,17 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
       const query = lastWord.slice(1).toLowerCase();
       setShowPersonSuggestions(true);
       setShowHashtagSuggestions(false);
-      setSuggestions(allPersons.filter(p => p.toLowerCase().includes(query)));
+      if (personSearchTimeoutRef.current !== null) {
+        window.clearTimeout(personSearchTimeoutRef.current);
+      }
+      personSearchTimeoutRef.current = window.setTimeout(() => {
+        void fetchPersonSuggestions(query);
+      }, 300);
     } else {
+      cancelPendingPersonSearch();
       setShowHashtagSuggestions(false);
       setShowPersonSuggestions(false);
+      setSuggestions([]);
     }
   };
 
@@ -83,6 +122,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     setText(words.join(' '));
     setShowHashtagSuggestions(false);
     setShowPersonSuggestions(false);
+    cancelPendingPersonSearch();
     textareaRef.current?.focus();
   };
 

@@ -2,8 +2,11 @@ package repositories
 
 import (
 	"database/sql"
+	"strings"
 
 	"familyjournal/backend/internal/models"
+
+	"github.com/jmoiron/sqlx"
 )
 
 func (r *Repository) CreatePerson(person *models.Person) error {
@@ -48,19 +51,88 @@ func (r *Repository) DeletePerson(id int64, ownerFilter *int64) error {
 	return err
 }
 
-func (r *Repository) ListPersons(ownerFilter *int64) ([]models.Person, error) {
-	var persons []models.Person
-	query := `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons`
+func buildPersonQuery(ownerFilter *int64, search string) (string, []interface{}) {
+	var conditions []string
 	args := []interface{}{}
+
 	if ownerFilter != nil {
-		query += ` WHERE created_by_user_id = ?`
+		conditions = append(conditions, `created_by_user_id = ?`)
 		args = append(args, *ownerFilter)
 	}
-	query += ` ORDER BY name ASC`
+	if trimmed := strings.TrimSpace(search); trimmed != "" {
+		conditions = append(conditions, `name LIKE ?`)
+		args = append(args, "%"+trimmed+"%")
+	}
+	if len(conditions) == 0 {
+		return "", args
+	}
+
+	return ` WHERE ` + strings.Join(conditions, ` AND `), args
+}
+
+func (r *Repository) ListPersons(ownerFilter *int64, search string, limit, offset int) ([]models.Person, error) {
+	var persons []models.Person
+	whereClause, args := buildPersonQuery(ownerFilter, search)
+	query := `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons` + whereClause
+	query += ` ORDER BY name ASC LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
 	if err := r.DB.Select(&persons, query, args...); err != nil {
 		return nil, err
 	}
 	return persons, nil
+}
+
+func (r *Repository) ListPersonsPaginated(ownerFilter *int64, search string, limit, offset int) ([]models.Person, int, error) {
+	tx, err := r.beginReadSnapshotTx()
+	if err != nil {
+		return nil, 0, err
+	}
+	defer tx.Rollback()
+
+	total, err := r.countPersons(tx, ownerFilter, search)
+	if err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		if err := tx.Commit(); err != nil {
+			return nil, 0, err
+		}
+		return []models.Person{}, 0, nil
+	}
+	persons, err := r.listPersons(tx, ownerFilter, search, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, 0, err
+	}
+	return persons, total, nil
+}
+
+func (r *Repository) CountPersons(ownerFilter *int64, search string) (int, error) {
+	return r.countPersons(r.DB, ownerFilter, search)
+}
+
+func (r *Repository) listPersons(queryer sqlx.Ext, ownerFilter *int64, search string, limit, offset int) ([]models.Person, error) {
+	var persons []models.Person
+	whereClause, args := buildPersonQuery(ownerFilter, search)
+	query := `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons` + whereClause
+	query += ` ORDER BY name ASC LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
+	if err := sqlx.Select(queryer, &persons, query, args...); err != nil {
+		return nil, err
+	}
+	return persons, nil
+}
+
+func (r *Repository) countPersons(queryer sqlx.Queryer, ownerFilter *int64, search string) (int, error) {
+	var total int
+	whereClause, args := buildPersonQuery(ownerFilter, search)
+	query := `SELECT COUNT(*) FROM persons` + whereClause
+	if err := sqlx.Get(queryer, &total, query, args...); err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 func (r *Repository) FindOrCreatePerson(userID int64, name string) (*models.Person, error) {

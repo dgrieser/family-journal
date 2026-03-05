@@ -66,8 +66,9 @@ func (h *PostsHandler) List(c *fiber.Ctx) error {
 	tags := splitQueryList(c.Query("hashtags"))
 	persons := splitQueryList(c.Query("persons"))
 	search := c.Query("search")
+	pagination := parsePagination(c)
 	scope := services.NewAccessScope(userID, role)
-	posts, err := h.Service.ListPosts(scope, date, tags, persons, search)
+	posts, err := h.Service.ListPosts(scope, date, tags, persons, search, pagination)
 	if err != nil {
 		log.Printf("list posts error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to list posts")
