@@ -93,6 +93,12 @@ func (r *Repository) ListPersonsPaginated(ownerFilter *int64, search string, lim
 	if err != nil {
 		return nil, 0, err
 	}
+	if total == 0 {
+		if err := tx.Commit(); err != nil {
+			return nil, 0, err
+		}
+		return []models.Person{}, 0, nil
+	}
 	persons, err := r.listPersons(tx, ownerFilter, search, limit, offset)
 	if err != nil {
 		return nil, 0, err

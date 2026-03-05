@@ -154,6 +154,12 @@ func (r *Repository) ListPostsPaginated(ownerFilter *int64, date time.Time, hash
 	if err != nil {
 		return nil, 0, err
 	}
+	if total == 0 {
+		if err := tx.Commit(); err != nil {
+			return nil, 0, err
+		}
+		return []models.Post{}, 0, nil
+	}
 	posts, err := r.listPosts(tx, ownerFilter, date, hashtags, persons, search, limit, offset)
 	if err != nil {
 		return nil, 0, err
