@@ -1,6 +1,6 @@
 # FamilyJournal
 
-FamilyJournal is a full-stack application for documenting daily care activities for children with officially recognized care levels. This branch uses the Codex Go/Fiber backend together with the Gemini React frontend, plus a MySQL database via Docker Compose.
+FamilyJournal is a full-stack application for documenting daily care activities for children with officially recognized care levels. Go/Fiber backend together with React frontend, plus a MySQL database via Docker Compose.
 
 ## Tech stack
 
