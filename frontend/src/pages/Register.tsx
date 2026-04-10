@@ -29,30 +29,28 @@ export const Register = () => {
   return (
     <div className="min-h-screen flex bg-slate-50">
       {/* Left branding panel */}
-      <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 bg-slate-800 px-10 py-12 flex-shrink-0">
-        <span
-          style={{ fontFamily: 'var(--font-display)' }}
-          className="text-2xl font-semibold text-white tracking-wide"
-        >
-          FamilyJournal
-        </span>
-        <p
-          style={{ fontFamily: 'var(--font-display)' }}
-          className="text-stone-400 text-lg italic leading-relaxed"
-        >
-          "Preserve the moments that matter."
-        </p>
+      <div className="hidden lg:flex flex-col justify-between lg:w-[var(--sidebar-width)] bg-slate-800 flex-shrink-0">
+        <div className="px-5 pt-7 pb-5 bg-slate-900/60 border-b-2 border-violet-600">
+          <div className="flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
+            <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-400 ml-[8px] mb-[-2px]">
+              Family
+            </span>
+            <span className="text-5xl font-bold text-white leading-none" style={{ letterSpacing: '-0.02em' }}>
+              Journal
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Form panel */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-start sm:items-center justify-center px-6 pt-10 pb-8 sm:p-8">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden mb-8">
-            <span
-              style={{ fontFamily: 'var(--font-display)' }}
-              className="text-2xl font-semibold text-stone-900 tracking-wide"
-            >
-              FamilyJournal
+          <div className="lg:hidden mb-6 flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
+            <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-500 ml-[5px] mb-[-1px]">
+              Family
+            </span>
+            <span className="text-3xl font-bold text-stone-900 leading-none" style={{ letterSpacing: '-0.02em' }}>
+              Journal
             </span>
           </div>
 
