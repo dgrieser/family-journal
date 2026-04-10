@@ -50,9 +50,9 @@ export const Login = () => {
       </div>
 
       {/* Form panel */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-start sm:items-center justify-center px-6 pt-10 pb-8 sm:p-8">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden mb-8 flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
+          <div className="lg:hidden mb-6 flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
             <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-500 ml-[5px] mb-[-1px]">
               Family
             </span>
