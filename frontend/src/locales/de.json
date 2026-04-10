@@ -1,5 +1,5 @@
 {
-  "app_name": "FamilienJournal",
+  "app_name": "FamilyJournal",
   "login": "Anmelden",
   "register": "Registrieren",
   "email": "E-Mail",
@@ -14,6 +14,7 @@
   "edit": "Bearbeiten",
   "new_post": "Neuer Eintrag",
   "add_comment": "Kommentar hinzufügen",
+  "filter": "Filter",
   "hashtags": "Hashtags",
   "mentions": "Erwähnungen",
   "date": "Datum",

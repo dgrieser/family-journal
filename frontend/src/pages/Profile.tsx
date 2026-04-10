@@ -35,57 +35,65 @@ export const Profile = () => {
     }
   };
 
+  const inputClass = 'block w-full border border-stone-200 rounded-md px-3.5 py-2.5 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition';
+
   return (
-    <div className="max-w-md mx-auto">
-      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <User size={24} /> {t('profile')}
+    <div className="max-w-lg">
+      <h2 className="text-xl font-semibold text-stone-900 mb-6 flex items-center gap-2">
+        <User size={20} className="text-stone-400" /> {t('profile')}
       </h2>
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg border border-stone-200 p-6">
         {message.text && (
-          <div className={`mb-4 p-3 rounded-md flex items-center gap-2 ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          <div className={`mb-5 flex items-center gap-2 rounded-md px-4 py-3 text-sm border ${
+            message.type === 'success'
+              ? 'bg-green-50 border-green-200 text-green-800'
+              : 'bg-red-50 border-red-200 text-red-700'
+          }`}>
+            {message.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
             {message.text}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('email')}</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">{t('email')}</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full border rounded-md px-3 py-2"
+              className={inputClass}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('current_password')}</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">{t('current_password')}</label>
             <input
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="mt-1 block w-full border rounded-md px-3 py-2"
+              className={inputClass}
               placeholder="••••••••"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('new_password')} ({t('leave_blank')})</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">
+              {t('new_password')} <span className="text-stone-400 font-normal">({t('leave_blank')})</span>
+            </label>
             <input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="mt-1 block w-full border rounded-md px-3 py-2"
+              className={inputClass}
               placeholder="••••••••"
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-amber-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-600 transition-colors"
           >
-            <Save size={18} />
+            <Save size={15} />
             {t('update')}
           </button>
         </form>

@@ -42,64 +42,76 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 mb-4">
+    <div className="bg-white rounded-lg border border-stone-200 p-5 mb-3">
+      {/* Header */}
       <div className="flex justify-between items-start mb-3">
         <div>
-          <span className="font-semibold text-gray-800">{post.user?.email}</span>
-          <span className="text-xs text-gray-500 block">{new Date(post.created_at).toLocaleString()}</span>
+          <span className="text-sm font-medium text-stone-800">{post.user?.email}</span>
+          <span className="text-xs text-stone-400 block mt-0.5">{new Date(post.created_at).toLocaleString()}</span>
         </div>
         {(user?.id === post.user_id || user?.role === 'admin') && (
-          <div className="flex space-x-2">
-            <button onClick={() => onEdit(post)} className="text-gray-400 hover:text-indigo-600">
-              <Edit2 size={18} />
+          <div className="flex gap-1">
+            <button
+              onClick={() => onEdit(post)}
+              className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+            >
+              <Edit2 size={15} />
             </button>
-            <button onClick={handleDelete} className="text-gray-400 hover:text-red-600">
-              <Trash2 size={18} />
+            <button
+              onClick={handleDelete}
+              className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            >
+              <Trash2 size={15} />
             </button>
           </div>
         )}
       </div>
 
-      <p className="text-gray-700 whitespace-pre-wrap mb-4">{post.text}</p>
+      {/* Content */}
+      <p className="text-stone-700 whitespace-pre-wrap mb-4 leading-relaxed text-sm">{post.text}</p>
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        {post.hashtags?.map((h: Hashtag) => (
-          <span key={h.id} className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs flex items-center">
-            <Tag size={12} className="mr-1" /> {h.name}
-          </span>
-        ))}
-        {post.persons?.map((p: Person) => (
-          <span key={p.id} className="bg-green-50 text-green-700 px-2 py-0.5 rounded text-xs flex items-center">
-            <UserIcon size={12} className="mr-1" /> {p.name}
-          </span>
-        ))}
-      </div>
+      {/* Tags */}
+      {(post.hashtags?.length > 0 || post.persons?.length > 0) && (
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {post.hashtags?.map((h: Hashtag) => (
+            <span key={h.id} className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 rounded text-xs font-medium">
+              <Tag size={11} /> {h.name}
+            </span>
+          ))}
+          {post.persons?.map((p: Person) => (
+            <span key={p.id} className="inline-flex items-center gap-1 bg-stone-100 text-stone-600 border border-stone-200 px-2 py-0.5 rounded text-xs font-medium">
+              <UserIcon size={11} /> {p.name}
+            </span>
+          ))}
+        </div>
+      )}
 
+      {/* Attachments */}
       {post.attachments?.length > 0 && (
-        <div className="border-t pt-3 mb-4">
-          <h4 className="text-xs font-semibold text-gray-500 mb-2">{t('attachments')}</h4>
+        <div className="border-t border-stone-100 pt-4 mb-4">
+          <h4 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2.5">{t('attachments')}</h4>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {post.attachments.map((a: Attachment) => (
               <div key={a.id} className="space-y-1">
                 {a.file_type.startsWith('image/') ? (
-                   <img
-                     src={`${api.defaults.baseURL}/attachments/${a.id}/download`}
-                     alt={a.file_name}
-                     className="w-full h-32 object-cover rounded border"
-                   />
+                  <img
+                    src={`${api.defaults.baseURL}/attachments/${a.id}/download`}
+                    alt={a.file_name}
+                    className="w-full h-28 object-cover rounded border border-stone-200"
+                  />
                 ) : (
-                   <div className="w-full h-32 bg-gray-100 rounded border flex items-center justify-center text-gray-400">
-                      <Paperclip size={24} />
-                   </div>
+                  <div className="w-full h-28 bg-stone-50 rounded border border-stone-200 flex items-center justify-center text-stone-300">
+                    <Paperclip size={22} />
+                  </div>
                 )}
                 <a
                   href={`${api.defaults.baseURL}/attachments/${a.id}/download`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between p-2 border rounded hover:bg-gray-50 text-sm truncate"
+                  className="flex items-center justify-between p-2 border border-stone-200 rounded hover:bg-stone-50 text-xs text-stone-600 transition-colors"
                 >
                   <span className="truncate">{a.file_name}</span>
-                  <Download size={14} className="flex-shrink-0 ml-1" />
+                  <Download size={12} className="flex-shrink-0 ml-1 text-stone-400" />
                 </a>
               </div>
             ))}
@@ -107,43 +119,45 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
         </div>
       )}
 
-      <div className="border-t pt-3 flex items-center justify-between">
+      {/* Comments toggle */}
+      <div className="border-t border-stone-100 pt-3">
         <button
           onClick={() => setShowComments(!showComments)}
-          className="text-gray-500 hover:text-indigo-600 flex items-center space-x-1 text-sm"
+          className="inline-flex items-center gap-1.5 text-stone-400 hover:text-stone-600 text-xs font-medium transition-colors"
         >
-          <MessageSquare size={18} />
+          <MessageSquare size={15} />
           <span>{post.comments?.length || 0}</span>
         </button>
       </div>
 
+      {/* Comments */}
       {showComments && (
-        <div className="mt-4 space-y-3">
+        <div className="mt-3 space-y-2">
           {post.comments?.map((c: Comment) => (
-            <div key={c.id} className="bg-gray-50 p-2 rounded text-sm group relative">
-              <div className="font-semibold text-xs mb-1">{c.user?.email}</div>
-              <div>{c.text}</div>
+            <div key={c.id} className="bg-stone-50 border border-stone-100 px-3 py-2 rounded group relative">
+              <div className="text-xs font-medium text-stone-500 mb-0.5">{c.user?.email}</div>
+              <div className="text-sm text-stone-700">{c.text}</div>
               {(user?.id === c.user_id || user?.role === 'admin') && (
                 <button
                   onClick={() => handleDeleteComment(c.id)}
-                  className="absolute top-2 right-2 text-red-400 opacity-0 group-hover:opacity-100 transition"
+                  className="absolute top-2 right-2 p-0.5 text-stone-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={13} />
                 </button>
               )}
             </div>
           ))}
-          <form onSubmit={handleAddComment} className="flex mt-2">
+          <form onSubmit={handleAddComment} className="flex mt-2 rounded-md overflow-hidden border border-stone-200 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition">
             <input
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               placeholder={t('add_comment')}
-              className="flex-1 border rounded-l-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-indigo-500"
+              className="flex-1 px-3 py-2 text-sm bg-white outline-none text-stone-800 placeholder:text-stone-400"
             />
             <button
               type="submit"
-              className="bg-indigo-600 text-white px-3 py-1 rounded-r-md text-sm hover:bg-indigo-700"
+              className="bg-amber-700 text-white px-3 py-2 text-sm hover:bg-amber-600 transition-colors flex items-center"
             >
               <Send size={14} />
             </button>

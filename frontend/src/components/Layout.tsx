@@ -1,9 +1,16 @@
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store';
 import api from '../api';
 import { LayoutDashboard, Users, UserCog, User, LogOut, Languages } from 'lucide-react';
 import { APP_ROUTES, API_ROUTES } from '../constants/routes';
+
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors rounded-md mx-2 ${
+    isActive
+      ? 'bg-amber-700 text-white font-medium'
+      : 'text-stone-400 hover:bg-stone-800 hover:text-stone-100'
+  }`;
 
 export const Layout = () => {
   const { t, i18n } = useTranslation();
@@ -25,59 +32,82 @@ export const Layout = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
+    <div className="min-h-screen flex flex-col md:flex-row bg-stone-50">
       {/* Sidebar / Topbar */}
-      <nav className="bg-indigo-700 text-white w-full md:w-64 flex-shrink-0">
-        <div className="p-4 flex items-center justify-between">
-          <span className="text-xl font-bold">{t('app_name')}</span>
-          <button onClick={toggleLanguage} className="md:hidden p-1 hover:bg-indigo-600 rounded">
-            <Languages size={20} />
+      <nav className="bg-stone-900 text-stone-300 w-full md:w-56 flex-shrink-0 flex md:flex-col">
+        {/* Brand */}
+        <div className="px-5 pt-7 pb-5 md:border-b-2 md:border-amber-600 flex items-center justify-between flex-shrink-0 bg-stone-950/60">
+          <div className="flex flex-col gap-1" style={{ fontFamily: 'var(--font-display)' }}>
+            <span className="text-xs font-medium tracking-[0.35em] uppercase text-amber-500">
+              Family
+            </span>
+            <span className="text-5xl font-bold text-white leading-none" style={{ letterSpacing: '-0.02em' }}>
+              Journal
+            </span>
+          </div>
+          <button
+            onClick={toggleLanguage}
+            className="md:hidden p-1.5 hover:text-amber-400 rounded transition-colors"
+            aria-label="Toggle language"
+          >
+            <Languages size={18} />
           </button>
         </div>
 
-        <div className="flex md:flex-col overflow-x-auto md:overflow-y-auto">
-          <Link to={APP_ROUTES.ROOT} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
-            <LayoutDashboard size={20} />
+        {/* Nav links */}
+        <div className="flex md:flex-col flex-1 overflow-x-auto md:overflow-visible md:py-3 gap-0.5 items-center md:items-stretch">
+          <NavLink to={APP_ROUTES.ROOT} end className={navLinkClass}>
+            <LayoutDashboard size={17} />
             <span>{t('timeline')}</span>
-          </Link>
-          <Link to={APP_ROUTES.PERSONS} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
-            <Users size={20} />
+          </NavLink>
+          <NavLink to={APP_ROUTES.PERSONS} className={navLinkClass}>
+            <Users size={17} />
             <span>{t('persons')}</span>
-          </Link>
-          <Link to={APP_ROUTES.PROFILE} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
-            <User size={20} />
+          </NavLink>
+          <NavLink to={APP_ROUTES.PROFILE} className={navLinkClass}>
+            <User size={17} />
             <span>{t('profile')}</span>
-          </Link>
+          </NavLink>
           {user?.role === 'admin' && (
-            <Link to={APP_ROUTES.ADMIN} className="flex items-center space-x-2 p-4 hover:bg-indigo-600">
-              <UserCog size={20} />
+            <NavLink to={APP_ROUTES.ADMIN} className={navLinkClass}>
+              <UserCog size={17} />
               <span>{t('admin')}</span>
-            </Link>
+            </NavLink>
           )}
+        </div>
 
-          <div className="mt-auto hidden md:block">
-             <button onClick={toggleLanguage} className="flex items-center space-x-2 p-4 hover:bg-indigo-600 w-full text-left">
-                <Languages size={20} />
-                <span>{i18n.language.toUpperCase()}</span>
-             </button>
-             <button onClick={handleLogout} className="flex items-center space-x-2 p-4 hover:bg-indigo-600 w-full text-left">
-                <LogOut size={20} />
-                <span>{t('logout')}</span>
-             </button>
-          </div>
+        {/* Bottom items - desktop */}
+        <div className="hidden md:flex flex-col border-t border-stone-800 py-2 gap-0.5">
+          <button
+            onClick={toggleLanguage}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-400 hover:bg-stone-800 hover:text-stone-100 transition-colors rounded-md mx-2"
+          >
+            <Languages size={17} />
+            <span>{i18n.language.toUpperCase()}</span>
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-400 hover:bg-stone-800 hover:text-stone-100 transition-colors rounded-md mx-2"
+          >
+            <LogOut size={17} />
+            <span>{t('logout')}</span>
+          </button>
         </div>
       </nav>
 
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto min-h-0">
         <Outlet />
       </main>
 
-      {/* Mobile Logout Button */}
-      <div className="md:hidden bg-white border-t p-2 flex justify-around">
-          <button onClick={handleLogout} className="flex flex-col items-center text-gray-600 p-2">
-            <LogOut size={20} />
-            <span className="text-xs">{t('logout')}</span>
-          </button>
+      {/* Mobile logout bar */}
+      <div className="md:hidden bg-stone-900 text-stone-400 border-t border-stone-800 p-2 flex justify-around">
+        <button
+          onClick={handleLogout}
+          className="flex flex-col items-center gap-0.5 p-2 hover:text-stone-100 transition-colors"
+        >
+          <LogOut size={18} />
+          <span className="text-xs">{t('logout')}</span>
+        </button>
       </div>
     </div>
   );

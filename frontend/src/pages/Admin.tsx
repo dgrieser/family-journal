@@ -40,55 +40,67 @@ export const Admin = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <UserCog size={24} /> {t('admin')}
+    <div>
+      <h2 className="text-xl font-semibold text-stone-900 mb-6 flex items-center gap-2">
+        <UserCog size={20} className="text-stone-400" /> {t('admin')}
       </h2>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('email')}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('role')}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('active')}</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+      <div className="bg-white rounded-lg border border-stone-200 overflow-hidden overflow-x-auto">
+        <table className="min-w-full">
+          <thead>
+            <tr className="border-b border-stone-100 bg-stone-50">
+              <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('email')}</th>
+              <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('role')}</th>
+              <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('active')}</th>
+              <th className="px-5 py-3 text-right text-xs font-medium text-stone-400 uppercase tracking-wider"></th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y divide-stone-100">
             {users.map((u: User) => (
-              <tr key={u.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{u.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`px-2 py-1 rounded text-xs font-semibold ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
+              <tr key={u.id} className="hover:bg-stone-50 transition-colors">
+                <td className="px-5 py-3.5 text-sm text-stone-800">{u.email}</td>
+                <td className="px-5 py-3.5">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                    u.role === 'admin'
+                      ? 'bg-stone-800 text-stone-100'
+                      : 'bg-stone-100 text-stone-600'
+                  }`}>
                     {u.role === 'admin' ? t('admin_role') : t('user')}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                   <span className={`px-2 py-1 rounded text-xs font-semibold ${u.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <td className="px-5 py-3.5">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                    u.is_active
+                      ? 'bg-green-50 text-green-700 border border-green-100'
+                      : 'bg-red-50 text-red-600 border border-red-100'
+                  }`}>
                     {u.is_active ? t('active') : t('inactive')}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="px-5 py-3.5 text-right">
                   <div className="flex justify-end gap-3">
                     {u.role === 'admin' ? (
                       <button
                         onClick={() => handleRoleChange(u.id, 'user')}
-                        className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                        className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
                       >
-                        <ShieldAlert size={16} /> {t('demote')}
+                        <ShieldAlert size={14} /> {t('demote')}
                       </button>
                     ) : (
                       <button
                         onClick={() => handleRoleChange(u.id, 'admin')}
-                        className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1"
+                        className="inline-flex items-center gap-1 text-xs text-amber-700 hover:text-amber-600 font-medium transition-colors"
                       >
-                        <Shield size={16} /> {t('promote')}
+                        <Shield size={14} /> {t('promote')}
                       </button>
                     )}
                     <button
                       onClick={() => handleToggleActive(u.id, !u.is_active)}
-                      className={`${u.is_active ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'} flex items-center gap-1`}
+                      className={`inline-flex items-center gap-1 text-xs font-medium transition-colors ${
+                        u.is_active
+                          ? 'text-stone-500 hover:text-stone-700'
+                          : 'text-green-600 hover:text-green-700'
+                      }`}
                     >
                       {u.is_active ? t('deactivate') : t('activate')}
                     </button>

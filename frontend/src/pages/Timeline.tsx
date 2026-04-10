@@ -10,7 +10,7 @@ import type { Post, Hashtag, PaginatedResponse, PaginationMeta } from '../types'
 const PAGE_SIZE = 20;
 
 export const Timeline = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [posts, setPosts] = useState<Post[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: PAGE_SIZE, totalItems: 0, totalPages: 0 });
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -106,16 +106,26 @@ export const Timeline = () => {
     setDate(d.toISOString().split('T')[0]);
   };
 
+  const hasActiveFilters = selectedHashtags.length > 0 || selectedPersons.length > 0;
+
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-6 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center space-x-2">
-            <button onClick={() => changeDate(-1)} className="p-2 hover:bg-gray-200 rounded">
-              <ChevronLeft size={20} />
+    <div>
+      {/* Controls */}
+      <div className="mb-5 space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center gap-3">
+          {/* Date picker */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => changeDate(-1)}
+              className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded transition-colors"
+            >
+              <ChevronLeft size={18} />
             </button>
-            <div className="flex items-center space-x-2 bg-white border px-3 py-1.5 rounded-md shadow-sm">
-              <Calendar size={18} className="text-gray-400" />
+            <div className="relative flex items-center gap-2 bg-white border border-stone-200 px-3 py-2 rounded-md shadow-sm cursor-pointer">
+              <Calendar size={15} className="text-stone-400 flex-shrink-0" />
+              <span className="text-sm text-stone-700 select-none whitespace-nowrap">
+                {new Date(date + 'T12:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              </span>
               <input
                 type="date"
                 value={date}
@@ -123,17 +133,37 @@ export const Timeline = () => {
                   setPage(1);
                   setDate(e.target.value);
                 }}
-                className="outline-none text-sm font-medium"
+                className="absolute inset-0 opacity-0 cursor-pointer w-full"
               />
             </div>
-            <button onClick={() => changeDate(1)} className="p-2 hover:bg-gray-200 rounded">
-              <ChevronRight size={20} />
+            <button
+              onClick={() => changeDate(1)}
+              className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded transition-colors"
+            >
+              <ChevronRight size={18} />
             </button>
           </div>
 
-          <div className="relative flex-1 flex gap-2">
+          {/* Search + filter toggle */}
+          <div className="flex gap-2 flex-1">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-md shadow-sm transition-colors ${
+                showFilters || hasActiveFilters
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'
+              }`}
+            >
+              <Filter size={15} />
+              <span className="hidden sm:inline">{t('filter')}</span>
+              {hasActiveFilters && (
+                <span className="bg-amber-700 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-medium">
+                  {selectedHashtags.length + selectedPersons.length}
+                </span>
+              )}
+            </button>
             <div className="relative flex-1">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
               <input
                 type="text"
                 value={search}
@@ -142,24 +172,18 @@ export const Timeline = () => {
                   setSearch(e.target.value);
                 }}
                 placeholder={t('search')}
-                className="w-full pl-10 pr-4 py-2 border rounded-md shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-9 pr-4 py-2 text-sm border border-stone-200 bg-white rounded-md shadow-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition placeholder:text-stone-400"
               />
             </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`p-2 border rounded-md shadow-sm hover:bg-gray-50 flex items-center gap-1 ${showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white'}`}
-            >
-              <Filter size={20} />
-              <span className="hidden sm:inline">{t('hashtags')} / {t('mentions')}</span>
-            </button>
           </div>
         </div>
 
+        {/* Filter panel */}
         {showFilters && (
-          <div className="bg-white p-4 rounded-lg shadow-sm border space-y-4">
+          <div className="bg-white border border-stone-200 rounded-lg p-4 space-y-4 shadow-sm">
             <div>
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">{t('hashtags')}</h4>
-              <div className="flex flex-wrap gap-2">
+              <h4 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2.5">{t('hashtags')}</h4>
+              <div className="flex flex-wrap gap-1.5">
                 {allHashtags.map(h => (
                   <button
                     key={h}
@@ -167,24 +191,29 @@ export const Timeline = () => {
                       setPage(1);
                       setSelectedHashtags(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
                     }}
-                    className={`px-3 py-1 rounded-full text-xs transition ${selectedHashtags.includes(h) ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                      selectedHashtags.includes(h)
+                        ? 'bg-amber-700 text-white'
+                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    }`}
                   >
                     #{h}
                   </button>
                 ))}
               </div>
             </div>
+
             <div>
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">{t('persons')}</h4>
+              <h4 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2.5">{t('persons')}</h4>
               <input
                 type="text"
                 value={personSearch}
                 onChange={(e) => setPersonSearch(e.target.value)}
                 placeholder={t('search')}
-                className="mb-3 w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                className="mb-3 w-full rounded-md border border-stone-200 px-3 py-2 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition placeholder:text-stone-400"
               />
               {selectedPersons.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2">
+                <div className="mb-2.5 flex flex-wrap gap-1.5">
                   {selectedPersons.map(p => (
                     <button
                       key={p}
@@ -192,40 +221,41 @@ export const Timeline = () => {
                         setPage(1);
                         setSelectedPersons(prev => prev.filter(x => x !== p));
                       }}
-                      className="rounded-full bg-green-600 px-3 py-1 text-xs text-white transition hover:bg-green-700"
+                      className="inline-flex items-center gap-1 rounded bg-stone-700 px-2.5 py-1 text-xs text-white font-medium hover:bg-stone-600 transition-colors"
                     >
-                      @{p}
+                      @{p} <X size={11} />
                     </button>
                   ))}
                 </div>
               )}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {matchingPersons
                   .filter((p) => !selectedPersons.includes(p))
                   .map(p => (
-                  <button
-                    key={p}
-                    onClick={() => {
-                      setPage(1);
-                      setSelectedPersons(prev => [...prev, p]);
-                    }}
-                    className="px-3 py-1 rounded-full text-xs transition bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  >
-                    @{p}
-                  </button>
-                ))}
+                    <button
+                      key={p}
+                      onClick={() => {
+                        setPage(1);
+                        setSelectedPersons(prev => [...prev, p]);
+                      }}
+                      className="px-2.5 py-1 rounded text-xs font-medium bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors"
+                    >
+                      @{p}
+                    </button>
+                  ))}
               </div>
             </div>
-            {(selectedHashtags.length > 0 || selectedPersons.length > 0) && (
+
+            {hasActiveFilters && (
               <button
                 onClick={() => {
                   setPage(1);
                   setSelectedHashtags([]);
                   setSelectedPersons([]);
                 }}
-                className="text-xs text-red-500 flex items-center gap-1 hover:underline"
+                className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 transition-colors font-medium"
               >
-                <X size={14} /> {t('clear_filters')}
+                <X size={13} /> {t('clear_filters')}
               </button>
             )}
           </div>
@@ -241,13 +271,13 @@ export const Timeline = () => {
       />
 
       {loading ? (
-        <div className="text-center py-10 text-gray-500">{t('loading')}</div>
+        <div className="text-center py-12 text-stone-400 text-sm">{t('loading')}</div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-10 bg-white rounded-lg shadow text-gray-500">
+        <div className="text-center py-12 bg-white border border-stone-200 rounded-lg text-stone-400 text-sm">
           {t('no_posts')}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {posts.map((post: Post) => (
             <PostCard
               key={post.id}
@@ -263,14 +293,14 @@ export const Timeline = () => {
       )}
 
       {pagination.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between rounded-lg border bg-white px-4 py-3 text-sm text-gray-600">
+        <div className="mt-4 flex items-center justify-between rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm text-stone-500">
           <span>{t('page_status', { page: pagination.page, total: pagination.totalPages })}</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setPage((current) => Math.max(1, current - 1))}
               disabled={pagination.page <= 1}
-              className="rounded border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded border border-stone-200 px-3 py-1 text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
             >
               {t('previous')}
             </button>
@@ -278,7 +308,7 @@ export const Timeline = () => {
               type="button"
               onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
               disabled={pagination.page >= pagination.totalPages}
-              className="rounded border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded border border-stone-200 px-3 py-1 text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
             >
               {t('next')}
             </button>

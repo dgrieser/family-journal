@@ -12,7 +12,7 @@ interface PostFormProps {
 }
 
 export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [text, setText] = useState(initialData?.text || '');
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [files, setFiles] = useState<File[]>([]);
@@ -48,12 +48,12 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
   useEffect(() => {
     // Fetch hashtags for autocomplete.
     const fetchData = async () => {
-       try {
-         const hRes = await api.get('/hashtags');
-         setAllHashtags(hRes.data.map((h: Hashtag) => h.name));
-       } catch (err) {
-         console.error(err);
-       }
+      try {
+        const hRes = await api.get('/hashtags');
+        setAllHashtags(hRes.data.map((h: Hashtag) => h.name));
+      } catch (err) {
+        console.error(err);
+      }
     };
     fetchData();
   }, []);
@@ -173,32 +173,38 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 mb-6">
+    <div className="bg-white rounded-lg border border-stone-200 p-4 mb-5">
       <form onSubmit={handleSubmit}>
-        <div className="flex items-center justify-between mb-2">
-           <input
-             type="date"
-             value={date}
-             onChange={(e) => setDate(e.target.value)}
-             className="border rounded px-2 py-1 text-sm"
-           />
+        <div className="mb-2">
+          <div className="relative inline-flex items-center gap-2 border border-stone-200 rounded px-2.5 py-1.5 cursor-pointer bg-white">
+            <span className="text-sm text-stone-700 select-none whitespace-nowrap">
+              {new Date(date + 'T12:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            </span>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full"
+            />
+          </div>
         </div>
+
         <div className="relative">
           <textarea
             ref={textareaRef}
             value={text}
             onChange={handleTextChange}
             placeholder={t('new_post')}
-            className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none min-h-[100px]"
+            className="w-full border border-stone-200 rounded-md p-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 min-h-[100px] resize-none transition"
           />
           {(showHashtagSuggestions || showPersonSuggestions) && suggestions.length > 0 && (
-            <div className="absolute z-10 bg-white border rounded shadow-lg mt-1 w-full max-h-40 overflow-y-auto">
+            <div className="absolute z-10 bg-white border border-stone-200 rounded-md shadow-lg mt-1 w-full max-h-40 overflow-y-auto">
               {suggestions.map(s => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => applySuggestion(s)}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                  className="block w-full text-left px-3.5 py-2 text-sm hover:bg-stone-50 text-stone-700 transition-colors"
                 >
                   {s}
                 </button>
@@ -207,35 +213,41 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
           )}
         </div>
 
-        <div className="mt-2 flex flex-wrap gap-2">
-           {files.map((file, i) => (
-             <div key={i} className="flex items-center bg-gray-100 px-2 py-1 rounded text-xs">
+        {files.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {files.map((file, i) => (
+              <div key={i} className="flex items-center bg-stone-100 border border-stone-200 px-2 py-1 rounded text-xs text-stone-600">
                 <span className="truncate max-w-[100px]">{file.name}</span>
-                <button type="button" onClick={() => setFiles(files.filter((_, idx) => idx !== i))} className="ml-1 text-red-500">
-                  <X size={14} />
+                <button
+                  type="button"
+                  onClick={() => setFiles(files.filter((_, idx) => idx !== i))}
+                  className="ml-1.5 text-stone-400 hover:text-red-500 transition-colors"
+                >
+                  <X size={12} />
                 </button>
-             </div>
-           ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {submitError && (
-          <div className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {submitError}
           </div>
         )}
 
         <div className="flex items-center justify-between mt-3">
-          <label className="cursor-pointer text-gray-500 hover:text-indigo-600 flex items-center gap-1">
-            <Paperclip size={20} />
-            <span className="text-sm">{t('upload_files')}</span>
+          <label className="cursor-pointer inline-flex items-center gap-1.5 text-stone-400 hover:text-stone-600 text-sm transition-colors">
+            <Paperclip size={17} />
+            <span>{t('upload_files')}</span>
             <input type="file" multiple onChange={handleFileChange} className="hidden" />
           </label>
           <button
             type="submit"
             disabled={!text.trim() || isSubmitting}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+            className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            <Send size={18} />
+            <Send size={15} />
             {t('save')}
           </button>
         </div>
