@@ -27,9 +27,9 @@ export const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-stone-50">
+    <div className="min-h-screen flex bg-slate-50">
       {/* Left branding panel */}
-      <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 bg-stone-900 px-10 py-12 flex-shrink-0">
+      <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 bg-slate-800 px-10 py-12 flex-shrink-0">
         <span
           style={{ fontFamily: 'var(--font-display)' }}
           className="text-2xl font-semibold text-white tracking-wide"
@@ -59,7 +59,7 @@ export const Register = () => {
           <h1 className="text-2xl font-semibold text-stone-900 mb-1">{t('register')}</h1>
           <p className="text-sm text-stone-500 mb-7">
             {t('already_have_account')}{' '}
-            <Link to={APP_ROUTES.AUTH_LOGIN} className="text-amber-700 hover:text-amber-600 font-medium transition-colors">
+            <Link to={APP_ROUTES.AUTH_LOGIN} className="text-violet-700 hover:text-violet-600 font-medium transition-colors">
               {t('login')}
             </Link>
           </p>
@@ -77,7 +77,7 @@ export const Register = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full rounded-md border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600 transition"
+                className="block w-full rounded-md border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-violet-600 focus:outline-none focus:ring-1 focus:ring-violet-600 transition"
                 required
               />
             </div>
@@ -87,13 +87,13 @@ export const Register = () => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="block w-full rounded-md border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600 transition"
+                className="block w-full rounded-md border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-violet-600 focus:outline-none focus:ring-1 focus:ring-violet-600 transition"
                 required
               />
             </div>
             <button
               type="submit"
-              className="w-full rounded-md bg-amber-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors"
+              className="w-full rounded-md bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 transition-colors"
             >
               {t('register')}
             </button>

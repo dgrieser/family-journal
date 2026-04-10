@@ -8,8 +8,8 @@ import { APP_ROUTES, API_ROUTES } from '../constants/routes';
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors rounded-md mx-2 ${
     isActive
-      ? 'bg-amber-700 text-white font-medium'
-      : 'text-stone-400 hover:bg-stone-800 hover:text-stone-100'
+      ? 'bg-violet-600 text-white font-medium'
+      : 'text-slate-400 hover:bg-slate-700 hover:text-slate-100'
   }`;
 
 export const Layout = () => {
@@ -32,13 +32,13 @@ export const Layout = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-stone-50">
+    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
       {/* Sidebar / Topbar */}
-      <nav className="bg-stone-900 text-stone-300 w-full md:w-56 flex-shrink-0 flex md:flex-col">
+      <nav className="bg-slate-800 text-slate-300 w-full md:w-[var(--sidebar-width)] flex-shrink-0 flex md:flex-col">
         {/* Brand */}
-        <div className="px-5 pt-7 pb-5 md:border-b-2 md:border-amber-600 flex items-center justify-between flex-shrink-0 bg-stone-950/60">
-          <div className="flex flex-col gap-1" style={{ fontFamily: 'var(--font-display)' }}>
-            <span className="text-xs font-medium tracking-[0.35em] uppercase text-amber-500">
+        <div className="px-5 pt-7 pb-5 md:border-b-2 md:border-violet-600 flex items-center justify-between flex-shrink-0 bg-slate-900/60">
+          <div className="flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
+            <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-400 ml-[8px] mb-[-2px]">
               Family
             </span>
             <span className="text-5xl font-bold text-white leading-none" style={{ letterSpacing: '-0.02em' }}>
@@ -47,7 +47,7 @@ export const Layout = () => {
           </div>
           <button
             onClick={toggleLanguage}
-            className="md:hidden p-1.5 hover:text-amber-400 rounded transition-colors"
+            className="md:hidden p-1.5 hover:text-violet-400 rounded transition-colors"
             aria-label="Toggle language"
           >
             <Languages size={18} />
@@ -77,17 +77,17 @@ export const Layout = () => {
         </div>
 
         {/* Bottom items - desktop */}
-        <div className="hidden md:flex flex-col border-t border-stone-800 py-2 gap-0.5">
+        <div className="hidden md:flex flex-col border-t border-slate-700 py-2 gap-0.5">
           <button
             onClick={toggleLanguage}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-400 hover:bg-stone-800 hover:text-stone-100 transition-colors rounded-md mx-2"
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-400 hover:bg-slate-700 hover:text-slate-100 transition-colors rounded-md mx-2"
           >
             <Languages size={17} />
             <span>{i18n.language.toUpperCase()}</span>
           </button>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-400 hover:bg-stone-800 hover:text-stone-100 transition-colors rounded-md mx-2"
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-400 hover:bg-slate-700 hover:text-slate-100 transition-colors rounded-md mx-2"
           >
             <LogOut size={17} />
             <span>{t('logout')}</span>
@@ -100,7 +100,7 @@ export const Layout = () => {
       </main>
 
       {/* Mobile logout bar */}
-      <div className="md:hidden bg-stone-900 text-stone-400 border-t border-stone-800 p-2 flex justify-around">
+      <div className="md:hidden bg-slate-800 text-slate-400 border-t border-slate-700 p-2 flex justify-around">
         <button
           onClick={handleLogout}
           className="flex flex-col items-center gap-0.5 p-2 hover:text-stone-100 transition-colors"

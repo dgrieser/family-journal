@@ -57,7 +57,7 @@ export const Persons = () => {
     }
   };
 
-  const inputClass = 'block w-full border border-stone-200 rounded-md px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition placeholder:text-stone-400';
+  const inputClass = 'block w-full border border-stone-200 rounded-md px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition placeholder:text-stone-400';
 
   return (
     <div>
@@ -101,7 +101,7 @@ export const Persons = () => {
             )}
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 transition-colors"
+              className="inline-flex items-center gap-2 rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 transition-colors"
             >
               {editingId ? <Check size={15} /> : <Plus size={15} />}
               {t('save')}
@@ -129,7 +129,7 @@ export const Persons = () => {
                   <div className="flex justify-end gap-1">
                     <button
                       onClick={() => handleEdit(p)}
-                      className="p-1.5 text-stone-400 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
+                      className="p-1.5 text-stone-400 hover:text-violet-700 hover:bg-violet-50 rounded transition-colors"
                     >
                       <Edit2 size={15} />
                     </button>

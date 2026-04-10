@@ -35,7 +35,7 @@ export const Profile = () => {
     }
   };
 
-  const inputClass = 'block w-full border border-stone-200 rounded-md px-3.5 py-2.5 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition';
+  const inputClass = 'block w-full border border-stone-200 rounded-md px-3.5 py-2.5 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition';
 
   return (
     <div className="max-w-lg">
@@ -91,7 +91,7 @@ export const Profile = () => {
           </div>
           <button
             type="submit"
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-amber-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-600 transition-colors"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-500 transition-colors"
           >
             <Save size={15} />
             {t('update')}

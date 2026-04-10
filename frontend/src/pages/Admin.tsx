@@ -89,7 +89,7 @@ export const Admin = () => {
                     ) : (
                       <button
                         onClick={() => handleRoleChange(u.id, 'admin')}
-                        className="inline-flex items-center gap-1 text-xs text-amber-700 hover:text-amber-600 font-medium transition-colors"
+                        className="inline-flex items-center gap-1 text-xs text-violet-700 hover:text-violet-600 font-medium transition-colors"
                       >
                         <Shield size={14} /> {t('promote')}
                       </button>

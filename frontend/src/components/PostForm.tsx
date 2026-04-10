@@ -195,7 +195,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
             value={text}
             onChange={handleTextChange}
             placeholder={t('new_post')}
-            className="w-full border border-stone-200 rounded-md p-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 min-h-[100px] resize-none transition"
+            className="w-full border border-stone-200 rounded-md p-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 min-h-[100px] resize-none transition"
           />
           {(showHashtagSuggestions || showPersonSuggestions) && suggestions.length > 0 && (
             <div className="absolute z-10 bg-white border border-stone-200 rounded-md shadow-lg mt-1 w-full max-h-40 overflow-y-auto">
@@ -245,7 +245,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
           <button
             type="submit"
             disabled={!text.trim() || isSubmitting}
-            className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center gap-2 rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <Send size={15} />
             {t('save')}

@@ -34,39 +34,37 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-stone-50">
+    <div className="min-h-screen flex bg-slate-50">
       {/* Left branding panel */}
-      <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 bg-stone-900 px-10 py-12 flex-shrink-0">
-        <span
-          style={{ fontFamily: 'var(--font-display)' }}
-          className="text-2xl font-semibold text-white tracking-wide"
-        >
-          FamilyJournal
-        </span>
-        <p
-          style={{ fontFamily: 'var(--font-display)' }}
-          className="text-stone-400 text-lg italic leading-relaxed"
-        >
-          "Preserve the moments that matter."
-        </p>
+      <div className="hidden lg:flex flex-col justify-between lg:w-[var(--sidebar-width)] bg-slate-800 flex-shrink-0">
+        <div className="px-5 pt-7 pb-5 bg-slate-900/60 border-b-2 border-violet-600">
+          <div className="flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
+            <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-400 ml-[8px] mb-[-2px]">
+              Family
+            </span>
+            <span className="text-5xl font-bold text-white leading-none" style={{ letterSpacing: '-0.02em' }}>
+              Journal
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Form panel */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden mb-8">
-            <span
-              style={{ fontFamily: 'var(--font-display)' }}
-              className="text-2xl font-semibold text-stone-900 tracking-wide"
-            >
-              FamilyJournal
+          <div className="lg:hidden mb-8 flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
+            <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-500 ml-[5px] mb-[-1px]">
+              Family
+            </span>
+            <span className="text-3xl font-bold text-stone-900 leading-none" style={{ letterSpacing: '-0.02em' }}>
+              Journal
             </span>
           </div>
 
           <h1 className="text-2xl font-semibold text-stone-900 mb-1">{t('login')}</h1>
           <p className="text-sm text-stone-500 mb-7">
             {t('dont_have_account')}{' '}
-            <Link to={APP_ROUTES.AUTH_REGISTER} className="text-amber-700 hover:text-amber-600 font-medium transition-colors">
+            <Link to={APP_ROUTES.AUTH_REGISTER} className="text-violet-700 hover:text-violet-600 font-medium transition-colors">
               {t('register')}
             </Link>
           </p>
@@ -89,7 +87,7 @@ export const Login = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full rounded-md border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600 transition"
+                className="block w-full rounded-md border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-violet-600 focus:outline-none focus:ring-1 focus:ring-violet-600 transition"
                 required
               />
             </div>
@@ -99,13 +97,13 @@ export const Login = () => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="block w-full rounded-md border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600 transition"
+                className="block w-full rounded-md border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-violet-600 focus:outline-none focus:ring-1 focus:ring-violet-600 transition"
                 required
               />
             </div>
             <button
               type="submit"
-              className="w-full rounded-md bg-amber-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors"
+              className="w-full rounded-md bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 transition-colors"
             >
               {t('login')}
             </button>

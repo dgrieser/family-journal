@@ -42,7 +42,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-stone-200 p-5 mb-3">
+    <div className="bg-white rounded-lg border border-slate-200 p-5 mb-3">
       {/* Header */}
       <div className="flex justify-between items-start mb-3">
         <div>
@@ -74,12 +74,12 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
       {(post.hashtags?.length > 0 || post.persons?.length > 0) && (
         <div className="flex flex-wrap gap-1.5 mb-4">
           {post.hashtags?.map((h: Hashtag) => (
-            <span key={h.id} className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 rounded text-xs font-medium">
+            <span key={h.id} className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded text-xs font-medium">
               <Tag size={11} /> {h.name}
             </span>
           ))}
           {post.persons?.map((p: Person) => (
-            <span key={p.id} className="inline-flex items-center gap-1 bg-stone-100 text-stone-600 border border-stone-200 px-2 py-0.5 rounded text-xs font-medium">
+            <span key={p.id} className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-xs font-medium">
               <UserIcon size={11} /> {p.name}
             </span>
           ))}
@@ -88,7 +88,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
 
       {/* Attachments */}
       {post.attachments?.length > 0 && (
-        <div className="border-t border-stone-100 pt-4 mb-4">
+        <div className="border-t border-slate-100 pt-4 mb-4">
           <h4 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2.5">{t('attachments')}</h4>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {post.attachments.map((a: Attachment) => (
@@ -97,10 +97,10 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
                   <img
                     src={`${api.defaults.baseURL}/attachments/${a.id}/download`}
                     alt={a.file_name}
-                    className="w-full h-28 object-cover rounded border border-stone-200"
+                    className="w-full h-28 object-cover rounded border border-slate-200"
                   />
                 ) : (
-                  <div className="w-full h-28 bg-stone-50 rounded border border-stone-200 flex items-center justify-center text-stone-300">
+                  <div className="w-full h-28 bg-slate-50 rounded border border-slate-200 flex items-center justify-center text-slate-300">
                     <Paperclip size={22} />
                   </div>
                 )}
@@ -108,7 +108,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
                   href={`${api.defaults.baseURL}/attachments/${a.id}/download`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between p-2 border border-stone-200 rounded hover:bg-stone-50 text-xs text-stone-600 transition-colors"
+                  className="flex items-center justify-between p-2 border border-slate-200 rounded hover:bg-slate-50 text-xs text-slate-600 transition-colors"
                 >
                   <span className="truncate">{a.file_name}</span>
                   <Download size={12} className="flex-shrink-0 ml-1 text-stone-400" />
@@ -120,7 +120,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
       )}
 
       {/* Comments toggle */}
-      <div className="border-t border-stone-100 pt-3">
+      <div className="border-t border-slate-100 pt-3">
         <button
           onClick={() => setShowComments(!showComments)}
           className="inline-flex items-center gap-1.5 text-stone-400 hover:text-stone-600 text-xs font-medium transition-colors"
@@ -134,7 +134,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
       {showComments && (
         <div className="mt-3 space-y-2">
           {post.comments?.map((c: Comment) => (
-            <div key={c.id} className="bg-stone-50 border border-stone-100 px-3 py-2 rounded group relative">
+            <div key={c.id} className="bg-slate-50 border border-slate-100 px-3 py-2 rounded group relative">
               <div className="text-xs font-medium text-stone-500 mb-0.5">{c.user?.email}</div>
               <div className="text-sm text-stone-700">{c.text}</div>
               {(user?.id === c.user_id || user?.role === 'admin') && (
@@ -147,7 +147,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
               )}
             </div>
           ))}
-          <form onSubmit={handleAddComment} className="flex mt-2 rounded-md overflow-hidden border border-stone-200 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition">
+          <form onSubmit={handleAddComment} className="flex mt-2 rounded-md overflow-hidden border border-slate-200 focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500 transition">
             <input
               type="text"
               value={commentText}
@@ -157,7 +157,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
             />
             <button
               type="submit"
-              className="bg-amber-700 text-white px-3 py-2 text-sm hover:bg-amber-600 transition-colors flex items-center"
+              className="bg-violet-600 text-white px-3 py-2 text-sm hover:bg-violet-500 transition-colors flex items-center"
             >
               <Send size={14} />
             </button>
