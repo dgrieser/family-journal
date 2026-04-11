@@ -4,6 +4,29 @@ import api from '../api';
 import { MessageSquare, Trash2, Edit2, Download, User as UserIcon, Tag, Send, Paperclip } from 'lucide-react';
 import { useAuthStore } from '../store';
 import type { Post, Hashtag, Person, Attachment, Comment } from '../types';
+import { getTagColors } from '../utils/tagColors';
+
+const TAG_PATTERN = /([@#][\p{L}\d_]+)/gu;
+
+function renderTextWithTags(text: string) {
+  const parts = text.split(TAG_PATTERN);
+  return parts.map((part, i) => {
+    if (/^[@#]/.test(part)) {
+      const name = part.slice(1);
+      const { color, background, border } = getTagColors(name);
+      return (
+        <span
+          key={i}
+          style={{ color, background, border: `1px solid ${border}` }}
+          className="inline rounded px-1 py-0.5 text-xs font-medium mx-0.5 whitespace-nowrap"
+        >
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
+}
 
 interface PostCardProps {
   post: Post;
@@ -68,21 +91,27 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
       </div>
 
       {/* Content */}
-      <p className="text-stone-700 whitespace-pre-wrap mb-4 leading-relaxed text-sm">{post.text}</p>
+      <p className="text-stone-700 whitespace-pre-wrap mb-4 leading-relaxed text-sm">{renderTextWithTags(post.text)}</p>
 
       {/* Tags */}
       {(post.hashtags?.length > 0 || post.persons?.length > 0) && (
         <div className="flex flex-wrap gap-1.5 mb-4">
-          {post.hashtags?.map((h: Hashtag) => (
-            <span key={h.id} className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded text-xs font-medium">
-              <Tag size={11} /> {h.name}
-            </span>
-          ))}
-          {post.persons?.map((p: Person) => (
-            <span key={p.id} className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded text-xs font-medium">
-              <UserIcon size={11} /> {p.name}
-            </span>
-          ))}
+          {post.hashtags?.map((h: Hashtag) => {
+            const { color, background, border } = getTagColors(h.name);
+            return (
+              <span key={h.id} style={{ color, background, border: `1px solid ${border}` }} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium">
+                <Tag size={11} /> {h.name}
+              </span>
+            );
+          })}
+          {post.persons?.map((p: Person) => {
+            const { color, background, border } = getTagColors(p.name);
+            return (
+              <span key={p.id} style={{ color, background, border: `1px solid ${border}` }} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium">
+                <UserIcon size={11} /> {p.name}
+              </span>
+            );
+          })}
         </div>
       )}
 

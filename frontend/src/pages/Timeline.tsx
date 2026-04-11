@@ -6,6 +6,7 @@ import { PostForm } from '../components/PostForm';
 import { PostCard } from '../components/PostCard';
 import { Calendar, ChevronLeft, ChevronRight, Search, Filter, X } from 'lucide-react';
 import type { Post, Hashtag, PaginatedResponse, PaginationMeta } from '../types';
+import { getTagColors } from '../utils/tagColors';
 
 const PAGE_SIZE = 20;
 
@@ -184,22 +185,26 @@ export const Timeline = () => {
             <div>
               <h4 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2.5">{t('hashtags')}</h4>
               <div className="flex flex-wrap gap-1.5">
-                {allHashtags.map(h => (
-                  <button
-                    key={h}
-                    onClick={() => {
-                      setPage(1);
-                      setSelectedHashtags(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
-                    }}
-                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                      selectedHashtags.includes(h)
-                        ? 'bg-violet-600 text-white'
-                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                    }`}
-                  >
-                    #{h}
-                  </button>
-                ))}
+                {allHashtags.map(h => {
+                  const { color, background, border } = getTagColors(h);
+                  const selected = selectedHashtags.includes(h);
+                  return (
+                    <button
+                      key={h}
+                      onClick={() => {
+                        setPage(1);
+                        setSelectedHashtags(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
+                      }}
+                      style={selected
+                        ? { background: color, color: 'white', border: 'none' }
+                        : { color, background, border: `1px solid ${border}` }
+                      }
+                      className="px-2.5 py-1 rounded text-xs font-medium transition-colors"
+                    >
+                      #{h}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -214,35 +219,43 @@ export const Timeline = () => {
               />
               {selectedPersons.length > 0 && (
                 <div className="mb-2.5 flex flex-wrap gap-1.5">
-                  {selectedPersons.map(p => (
-                    <button
-                      key={p}
-                      onClick={() => {
-                        setPage(1);
-                        setSelectedPersons(prev => prev.filter(x => x !== p));
-                      }}
-                      className="inline-flex items-center gap-1 rounded bg-stone-700 px-2.5 py-1 text-xs text-white font-medium hover:bg-stone-600 transition-colors"
-                    >
-                      @{p} <X size={11} />
-                    </button>
-                  ))}
+                  {selectedPersons.map(p => {
+                    const { color } = getTagColors(p);
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => {
+                          setPage(1);
+                          setSelectedPersons(prev => prev.filter(x => x !== p));
+                        }}
+                        style={{ background: color, color: 'white' }}
+                        className="inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors"
+                      >
+                        @{p} <X size={11} />
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               <div className="flex flex-wrap gap-1.5">
                 {matchingPersons
                   .filter((p) => !selectedPersons.includes(p))
-                  .map(p => (
-                    <button
-                      key={p}
-                      onClick={() => {
-                        setPage(1);
-                        setSelectedPersons(prev => [...prev, p]);
-                      }}
-                      className="px-2.5 py-1 rounded text-xs font-medium bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors"
-                    >
-                      @{p}
-                    </button>
-                  ))}
+                  .map(p => {
+                    const { color, background, border } = getTagColors(p);
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => {
+                          setPage(1);
+                          setSelectedPersons(prev => [...prev, p]);
+                        }}
+                        style={{ color, background, border: `1px solid ${border}` }}
+                        className="px-2.5 py-1 rounded text-xs font-medium transition-colors"
+                      >
+                        @{p}
+                      </button>
+                    );
+                  })}
               </div>
             </div>
 

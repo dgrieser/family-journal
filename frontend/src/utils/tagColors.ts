@@ -1,0 +1,68 @@
+/**
+ * Golden angle color assignment for persons and hashtags.
+ * hue_i = (i * 137.508) % 360
+ *
+ * The djb2 hash converts a word into a stable integer index,
+ * then the golden angle step ensures maximum perceptual separation.
+ */
+
+export function goldenAngleHue(word: string): number {
+  let hash = 5381;
+  const s = word.toLowerCase();
+  for (let i = 0; i < s.length; i++) {
+    hash = ((hash << 5) + hash) ^ s.charCodeAt(i);
+    hash = hash >>> 0; // keep unsigned 32-bit
+  }
+  return (hash * 137.508) % 360;
+}
+
+export interface TagColors {
+  color: string;
+  background: string;
+  border: string;
+}
+
+export function getTagColors(word: string): TagColors {
+  const hue = goldenAngleHue(word);
+  return {
+    color: `hsl(${hue}, 65%, 35%)`,
+    background: `hsl(${hue}, 80%, 92%)`,
+    border: `hsl(${hue}, 55%, 80%)`,
+  };
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Converts raw post text into an HTML string where @mentions and #hashtags
+ * are wrapped in <mark> tags with golden-angle inline styles.
+ * Used by the PostForm textarea backdrop overlay.
+ * All non-tag text is HTML-escaped to prevent XSS.
+ */
+export function buildHighlightHtml(text: string): string {
+  const parts = text.split(/([@#][\p{L}\d_]+)/gu);
+  return parts
+    .map((part) => {
+      if (/^[@#]/.test(part)) {
+        const name = part.slice(1);
+        const hue = goldenAngleHue(name);
+        return (
+          `<mark style="` +
+          `background:hsl(${hue},80%,92%);` +
+          `color:hsl(${hue},65%,35%);` +
+          `border-radius:3px;` +
+          `padding:0 3px;` +
+          `border:1px solid hsl(${hue},55%,80%);` +
+          `font-weight:500` +
+          `">${escapeHtml(part)}</mark>`
+        );
+      }
+      return escapeHtml(part);
+    })
+    .join('');
+}

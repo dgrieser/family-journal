@@ -5,6 +5,7 @@ import api from '../api';
 import { searchPersons } from '../persons';
 import { Send, Paperclip, X } from 'lucide-react';
 import type { Post, Hashtag } from '../types';
+import { buildHighlightHtml } from '../utils/tagColors';
 
 interface PostFormProps {
   onSuccess: () => void;
@@ -24,6 +25,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
   const personRequestIdRef = useRef(0);
   const personSearchTimeoutRef = useRef<number | null>(null);
 
@@ -190,12 +192,43 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
         </div>
 
         <div className="relative">
+          {/* Backdrop that renders highlighted @mentions and #hashtags */}
+          <div
+            ref={backdropRef}
+            aria-hidden="true"
+            dangerouslySetInnerHTML={{ __html: buildHighlightHtml(text) }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              padding: '0.75rem',
+              fontSize: '0.875rem',
+              fontFamily: 'inherit',
+              lineHeight: 'inherit',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              overflowY: 'hidden',
+              border: '1px solid transparent',
+              borderRadius: '0.375rem',
+              color: 'transparent',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
           <textarea
             ref={textareaRef}
             value={text}
             onChange={handleTextChange}
-            placeholder={t('new_post')}
-            className="w-full border border-stone-200 rounded-md p-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 min-h-[100px] resize-none transition"
+            onScroll={(e) => {
+              if (backdropRef.current) {
+                backdropRef.current.scrollTop = e.currentTarget.scrollTop;
+              }
+            }}
+            placeholder={text ? '' : t('new_post')}
+            style={{ background: 'transparent', caretColor: '#57534e', color: text ? 'transparent' : undefined }}
+            className="w-full border border-stone-200 rounded-md p-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 min-h-[100px] resize-none transition relative"
           />
           {(showHashtagSuggestions || showPersonSuggestions) && suggestions.length > 0 && (
             <div className="absolute z-10 bg-white border border-stone-200 rounded-md shadow-lg mt-1 w-full max-h-40 overflow-y-auto">
