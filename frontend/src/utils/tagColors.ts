@@ -6,6 +6,9 @@
  * then the golden angle step ensures maximum perceptual separation.
  */
 
+/** Shared regex for splitting / matching @mention and #hashtag tokens. */
+export const TAG_PATTERN = /([@#][\p{L}\d_]+)/gu;
+
 export function goldenAngleHue(word: string): number {
   let hash = 5381;
   const s = word.toLowerCase();
@@ -35,7 +38,9 @@ function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 /**
@@ -45,10 +50,10 @@ function escapeHtml(s: string): string {
  * All non-tag text is HTML-escaped to prevent XSS.
  */
 export function buildHighlightHtml(text: string): string {
-  const parts = text.split(/([@#][\p{L}\d_]+)/gu);
+  const parts = text.split(TAG_PATTERN);
   return parts
     .map((part) => {
-      if (/^[@#]/.test(part)) {
+      if (/^[@#][\p{L}\d_]+$/u.test(part)) {
         const name = part.slice(1);
         const hue = goldenAngleHue(name);
         return (

@@ -17,3 +17,17 @@ body {
   font-family: var(--font-body);
   @apply bg-slate-50 text-stone-800 antialiased;
 }
+
+/* Textarea backdrop for tag highlighting — hidden scrollbar keeps alignment with textarea */
+.tag-highlight-backdrop {
+  scrollbar-width: none; /* Firefox */
+}
+.tag-highlight-backdrop::-webkit-scrollbar {
+  display: none; /* Chrome / Safari */
+}
+
+/* Keep text selection visible when textarea has transparent text */
+.tag-textarea::selection {
+  background-color: rgba(139, 92, 246, 0.25);
+  color: transparent;
+}

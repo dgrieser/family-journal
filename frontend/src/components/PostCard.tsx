@@ -4,14 +4,12 @@ import api from '../api';
 import { MessageSquare, Trash2, Edit2, Download, User as UserIcon, Tag, Send, Paperclip } from 'lucide-react';
 import { useAuthStore } from '../store';
 import type { Post, Hashtag, Person, Attachment, Comment } from '../types';
-import { getTagColors } from '../utils/tagColors';
-
-const TAG_PATTERN = /([@#][\p{L}\d_]+)/gu;
+import { getTagColors, TAG_PATTERN } from '../utils/tagColors';
 
 function renderTextWithTags(text: string) {
   const parts = text.split(TAG_PATTERN);
   return parts.map((part, i) => {
-    if (/^[@#]/.test(part)) {
+    if (/^[@#][\p{L}\d_]+$/u.test(part)) {
       const name = part.slice(1);
       const { color, background, border } = getTagColors(name);
       return (
