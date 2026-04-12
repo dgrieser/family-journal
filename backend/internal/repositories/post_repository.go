@@ -127,15 +127,16 @@ func (r *Repository) DeletePost(id int64, ownerFilter *int64) error {
 
 func (r *Repository) GetPost(id int64, ownerFilter *int64) (*models.Post, error) {
 	var post models.Post
-	query := `SELECT id, user_id, date, text, created_at, updated_at FROM posts WHERE id = ?`
+	query := `SELECT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at, u.email AS author_email FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id = ?`
 	args := []interface{}{id}
 	if ownerFilter != nil {
-		query += ` AND user_id = ?`
+		query += ` AND p.user_id = ?`
 		args = append(args, *ownerFilter)
 	}
 	if err := r.DB.Get(&post, query, args...); err != nil {
 		return nil, err
 	}
+	post.HydrateUser()
 	return &post, nil
 }
 
@@ -176,7 +177,8 @@ func (r *Repository) CountPosts(ownerFilter *int64, date time.Time, hashtags, pe
 
 func buildPostListQuery(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (string, []interface{}) {
 	base, args := buildPostQueryBase(ownerFilter, date, hashtags, persons, search)
-	return `SELECT DISTINCT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at ` + base, args
+	return `SELECT DISTINCT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at, u.email AS author_email ` +
+		strings.Replace(base, "FROM posts p", "FROM posts p\n\t\tJOIN users u ON u.id = p.user_id", 1), args
 }
 
 func buildPostCountQuery(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (string, []interface{}) {
@@ -226,6 +228,9 @@ func (r *Repository) listPosts(queryer sqlx.Ext, ownerFilter *int64, date time.T
 	var posts []models.Post
 	if err := sqlx.Select(queryer, &posts, base, args...); err != nil {
 		return nil, err
+	}
+	for i := range posts {
+		posts[i].HydrateUser()
 	}
 	return posts, nil
 }

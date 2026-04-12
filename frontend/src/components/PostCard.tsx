@@ -81,8 +81,8 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
       {/* Header */}
       <div className="flex justify-between items-start mb-3">
         <div>
-          <span className="text-sm font-medium text-stone-800">{post.user?.email}</span>
-          <span className="text-xs text-stone-400 block mt-0.5">{new Date(post.created_at).toLocaleString(i18n.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="text-xs text-stone-900 block">{new Date(post.created_at).toLocaleString(i18n.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="text-xs text-stone-400 block mt-0.5">{post.user?.email}</span>
         </div>
         {(user?.id === post.user_id || user?.role === 'admin') && (
           <div className="flex gap-1">
@@ -179,7 +179,11 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
         <div className="mt-3 space-y-2">
           {post.comments?.map((c: Comment) => (
             <div key={c.id} className="bg-slate-50 border border-slate-100 px-3 py-2 rounded group relative">
-              <div className="text-xs font-medium text-stone-500 mb-0.5">{c.user?.email}</div>
+              <div className="text-xs text-stone-500 mb-0.5">
+                <span>{c.user?.email}</span>
+                <span className="mx-1 text-stone-300">·</span>
+                <span className="text-stone-400">{new Date(c.created_at).toLocaleString(i18n.language, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
               <div className="text-sm text-stone-700">{c.text}</div>
               {(user?.id === c.user_id || user?.role === 'admin') && (
                 <button
