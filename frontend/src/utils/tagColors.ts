@@ -56,14 +56,15 @@ export function buildHighlightHtml(text: string): string {
       if (/^[@#][\p{L}\d_]+$/u.test(part)) {
         const name = part.slice(1);
         const hue = goldenAngleHue(name);
+        // Use box-shadow instead of padding/border so the mark adds zero
+        // horizontal width — keeping text metrics identical to the textarea
+        // and preserving cursor position alignment.
         return (
           `<mark style="` +
           `background:hsl(${hue},80%,92%);` +
           `color:hsl(${hue},65%,35%);` +
           `border-radius:3px;` +
-          `padding:0 3px;` +
-          `border:1px solid hsl(${hue},55%,80%);` +
-          `font-weight:500` +
+          `box-shadow:0 0 0 3px hsl(${hue},80%,92%),0 0 0 4px hsl(${hue},55%,80%)` +
           `">${escapeHtml(part)}</mark>`
         );
       }
