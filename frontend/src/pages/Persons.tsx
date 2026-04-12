@@ -5,11 +5,13 @@ import { Users, Plus, Trash2, Edit2, Check } from 'lucide-react';
 import type { PaginatedResponse, PaginationMeta, Person } from '../types';
 import { extractError } from '../utils/apiError';
 import { ErrorAlert } from '../components/ErrorAlert';
+import { useAuthStore } from '../store';
 
 const PAGE_SIZE = 20;
 
 export const Persons = () => {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
   const [persons, setPersons] = useState<Person[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: PAGE_SIZE, totalItems: 0, totalPages: 0 });
   const [name, setName] = useState('');
@@ -142,20 +144,22 @@ export const Persons = () => {
                 <td className="px-5 py-3.5 text-sm font-medium text-stone-800">{p.name}</td>
                 <td className="px-5 py-3.5 text-sm text-stone-500">{p.description}</td>
                 <td className="px-5 py-3.5 text-right">
-                  <div className="flex justify-end gap-1">
-                    <button
-                      onClick={() => handleEdit(p)}
-                      className="p-1.5 text-stone-400 hover:text-violet-700 hover:bg-violet-50 rounded transition-colors"
-                    >
-                      <Edit2 size={15} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+                  {(user?.id === p.created_by_user_id || user?.role === 'admin') && (
+                    <div className="flex justify-end gap-1">
+                      <button
+                        onClick={() => handleEdit(p)}
+                        className="p-1.5 text-stone-400 hover:text-violet-700 hover:bg-violet-50 rounded transition-colors"
+                      >
+                        <Edit2 size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
