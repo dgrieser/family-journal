@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import api from '../api';
 import { Users, Plus, Trash2, Edit2, Check } from 'lucide-react';
 import type { PaginatedResponse, PaginationMeta, Person } from '../types';
@@ -14,6 +15,7 @@ export const Persons = () => {
   const [description, setDescription] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchPersons = useCallback(async (nextPage: number) => {
     const res = await api.get<PaginatedResponse<Person>>('/persons', {
@@ -27,20 +29,32 @@ export const Persons = () => {
     void fetchPersons(page);
   }, [fetchPersons, page]);
 
+  const extractError = (err: unknown, fallback: string): string => {
+    if (axios.isAxiosError(err)) {
+      return (err.response?.data as { error?: string })?.error || fallback;
+    }
+    return fallback;
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      await api.put(`/persons/${editingId}`, { name, description });
-    } else {
-      await api.post('/persons', { name, description });
-    }
-    setName('');
-    setDescription('');
-    setEditingId(null);
-    if (page === 1) {
-      await fetchPersons(1);
-    } else {
-      setPage(1);
+    try {
+      if (editingId) {
+        await api.put(`/persons/${editingId}`, { name, description });
+      } else {
+        await api.post('/persons', { name, description });
+      }
+      setName('');
+      setDescription('');
+      setEditingId(null);
+      setError(null);
+      if (page === 1) {
+        await fetchPersons(1);
+      } else {
+        setPage(1);
+      }
+    } catch (err) {
+      setError(extractError(err, t('action_error')));
     }
   };
 
@@ -48,12 +62,17 @@ export const Persons = () => {
     setEditingId(p.id);
     setName(p.name);
     setDescription(p.description || '');
+    setError(null);
   };
 
   const handleDelete = async (id: number) => {
     if (window.confirm(t('delete') + '?')) {
-      await api.delete(`/persons/${id}`);
-      void fetchPersons(page);
+      try {
+        await api.delete(`/persons/${id}`);
+        void fetchPersons(page);
+      } catch (err) {
+        setError(extractError(err, t('delete_error')));
+      }
     }
   };
 
@@ -64,6 +83,14 @@ export const Persons = () => {
       <h2 className="text-xl font-semibold text-stone-900 mb-6 flex items-center gap-2">
         <Users size={20} className="text-stone-400" /> {t('persons')}
       </h2>
+
+      {/* Error */}
+      {error && (
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 flex justify-between items-start">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="ml-3 text-red-400 hover:text-red-600 flex-shrink-0">&times;</button>
+        </div>
+      )}
 
       {/* Form card */}
       <div className="bg-white rounded-lg border border-stone-200 p-5 mb-6">

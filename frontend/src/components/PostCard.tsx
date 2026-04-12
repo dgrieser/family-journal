@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import api from '../api';
 import { MessageSquare, Trash2, Edit2, Download, User as UserIcon, Tag, Send, Paperclip } from 'lucide-react';
 import { useAuthStore } from '../store';
@@ -37,11 +38,23 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
   const { user } = useAuthStore();
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const extractError = (err: unknown, fallback: string): string => {
+    if (axios.isAxiosError(err)) {
+      return (err.response?.data as { error?: string })?.error || fallback;
+    }
+    return fallback;
+  };
 
   const handleDelete = async () => {
     if (window.confirm(t('delete') + '?')) {
-      await api.delete(`/posts/${post.id}`);
-      onUpdate();
+      try {
+        await api.delete(`/posts/${post.id}`);
+        onUpdate();
+      } catch (err) {
+        setError(extractError(err, t('delete_error')));
+      }
     }
   };
 
@@ -53,13 +66,17 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
       setCommentText('');
       onUpdate();
     } catch (err) {
-      console.error(err);
+      setError(extractError(err, t('comment_error')));
     }
   };
 
   const handleDeleteComment = async (commentId: number) => {
-    await api.delete(`/comments/${commentId}`);
-    onUpdate();
+    try {
+      await api.delete(`/comments/${commentId}`);
+      onUpdate();
+    } catch (err) {
+      setError(extractError(err, t('delete_error')));
+    }
   };
 
   return (
@@ -87,6 +104,14 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
           </div>
         )}
       </div>
+
+      {/* Error */}
+      {error && (
+        <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 flex justify-between items-start">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="ml-3 text-red-400 hover:text-red-600 flex-shrink-0">&times;</button>
+        </div>
+      )}
 
       {/* Content */}
       <p className="text-stone-700 whitespace-pre-wrap mb-4 leading-relaxed text-sm">{renderTextWithTags(post.text)}</p>
