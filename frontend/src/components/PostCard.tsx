@@ -33,7 +33,7 @@ interface PostCardProps {
 }
 
 export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
@@ -68,7 +68,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
       <div className="flex justify-between items-start mb-3">
         <div>
           <span className="text-sm font-medium text-stone-800">{post.user?.email}</span>
-          <span className="text-xs text-stone-400 block mt-0.5">{new Date(post.created_at).toLocaleString()}</span>
+          <span className="text-xs text-stone-400 block mt-0.5">{new Date(post.created_at).toLocaleString(i18n.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
         </div>
         {(user?.id === post.user_id || user?.role === 'admin') && (
           <div className="flex gap-1">
