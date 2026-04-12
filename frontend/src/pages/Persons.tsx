@@ -135,7 +135,7 @@ export const Persons = () => {
             <tr className="border-b border-stone-100 bg-stone-50">
               <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('name')}</th>
               <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('description')}</th>
-              <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('created_by')}</th>
+              <th className="hidden sm:table-cell px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('created_by')}</th>
               <th className="px-5 py-3 text-right text-xs font-medium text-stone-400 uppercase tracking-wider"></th>
             </tr>
           </thead>
@@ -144,7 +144,7 @@ export const Persons = () => {
               <tr key={p.id} className="hover:bg-stone-50 transition-colors">
                 <td className="px-5 py-3.5 text-sm font-medium text-stone-800">{p.name}</td>
                 <td className="px-5 py-3.5 text-sm text-stone-500">{p.description}</td>
-                <td className="px-5 py-3.5 text-sm text-stone-500">{p.creator?.email}</td>
+                <td className="hidden sm:table-cell px-5 py-3.5 text-sm text-stone-500">{p.creator?.email}</td>
                 <td className="px-5 py-3.5 text-right">
                   {(user?.id === p.created_by_user_id || user?.role === 'admin') && (
                     <div className="flex justify-end gap-1">
