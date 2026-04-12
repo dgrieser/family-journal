@@ -53,5 +53,6 @@
   "delete_error": "Löschen fehlgeschlagen. Möglicherweise fehlt die Berechtigung.",
   "comment_error": "Kommentar konnte nicht hinzugefügt werden.",
   "action_error": "Aktion fehlgeschlagen. Möglicherweise fehlt die Berechtigung.",
-  "created_by": "Erstellt von"
+  "created_by": "Erstellt von",
+  "created_at": "Erstellt am"
 }

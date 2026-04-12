@@ -53,5 +53,6 @@
   "delete_error": "Could not delete. You may not have permission.",
   "comment_error": "Could not add comment.",
   "action_error": "Action failed. You may not have permission.",
-  "created_by": "Created by"
+  "created_by": "Created by",
+  "created_at": "Created"
 }

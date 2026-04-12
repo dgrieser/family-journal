@@ -10,7 +10,7 @@ import { useAuthStore } from '../store';
 const PAGE_SIZE = 20;
 
 export const Persons = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
   const [persons, setPersons] = useState<Person[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: PAGE_SIZE, totalItems: 0, totalPages: 0 });
@@ -136,6 +136,7 @@ export const Persons = () => {
               <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('name')}</th>
               <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('description')}</th>
               <th className="hidden sm:table-cell px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('created_by')}</th>
+              <th className="hidden sm:table-cell px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('created_at')}</th>
               <th className="px-5 py-3 text-right text-xs font-medium text-stone-400 uppercase tracking-wider"></th>
             </tr>
           </thead>
@@ -145,9 +146,11 @@ export const Persons = () => {
                 <td className="px-5 py-3.5">
                   <div className="text-sm font-medium text-stone-800">{p.name}</div>
                   {p.creator?.email && <div className="sm:hidden text-xs text-stone-400 mt-0.5">{p.creator.email}</div>}
+                  <div className="sm:hidden text-xs text-stone-400 mt-0.5">{new Date(p.created_at).toLocaleDateString(i18n.language, { year: 'numeric', month: 'short', day: 'numeric' })}</div>
                 </td>
                 <td className="px-5 py-3.5 text-sm text-stone-500">{p.description}</td>
                 <td className="hidden sm:table-cell px-5 py-3.5 text-sm text-stone-500">{p.creator?.email}</td>
+                <td className="hidden sm:table-cell px-5 py-3.5 text-sm text-stone-500">{new Date(p.created_at).toLocaleDateString(i18n.language, { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                 <td className="px-5 py-3.5 text-right">
                   {(user?.id === p.created_by_user_id || user?.role === 'admin') && (
                     <div className="flex justify-end gap-1">
