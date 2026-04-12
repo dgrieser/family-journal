@@ -3,7 +3,7 @@ package services
 import "familyjournal/backend/internal/models"
 
 func (s *Service) ListPersons(scope AccessScope, search string, pagination PaginationParams) (PaginatedResponse[models.Person], error) {
-	persons, totalItems, err := s.Persons.ListPersonsPaginated(scope.OwnerFilter(), search, pagination.PageSize, pagination.Offset())
+	persons, totalItems, err := s.Persons.ListPersonsPaginated(nil, search, pagination.PageSize, pagination.Offset())
 	if err != nil {
 		return PaginatedResponse[models.Person]{}, err
 	}

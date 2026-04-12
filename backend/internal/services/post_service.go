@@ -50,7 +50,7 @@ func (s *Service) CreateOrUpdatePost(scope AccessScope, post *models.Post) error
 }
 
 func (s *Service) ListPosts(scope AccessScope, date time.Time, hashtags, persons []string, search string, pagination PaginationParams) (PaginatedResponse[models.Post], error) {
-	posts, totalItems, err := s.Posts.ListPostsPaginated(scope.OwnerFilter(), date, hashtags, persons, search, pagination.PageSize, pagination.Offset())
+	posts, totalItems, err := s.Posts.ListPostsPaginated(nil, date, hashtags, persons, search, pagination.PageSize, pagination.Offset())
 	if err != nil {
 		return PaginatedResponse[models.Post]{}, err
 	}
@@ -62,7 +62,7 @@ func (s *Service) ListPosts(scope AccessScope, date time.Time, hashtags, persons
 }
 
 func (s *Service) GetPost(scope AccessScope, postID int64) (*models.Post, error) {
-	post, err := s.Posts.GetPost(postID, scope.OwnerFilter())
+	post, err := s.Posts.GetPost(postID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (s *Service) DeletePost(scope AccessScope, postID int64) error {
 }
 
 func (s *Service) ListHashtags(scope AccessScope) ([]models.Hashtag, error) {
-	tags, err := s.Hashtags.ListHashtags(scope.OwnerFilter())
+	tags, err := s.Hashtags.ListHashtags(nil)
 	if err != nil {
 		return nil, err
 	}
