@@ -142,7 +142,10 @@ export const Persons = () => {
           <tbody className="divide-y divide-stone-100">
             {persons.map((p: Person) => (
               <tr key={p.id} className="hover:bg-stone-50 transition-colors">
-                <td className="px-5 py-3.5 text-sm font-medium text-stone-800">{p.name}</td>
+                <td className="px-5 py-3.5">
+                  <div className="text-sm font-medium text-stone-800">{p.name}</div>
+                  {p.creator?.email && <div className="sm:hidden text-xs text-stone-400 mt-0.5">{p.creator.email}</div>}
+                </td>
                 <td className="px-5 py-3.5 text-sm text-stone-500">{p.description}</td>
                 <td className="hidden sm:table-cell px-5 py-3.5 text-sm text-stone-500">{p.creator?.email}</td>
                 <td className="px-5 py-3.5 text-right">
