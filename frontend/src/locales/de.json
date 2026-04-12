@@ -52,5 +52,6 @@
   "post_partial_upload_error": "Eintrag gespeichert, aber das Hochladen der Anhänge ist fehlgeschlagen.",
   "delete_error": "Löschen fehlgeschlagen. Möglicherweise fehlt die Berechtigung.",
   "comment_error": "Kommentar konnte nicht hinzugefügt werden.",
-  "action_error": "Aktion fehlgeschlagen. Möglicherweise fehlt die Berechtigung."
+  "action_error": "Aktion fehlgeschlagen. Möglicherweise fehlt die Berechtigung.",
+  "created_by": "Erstellt von"
 }

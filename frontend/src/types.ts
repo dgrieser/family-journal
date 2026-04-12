@@ -12,6 +12,7 @@ export interface Person {
   name: string;
   description: string;
   created_by_user_id: number;
+  creator?: { id: number; email: string };
   created_at: string;
   updated_at: string;
 }

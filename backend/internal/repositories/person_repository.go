@@ -23,7 +23,11 @@ func (r *Repository) CreatePerson(person *models.Person) error {
 	if err != nil {
 		return err
 	}
-	return r.DB.Get(person, `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons WHERE id = ?`, id)
+	if err := r.DB.Get(person, `SELECT p.id, p.name, p.description, p.created_by_user_id, p.created_at, p.updated_at, u.email AS creator_email FROM persons p JOIN users u ON u.id = p.created_by_user_id WHERE p.id = ?`, id); err != nil {
+		return err
+	}
+	person.HydrateCreator()
+	return nil
 }
 
 func (r *Repository) UpdatePerson(person *models.Person, ownerFilter *int64) error {
@@ -80,11 +84,11 @@ func buildPersonQuery(ownerFilter *int64, search string) (string, []interface{})
 	args := []interface{}{}
 
 	if ownerFilter != nil {
-		conditions = append(conditions, `created_by_user_id = ?`)
+		conditions = append(conditions, `p.created_by_user_id = ?`)
 		args = append(args, *ownerFilter)
 	}
 	if trimmed := strings.TrimSpace(search); trimmed != "" {
-		conditions = append(conditions, `name LIKE ?`)
+		conditions = append(conditions, `p.name LIKE ?`)
 		args = append(args, "%"+trimmed+"%")
 	}
 	if len(conditions) == 0 {
@@ -97,11 +101,14 @@ func buildPersonQuery(ownerFilter *int64, search string) (string, []interface{})
 func (r *Repository) ListPersons(ownerFilter *int64, search string, limit, offset int) ([]models.Person, error) {
 	var persons []models.Person
 	whereClause, args := buildPersonQuery(ownerFilter, search)
-	query := `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons` + whereClause
-	query += ` ORDER BY name ASC LIMIT ? OFFSET ?`
+	query := `SELECT p.id, p.name, p.description, p.created_by_user_id, p.created_at, p.updated_at, u.email AS creator_email FROM persons p JOIN users u ON u.id = p.created_by_user_id` + whereClause
+	query += ` ORDER BY p.name ASC LIMIT ? OFFSET ?`
 	args = append(args, limit, offset)
 	if err := r.DB.Select(&persons, query, args...); err != nil {
 		return nil, err
+	}
+	for i := range persons {
+		persons[i].HydrateCreator()
 	}
 	return persons, nil
 }
@@ -140,11 +147,14 @@ func (r *Repository) CountPersons(ownerFilter *int64, search string) (int, error
 func (r *Repository) listPersons(queryer sqlx.Ext, ownerFilter *int64, search string, limit, offset int) ([]models.Person, error) {
 	var persons []models.Person
 	whereClause, args := buildPersonQuery(ownerFilter, search)
-	query := `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons` + whereClause
-	query += ` ORDER BY name ASC LIMIT ? OFFSET ?`
+	query := `SELECT p.id, p.name, p.description, p.created_by_user_id, p.created_at, p.updated_at, u.email AS creator_email FROM persons p JOIN users u ON u.id = p.created_by_user_id` + whereClause
+	query += ` ORDER BY p.name ASC LIMIT ? OFFSET ?`
 	args = append(args, limit, offset)
 	if err := sqlx.Select(queryer, &persons, query, args...); err != nil {
 		return nil, err
+	}
+	for i := range persons {
+		persons[i].HydrateCreator()
 	}
 	return persons, nil
 }
@@ -152,7 +162,7 @@ func (r *Repository) listPersons(queryer sqlx.Ext, ownerFilter *int64, search st
 func (r *Repository) countPersons(queryer sqlx.Queryer, ownerFilter *int64, search string) (int, error) {
 	var total int
 	whereClause, args := buildPersonQuery(ownerFilter, search)
-	query := `SELECT COUNT(*) FROM persons` + whereClause
+	query := `SELECT COUNT(*) FROM persons p JOIN users u ON u.id = p.created_by_user_id` + whereClause
 	if err := sqlx.Get(queryer, &total, query, args...); err != nil {
 		return 0, err
 	}
@@ -161,15 +171,22 @@ func (r *Repository) countPersons(queryer sqlx.Queryer, ownerFilter *int64, sear
 
 func (r *Repository) FindOrCreatePerson(userID int64, name string) (*models.Person, error) {
 	var person models.Person
-	query := `SELECT id, name, description, created_by_user_id, created_at, updated_at FROM persons WHERE created_by_user_id = ? AND name = ?`
+	query := `SELECT p.id, p.name, p.description, p.created_by_user_id, p.created_at, p.updated_at, u.email AS creator_email FROM persons p JOIN users u ON u.id = p.created_by_user_id WHERE p.created_by_user_id = ? AND p.name = ?`
 	if err := r.DB.Get(&person, query, userID, name); err == nil {
+		person.HydrateCreator()
 		return &person, nil
 	} else if err != sql.ErrNoRows {
 		return nil, err
 	}
 	person = models.Person{Name: name, CreatedBy: userID}
 	if err := r.CreatePerson(&person); err != nil {
-		if err = resolveDuplicateInsert(err, func() error { return r.DB.Get(&person, query, userID, name) }); err != nil {
+		if err = resolveDuplicateInsert(err, func() error {
+			if err2 := r.DB.Get(&person, query, userID, name); err2 != nil {
+				return err2
+			}
+			person.HydrateCreator()
+			return nil
+		}); err != nil {
 			return nil, err
 		}
 		return &person, nil
