@@ -1,21 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
 import api from '../api';
 import { UserCog, Shield, ShieldAlert } from 'lucide-react';
 import type { User } from '../types';
+import { extractError } from '../utils/apiError';
+import { ErrorAlert } from '../components/ErrorAlert';
 
 export const Admin = () => {
   const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  const extractError = (err: unknown, fallback: string): string => {
-    if (axios.isAxiosError(err)) {
-      return (err.response?.data as { error?: string })?.error || fallback;
-    }
-    return fallback;
-  };
 
   const fetchUsers = async () => {
     try {
@@ -54,12 +48,7 @@ export const Admin = () => {
         <UserCog size={20} className="text-stone-400" /> {t('admin')}
       </h2>
 
-      {error && (
-        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 flex justify-between items-start">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="ml-3 text-red-400 hover:text-red-600 flex-shrink-0">&times;</button>
-        </div>
-      )}
+      {error && <ErrorAlert message={error} onDismiss={() => setError(null)} className="mb-4" />}
 
       <div className="bg-white rounded-lg border border-stone-200 overflow-hidden overflow-x-auto">
         <table className="min-w-full">

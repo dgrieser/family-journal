@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
 import api from '../api';
 import { MessageSquare, Trash2, Edit2, Download, User as UserIcon, Tag, Send, Paperclip } from 'lucide-react';
 import { useAuthStore } from '../store';
 import type { Post, Hashtag, Person, Attachment, Comment } from '../types';
 import { getTagColors, TAG_PATTERN } from '../utils/tagColors';
+import { extractError } from '../utils/apiError';
+import { ErrorAlert } from './ErrorAlert';
 
 function renderTextWithTags(text: string) {
   const parts = text.split(TAG_PATTERN);
@@ -40,17 +41,11 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
   const [showComments, setShowComments] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const extractError = (err: unknown, fallback: string): string => {
-    if (axios.isAxiosError(err)) {
-      return (err.response?.data as { error?: string })?.error || fallback;
-    }
-    return fallback;
-  };
-
   const handleDelete = async () => {
     if (window.confirm(t('delete') + '?')) {
       try {
         await api.delete(`/posts/${post.id}`);
+        setError(null);
         onUpdate();
       } catch (err) {
         setError(extractError(err, t('delete_error')));
@@ -64,6 +59,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
     try {
       await api.post(`/posts/${post.id}/comments`, { text: commentText });
       setCommentText('');
+      setError(null);
       onUpdate();
     } catch (err) {
       setError(extractError(err, t('comment_error')));
@@ -73,6 +69,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
   const handleDeleteComment = async (commentId: number) => {
     try {
       await api.delete(`/comments/${commentId}`);
+      setError(null);
       onUpdate();
     } catch (err) {
       setError(extractError(err, t('delete_error')));
@@ -106,12 +103,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
       </div>
 
       {/* Error */}
-      {error && (
-        <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 flex justify-between items-start">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="ml-3 text-red-400 hover:text-red-600 flex-shrink-0">&times;</button>
-        </div>
-      )}
+      {error && <ErrorAlert message={error} onDismiss={() => setError(null)} className="mb-3" />}
 
       {/* Content */}
       <p className="text-stone-700 whitespace-pre-wrap mb-4 leading-relaxed text-sm">{renderTextWithTags(post.text)}</p>

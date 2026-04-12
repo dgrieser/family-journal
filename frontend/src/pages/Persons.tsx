@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
 import api from '../api';
 import { Users, Plus, Trash2, Edit2, Check } from 'lucide-react';
 import type { PaginatedResponse, PaginationMeta, Person } from '../types';
+import { extractError } from '../utils/apiError';
+import { ErrorAlert } from '../components/ErrorAlert';
 
 const PAGE_SIZE = 20;
 
@@ -28,13 +29,6 @@ export const Persons = () => {
   useEffect(() => {
     void fetchPersons(page);
   }, [fetchPersons, page]);
-
-  const extractError = (err: unknown, fallback: string): string => {
-    if (axios.isAxiosError(err)) {
-      return (err.response?.data as { error?: string })?.error || fallback;
-    }
-    return fallback;
-  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -69,6 +63,7 @@ export const Persons = () => {
     if (window.confirm(t('delete') + '?')) {
       try {
         await api.delete(`/persons/${id}`);
+        setError(null);
         void fetchPersons(page);
       } catch (err) {
         setError(extractError(err, t('delete_error')));
@@ -84,13 +79,7 @@ export const Persons = () => {
         <Users size={20} className="text-stone-400" /> {t('persons')}
       </h2>
 
-      {/* Error */}
-      {error && (
-        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 flex justify-between items-start">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="ml-3 text-red-400 hover:text-red-600 flex-shrink-0">&times;</button>
-        </div>
-      )}
+      {error && <ErrorAlert message={error} onDismiss={() => setError(null)} className="mb-4" />}
 
       {/* Form card */}
       <div className="bg-white rounded-lg border border-stone-200 p-5 mb-6">
