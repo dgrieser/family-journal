@@ -10,6 +10,7 @@ import (
 	appbuilder "familyjournal/backend/internal/app"
 	"familyjournal/backend/internal/config"
 	"familyjournal/backend/internal/db"
+	"familyjournal/backend/internal/models"
 	"familyjournal/backend/internal/repositories"
 	"familyjournal/backend/internal/services"
 	"familyjournal/backend/internal/sessionstore"
@@ -44,6 +45,20 @@ func main() {
 		log.Fatal(err)
 	}
 	repo := repositories.New(database)
+	if cfg.AdminEmail != "" {
+		user, err := repo.GetUserByEmail(cfg.AdminEmail)
+		if err != nil {
+			log.Printf("admin promotion: user not found for email %q: %v", cfg.AdminEmail, err)
+		} else if user.Role == models.RoleAdmin {
+			log.Printf("admin promotion: user %q is already admin", cfg.AdminEmail)
+		} else {
+			if err := repo.UpdateUserRole(user.ID, models.RoleAdmin); err != nil {
+				log.Printf("admin promotion: failed to promote %q: %v", cfg.AdminEmail, err)
+			} else {
+				log.Printf("admin promotion: promoted %q to admin", cfg.AdminEmail)
+			}
+		}
+	}
 	service := services.New(repo, repo, repo, repo, repo, repo)
 	storage := sessionstore.NewMySQLStore(database)
 

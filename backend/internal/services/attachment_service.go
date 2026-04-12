@@ -7,5 +7,5 @@ func (s *Service) CreateAttachment(att *models.Attachment) error {
 }
 
 func (s *Service) GetAttachmentByIDForUser(scope AccessScope, id int64) (*models.Attachment, error) {
-	return s.Attachments.GetAttachmentByID(id, scope.OwnerFilter())
+	return s.Attachments.GetAttachmentByID(id, nil)
 }

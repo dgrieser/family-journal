@@ -22,6 +22,7 @@ type Config struct {
 	AllowedTypes  []string
 	RateLimitMax  int
 	RateLimitTTL  int
+	AdminEmail    string
 }
 
 func Load() Config {
@@ -40,6 +41,7 @@ func Load() Config {
 		AllowedTypes:  getEnvList("ALLOWED_UPLOAD_TYPES", []string{"image/jpeg", "image/png", "application/pdf"}),
 		RateLimitMax:  int(getEnvInt("RATE_LIMIT_MAX", 200)),
 		RateLimitTTL:  int(getEnvInt("RATE_LIMIT_WINDOW_SECONDS", 60)),
+		AdminEmail:    getEnv("ADMIN_EMAIL", ""),
 	}
 }
 
