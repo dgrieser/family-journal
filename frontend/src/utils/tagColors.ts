@@ -64,7 +64,7 @@ export function buildHighlightHtml(text: string): string {
           `background:hsl(${hue},80%,92%);` +
           `color:hsl(${hue},65%,35%);` +
           `border-radius:3px;` +
-          `box-shadow:0 0 0 3px hsl(${hue},80%,92%),0 0 0 4px hsl(${hue},55%,80%)` +
+          `box-shadow:0 0 0 1px hsl(${hue},55%,80%)` +
           `">${escapeHtml(part)}</mark>`
         );
       }
