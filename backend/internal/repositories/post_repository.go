@@ -177,7 +177,8 @@ func (r *Repository) CountPosts(ownerFilter *int64, date time.Time, hashtags, pe
 
 func buildPostListQuery(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (string, []interface{}) {
 	base, args := buildPostQueryBase(ownerFilter, date, hashtags, persons, search)
-	return `SELECT DISTINCT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at, u.email AS author_email ` + base, args
+	return `SELECT DISTINCT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at, u.email AS author_email ` +
+		strings.Replace(base, "FROM posts p", "FROM posts p\n\t\tJOIN users u ON u.id = p.user_id", 1), args
 }
 
 func buildPostCountQuery(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (string, []interface{}) {
@@ -187,7 +188,6 @@ func buildPostCountQuery(ownerFilter *int64, date time.Time, hashtags, persons [
 
 func buildPostQueryBase(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (string, []interface{}) {
 	base := `FROM posts p
-		JOIN users u ON u.id = p.user_id
 		LEFT JOIN post_hashtags ph ON ph.post_id = p.id
 		LEFT JOIN hashtags h ON h.id = ph.hashtag_id
 		LEFT JOIN mentions m ON m.post_id = p.id

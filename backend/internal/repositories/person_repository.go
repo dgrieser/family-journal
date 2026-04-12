@@ -162,7 +162,7 @@ func (r *Repository) listPersons(queryer sqlx.Ext, ownerFilter *int64, search st
 func (r *Repository) countPersons(queryer sqlx.Queryer, ownerFilter *int64, search string) (int, error) {
 	var total int
 	whereClause, args := buildPersonQuery(ownerFilter, search)
-	query := `SELECT COUNT(*) FROM persons p JOIN users u ON u.id = p.created_by_user_id` + whereClause
+	query := `SELECT COUNT(*) FROM persons p` + whereClause
 	if err := sqlx.Get(queryer, &total, query, args...); err != nil {
 		return 0, err
 	}
