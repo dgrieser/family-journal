@@ -6,6 +6,7 @@ import (
 )
 
 var ErrDuplicate = errors.New("duplicate entry")
+var ErrForbidden = errors.New("forbidden")
 
 type Person struct {
 	ID          int64     `db:"id" json:"id"`

@@ -33,11 +33,23 @@ func (r *Repository) UpdatePerson(person *models.Person, ownerFilter *int64) err
 		query += ` AND created_by_user_id = ?`
 		args = append(args, *ownerFilter)
 	}
-	_, err := r.DB.Exec(query, args...)
-	if err != nil && isDuplicateKeyError(err) {
-		return models.ErrDuplicate
+	res, err := r.DB.Exec(query, args...)
+	if err != nil {
+		if isDuplicateKeyError(err) {
+			return models.ErrDuplicate
+		}
+		return err
 	}
-	return err
+	if ownerFilter != nil {
+		n, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return models.ErrForbidden
+		}
+	}
+	return nil
 }
 
 func (r *Repository) DeletePerson(id int64, ownerFilter *int64) error {
@@ -47,8 +59,20 @@ func (r *Repository) DeletePerson(id int64, ownerFilter *int64) error {
 		query += ` AND created_by_user_id = ?`
 		args = append(args, *ownerFilter)
 	}
-	_, err := r.DB.Exec(query, args...)
-	return err
+	res, err := r.DB.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	if ownerFilter != nil {
+		n, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return models.ErrForbidden
+		}
+	}
+	return nil
 }
 
 func buildPersonQuery(ownerFilter *int64, search string) (string, []interface{}) {
