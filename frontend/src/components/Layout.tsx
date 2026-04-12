@@ -39,7 +39,7 @@ export const Layout = () => {
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
 
       {/* Mobile top bar */}
-      <div className="md:hidden flex items-center justify-between bg-slate-900/60 px-5 py-4 flex-shrink-0">
+      <div className="md:hidden flex items-center justify-between bg-slate-800 px-5 py-4 flex-shrink-0">
         <div className="flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
           <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-400 ml-[8px] mb-[-2px]">
             Family
