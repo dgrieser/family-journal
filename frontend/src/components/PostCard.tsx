@@ -81,8 +81,8 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
       {/* Header */}
       <div className="flex justify-between items-start mb-3">
         <div>
-          <span className="text-sm font-medium text-stone-800">{post.user?.email}</span>
-          <span className="text-xs text-stone-400 block mt-0.5">{new Date(post.created_at).toLocaleString(i18n.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="text-xs text-stone-900 block">{new Date(post.created_at).toLocaleString(i18n.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="text-xs text-stone-400 block mt-0.5">{post.user?.email}</span>
         </div>
         {(user?.id === post.user_id || user?.role === 'admin') && (
           <div className="flex gap-1">
