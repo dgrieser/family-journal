@@ -5,6 +5,8 @@ import { MessageSquare, Trash2, Edit2, Download, User as UserIcon, Tag, Send, Pa
 import { useAuthStore } from '../store';
 import type { Post, Hashtag, Person, Attachment, Comment } from '../types';
 import { getTagColors, TAG_PATTERN } from '../utils/tagColors';
+import { extractError } from '../utils/apiError';
+import { ErrorAlert } from './ErrorAlert';
 
 function renderTextWithTags(text: string) {
   const parts = text.split(TAG_PATTERN);
@@ -37,11 +39,17 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
   const { user } = useAuthStore();
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleDelete = async () => {
     if (window.confirm(t('delete') + '?')) {
-      await api.delete(`/posts/${post.id}`);
-      onUpdate();
+      try {
+        await api.delete(`/posts/${post.id}`);
+        setError(null);
+        onUpdate();
+      } catch (err) {
+        setError(extractError(err, t('delete_error')));
+      }
     }
   };
 
@@ -51,15 +59,21 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
     try {
       await api.post(`/posts/${post.id}/comments`, { text: commentText });
       setCommentText('');
+      setError(null);
       onUpdate();
     } catch (err) {
-      console.error(err);
+      setError(extractError(err, t('comment_error')));
     }
   };
 
   const handleDeleteComment = async (commentId: number) => {
-    await api.delete(`/comments/${commentId}`);
-    onUpdate();
+    try {
+      await api.delete(`/comments/${commentId}`);
+      setError(null);
+      onUpdate();
+    } catch (err) {
+      setError(extractError(err, t('delete_error')));
+    }
   };
 
   return (
@@ -87,6 +101,9 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
           </div>
         )}
       </div>
+
+      {/* Error */}
+      {error && <ErrorAlert message={error} onDismiss={() => setError(null)} className="mb-3" />}
 
       {/* Content */}
       <p className="text-stone-700 whitespace-pre-wrap mb-4 leading-relaxed text-sm">{renderTextWithTags(post.text)}</p>

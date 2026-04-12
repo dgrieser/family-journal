@@ -3,17 +3,22 @@ import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { Users, Plus, Trash2, Edit2, Check } from 'lucide-react';
 import type { PaginatedResponse, PaginationMeta, Person } from '../types';
+import { extractError } from '../utils/apiError';
+import { ErrorAlert } from '../components/ErrorAlert';
+import { useAuthStore } from '../store';
 
 const PAGE_SIZE = 20;
 
 export const Persons = () => {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
   const [persons, setPersons] = useState<Person[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: PAGE_SIZE, totalItems: 0, totalPages: 0 });
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchPersons = useCallback(async (nextPage: number) => {
     const res = await api.get<PaginatedResponse<Person>>('/persons', {
@@ -29,18 +34,23 @@ export const Persons = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      await api.put(`/persons/${editingId}`, { name, description });
-    } else {
-      await api.post('/persons', { name, description });
-    }
-    setName('');
-    setDescription('');
-    setEditingId(null);
-    if (page === 1) {
-      await fetchPersons(1);
-    } else {
-      setPage(1);
+    try {
+      if (editingId) {
+        await api.put(`/persons/${editingId}`, { name, description });
+      } else {
+        await api.post('/persons', { name, description });
+      }
+      setName('');
+      setDescription('');
+      setEditingId(null);
+      setError(null);
+      if (page === 1) {
+        await fetchPersons(1);
+      } else {
+        setPage(1);
+      }
+    } catch (err) {
+      setError(extractError(err, t('action_error')));
     }
   };
 
@@ -48,12 +58,18 @@ export const Persons = () => {
     setEditingId(p.id);
     setName(p.name);
     setDescription(p.description || '');
+    setError(null);
   };
 
   const handleDelete = async (id: number) => {
     if (window.confirm(t('delete') + '?')) {
-      await api.delete(`/persons/${id}`);
-      void fetchPersons(page);
+      try {
+        await api.delete(`/persons/${id}`);
+        setError(null);
+        void fetchPersons(page);
+      } catch (err) {
+        setError(extractError(err, t('delete_error')));
+      }
     }
   };
 
@@ -64,6 +80,8 @@ export const Persons = () => {
       <h2 className="text-xl font-semibold text-stone-900 mb-6 flex items-center gap-2">
         <Users size={20} className="text-stone-400" /> {t('persons')}
       </h2>
+
+      {error && <ErrorAlert message={error} onDismiss={() => setError(null)} className="mb-4" />}
 
       {/* Form card */}
       <div className="bg-white rounded-lg border border-stone-200 p-5 mb-6">
@@ -126,20 +144,22 @@ export const Persons = () => {
                 <td className="px-5 py-3.5 text-sm font-medium text-stone-800">{p.name}</td>
                 <td className="px-5 py-3.5 text-sm text-stone-500">{p.description}</td>
                 <td className="px-5 py-3.5 text-right">
-                  <div className="flex justify-end gap-1">
-                    <button
-                      onClick={() => handleEdit(p)}
-                      className="p-1.5 text-stone-400 hover:text-violet-700 hover:bg-violet-50 rounded transition-colors"
-                    >
-                      <Edit2 size={15} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+                  {(user?.id === p.created_by_user_id || user?.role === 'admin') && (
+                    <div className="flex justify-end gap-1">
+                      <button
+                        onClick={() => handleEdit(p)}
+                        className="p-1.5 text-stone-400 hover:text-violet-700 hover:bg-violet-50 rounded transition-colors"
+                      >
+                        <Edit2 size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

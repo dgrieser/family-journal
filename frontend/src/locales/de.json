@@ -49,5 +49,8 @@
   "already_have_account": "Schon ein Konto?",
   "registration_success_login": "Registrierung erfolgreich. Bitte anmelden.",
   "post_submit_error": "Der Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.",
-  "post_partial_upload_error": "Eintrag gespeichert, aber das Hochladen der Anhänge ist fehlgeschlagen."
+  "post_partial_upload_error": "Eintrag gespeichert, aber das Hochladen der Anhänge ist fehlgeschlagen.",
+  "delete_error": "Löschen fehlgeschlagen. Möglicherweise fehlt die Berechtigung.",
+  "comment_error": "Kommentar konnte nicht hinzugefügt werden.",
+  "action_error": "Aktion fehlgeschlagen. Möglicherweise fehlt die Berechtigung."
 }

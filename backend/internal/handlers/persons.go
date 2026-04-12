@@ -85,6 +85,9 @@ func (h *PersonsHandler) Update(c *fiber.Ctx) error {
 		if errors.Is(err, models.ErrDuplicate) {
 			return fiber.NewError(fiber.StatusConflict, "person already exists")
 		}
+		if errors.Is(err, models.ErrForbidden) {
+			return fiber.NewError(fiber.StatusForbidden, "forbidden")
+		}
 		log.Printf("update person error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update person")
 	}
@@ -102,6 +105,9 @@ func (h *PersonsHandler) Delete(c *fiber.Ctx) error {
 	}
 	scope := services.NewAccessScope(userID, role)
 	if err := h.Service.DeletePerson(scope, int64(id)); err != nil {
+		if errors.Is(err, models.ErrForbidden) {
+			return fiber.NewError(fiber.StatusForbidden, "forbidden")
+		}
 		log.Printf("delete person error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete person")
 	}

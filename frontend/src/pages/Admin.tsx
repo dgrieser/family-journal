@@ -3,10 +3,13 @@ import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { UserCog, Shield, ShieldAlert } from 'lucide-react';
 import type { User } from '../types';
+import { extractError } from '../utils/apiError';
+import { ErrorAlert } from '../components/ErrorAlert';
 
 export const Admin = () => {
   const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -26,7 +29,7 @@ export const Admin = () => {
       const res = await api.patch(`/admin/users/${userId}/role`, { role: newRole });
       setUsers(users.map(u => u.id === userId ? res.data : u));
     } catch (err) {
-      console.error(err);
+      setError(extractError(err, t('action_error')));
     }
   };
 
@@ -35,7 +38,7 @@ export const Admin = () => {
       const res = await api.patch(`/admin/users/${userId}/active`, { is_active: isActive });
       setUsers(users.map(u => u.id === userId ? res.data : u));
     } catch (err) {
-      console.error(err);
+      setError(extractError(err, t('action_error')));
     }
   };
 
@@ -44,6 +47,8 @@ export const Admin = () => {
       <h2 className="text-xl font-semibold text-stone-900 mb-6 flex items-center gap-2">
         <UserCog size={20} className="text-stone-400" /> {t('admin')}
       </h2>
+
+      {error && <ErrorAlert message={error} onDismiss={() => setError(null)} className="mb-4" />}
 
       <div className="bg-white rounded-lg border border-stone-200 overflow-hidden overflow-x-auto">
         <table className="min-w-full">
