@@ -54,5 +54,15 @@
   "comment_error": "Could not add comment.",
   "action_error": "Action failed. You may not have permission.",
   "created_by": "Created by",
-  "created_at": "Created"
+  "created_at": "Created",
+  "view_day": "Day",
+  "view_search": "Search",
+  "timespan_all": "All time",
+  "timespan_last_week": "Last week",
+  "timespan_last_30_days": "Last 30 days",
+  "timespan_this_year": "This year",
+  "timespan_custom": "Custom",
+  "start_date": "From",
+  "end_date": "To",
+  "no_posts_found": "No posts found."
 }

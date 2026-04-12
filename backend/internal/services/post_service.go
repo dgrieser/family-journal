@@ -7,6 +7,13 @@ import (
 	"familyjournal/backend/internal/models"
 )
 
+// DateFilter represents an optional date constraint for listing posts.
+// Both nil = no date filter. Equal Start/End = exact date. Different = inclusive range.
+type DateFilter struct {
+	Start *time.Time
+	End   *time.Time
+}
+
 func (s *Service) ParseHashtags(text string) []string {
 	matches := hashtagRegex.FindAllStringSubmatch(text, -1)
 	unique := map[string]struct{}{}
@@ -49,8 +56,8 @@ func (s *Service) CreateOrUpdatePost(scope AccessScope, post *models.Post) error
 	return s.Posts.SavePostWithRelations(ownerID, scope.OwnerFilter(), post, tags, persons)
 }
 
-func (s *Service) ListPosts(scope AccessScope, date time.Time, hashtags, persons []string, search string, pagination PaginationParams) (PaginatedResponse[models.Post], error) {
-	posts, totalItems, err := s.Posts.ListPostsPaginated(nil, date, hashtags, persons, search, pagination.PageSize, pagination.Offset())
+func (s *Service) ListPosts(scope AccessScope, dateFilter DateFilter, hashtags, persons []string, search string, pagination PaginationParams) (PaginatedResponse[models.Post], error) {
+	posts, totalItems, err := s.Posts.ListPostsPaginated(nil, dateFilter, hashtags, persons, search, pagination.PageSize, pagination.Offset())
 	if err != nil {
 		return PaginatedResponse[models.Post]{}, err
 	}

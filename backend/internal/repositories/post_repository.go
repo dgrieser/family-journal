@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"familyjournal/backend/internal/models"
+	"familyjournal/backend/internal/services"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -140,18 +141,18 @@ func (r *Repository) GetPost(id int64, ownerFilter *int64) (*models.Post, error)
 	return &post, nil
 }
 
-func (r *Repository) ListPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error) {
-	return r.listPosts(r.DB, ownerFilter, date, hashtags, persons, search, limit, offset)
+func (r *Repository) ListPosts(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error) {
+	return r.listPosts(r.DB, ownerFilter, dateFilter, hashtags, persons, search, limit, offset)
 }
 
-func (r *Repository) ListPostsPaginated(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, int, error) {
+func (r *Repository) ListPostsPaginated(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string, limit, offset int) ([]models.Post, int, error) {
 	tx, err := r.beginReadSnapshotTx()
 	if err != nil {
 		return nil, 0, err
 	}
 	defer tx.Rollback()
 
-	total, err := r.countPosts(tx, ownerFilter, date, hashtags, persons, search)
+	total, err := r.countPosts(tx, ownerFilter, dateFilter, hashtags, persons, search)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -161,7 +162,7 @@ func (r *Repository) ListPostsPaginated(ownerFilter *int64, date time.Time, hash
 		}
 		return []models.Post{}, 0, nil
 	}
-	posts, err := r.listPosts(tx, ownerFilter, date, hashtags, persons, search, limit, offset)
+	posts, err := r.listPosts(tx, ownerFilter, dateFilter, hashtags, persons, search, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -171,29 +172,42 @@ func (r *Repository) ListPostsPaginated(ownerFilter *int64, date time.Time, hash
 	return posts, total, nil
 }
 
-func (r *Repository) CountPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (int, error) {
-	return r.countPosts(r.DB, ownerFilter, date, hashtags, persons, search)
+func (r *Repository) CountPosts(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string) (int, error) {
+	return r.countPosts(r.DB, ownerFilter, dateFilter, hashtags, persons, search)
 }
 
-func buildPostListQuery(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (string, []interface{}) {
-	base, args := buildPostQueryBase(ownerFilter, date, hashtags, persons, search)
+func buildPostListQuery(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string) (string, []interface{}) {
+	base, args := buildPostQueryBase(ownerFilter, dateFilter, hashtags, persons, search)
 	return `SELECT DISTINCT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at, u.email AS author_email ` +
 		strings.Replace(base, "FROM posts p", "FROM posts p\n\t\tJOIN users u ON u.id = p.user_id", 1), args
 }
 
-func buildPostCountQuery(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (string, []interface{}) {
-	base, args := buildPostQueryBase(ownerFilter, date, hashtags, persons, search)
+func buildPostCountQuery(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string) (string, []interface{}) {
+	base, args := buildPostQueryBase(ownerFilter, dateFilter, hashtags, persons, search)
 	return `SELECT COUNT(DISTINCT p.id) ` + base, args
 }
 
-func buildPostQueryBase(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (string, []interface{}) {
+func buildPostQueryBase(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string) (string, []interface{}) {
 	base := `FROM posts p
 		LEFT JOIN post_hashtags ph ON ph.post_id = p.id
 		LEFT JOIN hashtags h ON h.id = ph.hashtag_id
 		LEFT JOIN mentions m ON m.post_id = p.id
 		LEFT JOIN persons pe ON pe.id = m.person_id
-		WHERE p.date = ?`
-	args := []interface{}{date}
+		WHERE 1=1`
+	var args []interface{}
+	if dateFilter.Start != nil && dateFilter.End != nil && dateFilter.Start.Equal(*dateFilter.End) {
+		base += ` AND p.date = ?`
+		args = append(args, *dateFilter.Start)
+	} else if dateFilter.Start != nil && dateFilter.End != nil {
+		base += ` AND p.date >= ? AND p.date <= ?`
+		args = append(args, *dateFilter.Start, *dateFilter.End)
+	} else if dateFilter.Start != nil {
+		base += ` AND p.date >= ?`
+		args = append(args, *dateFilter.Start)
+	} else if dateFilter.End != nil {
+		base += ` AND p.date <= ?`
+		args = append(args, *dateFilter.End)
+	}
 	if ownerFilter != nil {
 		base += ` AND p.user_id = ?`
 		args = append(args, *ownerFilter)
@@ -221,8 +235,8 @@ func buildPostQueryBase(ownerFilter *int64, date time.Time, hashtags, persons []
 	return base, args
 }
 
-func (r *Repository) listPosts(queryer sqlx.Ext, ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error) {
-	base, args := buildPostListQuery(ownerFilter, date, hashtags, persons, search)
+func (r *Repository) listPosts(queryer sqlx.Ext, ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error) {
+	base, args := buildPostListQuery(ownerFilter, dateFilter, hashtags, persons, search)
 	base += " ORDER BY p.created_at DESC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 	var posts []models.Post
@@ -235,8 +249,8 @@ func (r *Repository) listPosts(queryer sqlx.Ext, ownerFilter *int64, date time.T
 	return posts, nil
 }
 
-func (r *Repository) countPosts(queryer sqlx.Queryer, ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (int, error) {
-	query, args := buildPostCountQuery(ownerFilter, date, hashtags, persons, search)
+func (r *Repository) countPosts(queryer sqlx.Queryer, ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string) (int, error) {
+	query, args := buildPostCountQuery(ownerFilter, dateFilter, hashtags, persons, search)
 	var total int
 	if err := sqlx.Get(queryer, &total, query, args...); err != nil {
 		return 0, err
