@@ -1,6 +1,8 @@
 package main
 
 import (
+	"database/sql"
+	"errors"
 	"log"
 	"os"
 	"os/signal"
@@ -47,8 +49,10 @@ func main() {
 	repo := repositories.New(database)
 	if cfg.AdminEmail != "" {
 		user, err := repo.GetUserByEmail(cfg.AdminEmail)
-		if err != nil {
-			log.Printf("admin promotion: user not found for email %q: %v", cfg.AdminEmail, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Printf("admin promotion: no user with email %q exists, skipping", cfg.AdminEmail)
+		} else if err != nil {
+			log.Printf("admin promotion: failed to retrieve user %q: %v", cfg.AdminEmail, err)
 		} else if user.Role == models.RoleAdmin {
 			log.Printf("admin promotion: user %q is already admin", cfg.AdminEmail)
 		} else {
