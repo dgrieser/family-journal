@@ -420,11 +420,13 @@ export const Timeline = () => {
         )}
       </div>
 
-      <PostForm
-        onSuccess={() => {
-          void fetchPosts({ page, viewMode, date, timespan, customStart, customEnd, search, selectedHashtags, selectedPersons });
-        }}
-      />
+      {viewMode !== 'search' && (
+        <PostForm
+          onSuccess={() => {
+            void fetchPosts({ page, viewMode, date, timespan, customStart, customEnd, search, selectedHashtags, selectedPersons });
+          }}
+        />
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-stone-400 text-sm">{t('loading')}</div>
