@@ -4,6 +4,7 @@ import api from '../api';
 import { Users, Plus, Trash2, Edit2, Check } from 'lucide-react';
 import type { PaginatedResponse, PaginationMeta, Person } from '../types';
 import { extractError } from '../utils/apiError';
+import { getTagColors } from '../utils/tagColors';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { useAuthStore } from '../store';
 
@@ -141,11 +142,19 @@ export const Persons = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
-            {persons.map((p: Person) => (
+            {persons.map((p: Person) => {
+              const colors = getTagColors(p.name);
+              return (
               <tr key={p.id} className="hover:bg-stone-50 transition-colors">
                 <td className="px-5 py-3.5">
-                  <div className="text-sm font-medium text-stone-800">{p.name}</div>
-                  {p.creator?.email && <div className="sm:hidden text-xs text-stone-400 mt-0.5">{p.creator.email}</div>}
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-medium"
+                    style={{ color: colors.color, background: colors.background, border: `1px solid ${colors.border}` }}
+                  >
+                    <Users size={11} />
+                    {p.name}
+                  </span>
+                  {p.creator?.email && <div className="sm:hidden text-xs text-stone-400 mt-1">{p.creator.email}</div>}
                   <div className="sm:hidden text-xs text-stone-400 mt-0.5">{new Date(p.created_at).toLocaleDateString(i18n.language, { year: 'numeric', month: 'short', day: 'numeric' })}</div>
                 </td>
                 <td className="px-5 py-3.5 text-sm text-stone-500">{p.description}</td>
@@ -170,7 +179,8 @@ export const Persons = () => {
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
