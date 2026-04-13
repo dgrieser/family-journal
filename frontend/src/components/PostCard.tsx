@@ -7,6 +7,7 @@ import type { Post, Hashtag, Person, Attachment, Comment } from '../types';
 import { getTagColors, TAG_PATTERN } from '../utils/tagColors';
 import { extractError } from '../utils/apiError';
 import { ErrorAlert } from './ErrorAlert';
+import { PostForm } from './PostForm';
 
 function renderTextWithTags(text: string) {
   const parts = text.split(TAG_PATTERN);
@@ -31,12 +32,12 @@ function renderTextWithTags(text: string) {
 interface PostCardProps {
   post: Post;
   onUpdate: () => void;
-  onEdit: (post: Post) => void;
 }
 
-export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
+export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
+  const [isEditing, setIsEditing] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +77,19 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
     }
   };
 
+  if (isEditing) {
+    return (
+      <div className="bg-white rounded-lg border border-violet-300 ring-1 ring-violet-100 p-5 mb-3">
+        <PostForm
+          initialData={post}
+          onSuccess={() => { setIsEditing(false); onUpdate(); }}
+          onCancel={() => setIsEditing(false)}
+          embedded
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-5 mb-3">
       {/* Header */}
@@ -87,7 +101,7 @@ export const PostCard = ({ post, onUpdate, onEdit }: PostCardProps) => {
         {(user?.id === post.user_id || user?.role === 'admin') && (
           <div className="flex gap-1">
             <button
-              onClick={() => onEdit(post)}
+              onClick={() => setIsEditing(true)}
               className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
             >
               <Edit2 size={15} />

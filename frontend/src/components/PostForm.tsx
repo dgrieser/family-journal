@@ -3,20 +3,23 @@ import { useTranslation } from 'react-i18next';
 import type { AxiosError } from 'axios';
 import api from '../api';
 import { searchPersons } from '../persons';
-import { Send, Paperclip, X } from 'lucide-react';
-import type { Post, Hashtag } from '../types';
+import { Send, Paperclip, X, Image } from 'lucide-react';
+import type { Post, Hashtag, Attachment } from '../types';
 import { buildHighlightHtml } from '../utils/tagColors';
 
 interface PostFormProps {
   onSuccess: () => void;
+  onCancel?: () => void;
   initialData?: Post | null;
+  embedded?: boolean;
 }
 
-export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
+export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFormProps) => {
   const { t, i18n } = useTranslation();
   const [text, setText] = useState(initialData?.text || '');
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [files, setFiles] = useState<File[]>([]);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<number[]>([]);
   const [showHashtagSuggestions, setShowHashtagSuggestions] = useState(false);
   const [showPersonSuggestions, setShowPersonSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -45,10 +48,11 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
       setText('');
       setDate(new Date().toISOString().split('T')[0]);
     }
+    setFiles([]);
+    setPendingDeleteIds([]);
   }, [initialData]);
 
   useEffect(() => {
-    // Fetch hashtags for autocomplete.
     const fetchData = async () => {
       try {
         const hRes = await api.get('/hashtags');
@@ -57,7 +61,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
         console.error(err);
       }
     };
-    fetchData();
+    void fetchData();
   }, []);
 
   useEffect(() => {
@@ -129,9 +133,17 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...newFiles]);
+      e.target.value = '';
     }
+  };
+
+  const togglePendingDelete = (id: number) => {
+    setPendingDeleteIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,6 +151,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
     setSubmitError('');
     setIsSubmitting(true);
     let postSaved = false;
+    let attachmentError = false;
 
     try {
       const isUpdate = !!initialData;
@@ -149,6 +162,15 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
       const postId = response.data.id;
       postSaved = true;
 
+      for (const id of pendingDeleteIds) {
+        try {
+          await api.delete(`/attachments/${id}`);
+        } catch (err) {
+          console.error('Failed to delete attachment', id, err);
+          attachmentError = true;
+        }
+      }
+
       if (postId && files.length > 0) {
         const formData = new FormData();
         files.forEach(file => formData.append('files', file));
@@ -157,6 +179,7 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
 
       setText('');
       setFiles([]);
+      setPendingDeleteIds([]);
       onSuccess();
     } catch (err) {
       console.error(err);
@@ -170,112 +193,170 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
         setSubmitError(t('post_submit_error'));
       }
     } finally {
+      if (attachmentError && !submitError) {
+        setSubmitError(t('attachment_delete_error'));
+      }
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="bg-white rounded-lg border border-stone-200 p-4 mb-5">
-      <form onSubmit={handleSubmit}>
-        <div className="mb-2">
-          <div className="relative inline-flex items-center gap-2 border border-stone-200 rounded px-2.5 py-1.5 cursor-pointer bg-white">
-            <span className="text-sm text-stone-700 select-none whitespace-nowrap">
-              {new Date(date + 'T12:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-            </span>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="absolute inset-0 opacity-0 cursor-pointer w-full"
-            />
-          </div>
-        </div>
+  const existingAttachments = initialData?.attachments ?? [];
 
-        <div className="relative">
-          {/* Backdrop that renders highlighted @mentions and #hashtags */}
-          <div
-            ref={backdropRef}
-            aria-hidden="true"
-            className="tag-highlight-backdrop"
-            dangerouslySetInnerHTML={{ __html: buildHighlightHtml(text) }}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              padding: '0.75rem',
-              fontSize: '0.875rem',
-              fontFamily: 'inherit',
-              lineHeight: 'inherit',
-              whiteSpace: 'pre-wrap',
-              overflowWrap: 'break-word',
-              overflowY: 'auto',
-              border: '1px solid transparent',
-              borderRadius: '0.375rem',
-              color: '#1c1917',
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
+  const formContent = (
+    <form onSubmit={handleSubmit}>
+      <div className="mb-2">
+        <div className="relative inline-flex items-center gap-2 border border-stone-200 rounded px-2.5 py-1.5 cursor-pointer bg-white">
+          <span className="text-sm text-stone-700 select-none whitespace-nowrap">
+            {new Date(date + 'T12:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          </span>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="absolute inset-0 opacity-0 cursor-pointer w-full"
           />
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={handleTextChange}
-            onScroll={(e) => {
-              if (backdropRef.current) {
-                backdropRef.current.scrollTop = e.currentTarget.scrollTop;
-              }
-            }}
-            placeholder={text ? '' : t('new_post')}
-            style={{ background: 'transparent', caretColor: '#57534e', color: text ? 'transparent' : undefined }}
-            className="tag-textarea w-full border border-stone-200 rounded-md p-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 min-h-[100px] resize-none transition relative"
-          />
-          {(showHashtagSuggestions || showPersonSuggestions) && suggestions.length > 0 && (
-            <div className="absolute z-10 bg-white border border-stone-200 rounded-md shadow-lg mt-1 w-full max-h-40 overflow-y-auto">
-              {suggestions.map(s => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => applySuggestion(s)}
-                  className="block w-full text-left px-3.5 py-2 text-sm hover:bg-stone-50 text-stone-700 transition-colors"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
+      </div>
 
-        {files.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {files.map((file, i) => (
-              <div key={i} className="flex items-center bg-stone-100 border border-stone-200 px-2 py-1 rounded text-xs text-stone-600">
-                <span className="truncate max-w-[100px]">{file.name}</span>
-                <button
-                  type="button"
-                  onClick={() => setFiles(files.filter((_, idx) => idx !== i))}
-                  className="ml-1.5 text-stone-400 hover:text-red-500 transition-colors"
-                >
-                  <X size={12} />
-                </button>
-              </div>
+      <div className="relative">
+        {/* Backdrop that renders highlighted @mentions and #hashtags */}
+        <div
+          ref={backdropRef}
+          aria-hidden="true"
+          className="tag-highlight-backdrop"
+          dangerouslySetInnerHTML={{ __html: buildHighlightHtml(text) }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            padding: '0.75rem',
+            fontSize: '0.875rem',
+            fontFamily: 'inherit',
+            lineHeight: 'inherit',
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'break-word',
+            overflowY: 'auto',
+            border: '1px solid transparent',
+            borderRadius: '0.375rem',
+            color: '#1c1917',
+            pointerEvents: 'none',
+            userSelect: 'none',
+          }}
+        />
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={handleTextChange}
+          onScroll={(e) => {
+            if (backdropRef.current) {
+              backdropRef.current.scrollTop = e.currentTarget.scrollTop;
+            }
+          }}
+          placeholder={text ? '' : t('new_post')}
+          style={{ background: 'transparent', caretColor: '#57534e', color: text ? 'transparent' : undefined }}
+          className="tag-textarea w-full border border-stone-200 rounded-md p-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 min-h-[100px] resize-none transition relative"
+        />
+        {(showHashtagSuggestions || showPersonSuggestions) && suggestions.length > 0 && (
+          <div className="absolute z-10 bg-white border border-stone-200 rounded-md shadow-lg mt-1 w-full max-h-40 overflow-y-auto">
+            {suggestions.map(s => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => applySuggestion(s)}
+                className="block w-full text-left px-3.5 py-2 text-sm hover:bg-stone-50 text-stone-700 transition-colors"
+              >
+                {s}
+              </button>
             ))}
           </div>
         )}
+      </div>
 
-        {submitError && (
-          <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {submitError}
+      {/* Existing attachments (edit mode only) */}
+      {existingAttachments.length > 0 && (
+        <div className="mt-3 border border-stone-200 rounded-md p-2.5 space-y-1.5">
+          <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1.5">{t('attachments')}</p>
+          <div className="flex flex-wrap gap-2">
+            {existingAttachments.map((a: Attachment) => {
+              const markedForDeletion = pendingDeleteIds.includes(a.id);
+              return (
+                <div
+                  key={a.id}
+                  className={`flex items-center gap-1.5 border rounded px-2 py-1 text-xs transition-all ${
+                    markedForDeletion
+                      ? 'bg-red-50 border-red-200 text-red-400 opacity-60'
+                      : 'bg-stone-50 border-stone-200 text-stone-600'
+                  }`}
+                >
+                  {a.file_type.startsWith('image/') ? (
+                    <Image size={11} className="flex-shrink-0" />
+                  ) : (
+                    <Paperclip size={11} className="flex-shrink-0" />
+                  )}
+                  <span className={`truncate max-w-[120px] ${markedForDeletion ? 'line-through' : ''}`}>
+                    {a.file_name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => togglePendingDelete(a.id)}
+                    className={`ml-0.5 transition-colors ${
+                      markedForDeletion
+                        ? 'text-red-400 hover:text-stone-500'
+                        : 'text-stone-400 hover:text-red-500'
+                    }`}
+                    title={markedForDeletion ? t('cancel') : t('delete')}
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
+      )}
 
-        <div className="flex items-center justify-between mt-3">
-          <label className="cursor-pointer inline-flex items-center gap-1.5 text-stone-400 hover:text-stone-600 text-sm transition-colors">
-            <Paperclip size={17} />
-            <span>{t('upload_files')}</span>
-            <input type="file" multiple onChange={handleFileChange} className="hidden" />
-          </label>
+      {/* New files to upload */}
+      {files.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {files.map((file, i) => (
+            <div key={i} className="flex items-center bg-stone-100 border border-stone-200 px-2 py-1 rounded text-xs text-stone-600">
+              <span className="truncate max-w-[100px]">{file.name}</span>
+              <button
+                type="button"
+                onClick={() => setFiles(files.filter((_, idx) => idx !== i))}
+                className="ml-1.5 text-stone-400 hover:text-red-500 transition-colors"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {submitError && (
+        <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {submitError}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between mt-3">
+        <label className="cursor-pointer inline-flex items-center gap-1.5 text-stone-400 hover:text-stone-600 text-sm transition-colors">
+          <Paperclip size={17} />
+          <span>{t('upload_files')}</span>
+          <input type="file" multiple onChange={handleFileChange} className="hidden" />
+        </label>
+        <div className="flex items-center gap-2">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="inline-flex items-center rounded-md border border-stone-200 px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors"
+            >
+              {t('cancel')}
+            </button>
+          )}
           <button
             type="submit"
             disabled={!text.trim() || isSubmitting}
@@ -285,7 +366,17 @@ export const PostForm = ({ onSuccess, initialData }: PostFormProps) => {
             {t('save')}
           </button>
         </div>
-      </form>
+      </div>
+    </form>
+  );
+
+  if (embedded) {
+    return formContent;
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-stone-200 p-4 mb-5">
+      {formContent}
     </div>
   );
 };

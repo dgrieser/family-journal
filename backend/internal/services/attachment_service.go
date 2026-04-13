@@ -9,3 +9,7 @@ func (s *Service) CreateAttachment(att *models.Attachment) error {
 func (s *Service) GetAttachmentByIDForUser(scope AccessScope, id int64) (*models.Attachment, error) {
 	return s.Attachments.GetAttachmentByID(id, nil)
 }
+
+func (s *Service) DeleteAttachmentByID(id int64) error {
+	return s.Attachments.DeleteAttachmentByID(id)
+}

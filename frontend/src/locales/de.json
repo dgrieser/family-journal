@@ -64,5 +64,6 @@
   "timespan_custom": "Benutzerdefiniert",
   "start_date": "Von",
   "end_date": "Bis",
-  "no_posts_found": "Keine Einträge gefunden."
+  "no_posts_found": "Keine Einträge gefunden.",
+  "attachment_delete_error": "Eintrag gespeichert, aber das Löschen einiger Anhänge ist fehlgeschlagen."
 }

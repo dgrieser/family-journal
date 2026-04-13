@@ -118,6 +118,7 @@ func New(cfg config.Config, service *services.Service, store *session.Store) *fi
 
 	api.Get("/hashtags", middleware.RequireAuth(store, service), postsHandler.ListHashtags)
 	api.Get("/attachments/:id/download", middleware.RequireAuth(store, service), postsHandler.DownloadAttachmentByID)
+	api.Delete("/attachments/:id", middleware.RequireAuth(store, service), postsHandler.DeleteAttachment)
 	api.Get("/persons", middleware.RequireAuth(store, service), personsHandler.List)
 	api.Post("/persons", middleware.RequireAuth(store, service), personsHandler.Create)
 	api.Put("/persons/:id", middleware.RequireAuth(store, service), personsHandler.Update)

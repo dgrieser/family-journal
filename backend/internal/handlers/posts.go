@@ -382,6 +382,34 @@ func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(saved)
 }
 
+func (h *PostsHandler) DeleteAttachment(c *fiber.Ctx) error {
+	userID, role, err := middleware.GetSessionUser(c, h.Store)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+	}
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
+	}
+	scope := services.NewAccessScope(userID, role)
+	attachment, err := h.Service.GetAttachmentByIDForUser(scope, int64(id))
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "not found")
+	}
+	if _, err := h.Service.GetPost(scope, attachment.PostID); err != nil {
+		return fiber.NewError(fiber.StatusForbidden, "forbidden")
+	}
+	if err := h.deleteAttachmentFiles([]models.Attachment{*attachment}); err != nil {
+		log.Printf("delete attachment file error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete file")
+	}
+	if err := h.Service.DeleteAttachmentByID(int64(id)); err != nil {
+		log.Printf("delete attachment db error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete attachment")
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 func (h *PostsHandler) DownloadAttachmentByID(c *fiber.Ctx) error {
 	userID, role, err := middleware.GetSessionUser(c, h.Store)
 	if err != nil {

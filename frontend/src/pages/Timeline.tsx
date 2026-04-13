@@ -61,7 +61,6 @@ export const Timeline = () => {
   const [personSearch, setPersonSearch] = useState('');
   const [matchingPersons, setMatchingPersons] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
 
@@ -424,9 +423,7 @@ export const Timeline = () => {
       <PostForm
         onSuccess={() => {
           void fetchPosts({ page, viewMode, date, timespan, customStart, customEnd, search, selectedHashtags, selectedPersons });
-          setEditingPost(null);
         }}
-        initialData={editingPost}
       />
 
       {loading ? (
@@ -442,10 +439,6 @@ export const Timeline = () => {
               key={post.id}
               post={post}
               onUpdate={() => void fetchPosts({ page, viewMode, date, timespan, customStart, customEnd, search, selectedHashtags, selectedPersons })}
-              onEdit={(p) => {
-                setEditingPost(p);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
             />
           ))}
         </div>
