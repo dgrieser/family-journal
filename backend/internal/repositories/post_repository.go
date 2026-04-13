@@ -176,46 +176,52 @@ func (r *Repository) CountPosts(ownerFilter *int64, dateFilter services.DateFilt
 	return r.countPosts(r.DB, ownerFilter, dateFilter, hashtags, persons, search)
 }
 
+const postJoins = `LEFT JOIN post_hashtags ph ON ph.post_id = p.id
+		LEFT JOIN hashtags h ON h.id = ph.hashtag_id
+		LEFT JOIN mentions m ON m.post_id = p.id
+		LEFT JOIN persons pe ON pe.id = m.person_id`
+
 func buildPostListQuery(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string) (string, []interface{}) {
-	base, args := buildPostQueryBase(ownerFilter, dateFilter, hashtags, persons, search)
-	return `SELECT DISTINCT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at, u.email AS author_email ` +
-		strings.Replace(base, "FROM posts p", "FROM posts p\n\t\tJOIN users u ON u.id = p.user_id", 1), args
+	where, args := buildPostWhereClause(ownerFilter, dateFilter, hashtags, persons, search)
+	return `SELECT DISTINCT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at, u.email AS author_email
+		FROM posts p
+		JOIN users u ON u.id = p.user_id
+		` + postJoins + `
+		` + where, args
 }
 
 func buildPostCountQuery(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string) (string, []interface{}) {
-	base, args := buildPostQueryBase(ownerFilter, dateFilter, hashtags, persons, search)
-	return `SELECT COUNT(DISTINCT p.id) ` + base, args
+	where, args := buildPostWhereClause(ownerFilter, dateFilter, hashtags, persons, search)
+	return `SELECT COUNT(DISTINCT p.id)
+		FROM posts p
+		` + postJoins + `
+		` + where, args
 }
 
-func buildPostQueryBase(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string) (string, []interface{}) {
-	base := `FROM posts p
-		LEFT JOIN post_hashtags ph ON ph.post_id = p.id
-		LEFT JOIN hashtags h ON h.id = ph.hashtag_id
-		LEFT JOIN mentions m ON m.post_id = p.id
-		LEFT JOIN persons pe ON pe.id = m.person_id
-		WHERE 1=1`
+func buildPostWhereClause(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string) (string, []interface{}) {
+	where := `WHERE 1=1`
 	var args []interface{}
 	if dateFilter.Start != nil && dateFilter.End != nil && dateFilter.Start.Equal(*dateFilter.End) {
-		base += ` AND p.date = ?`
+		where += ` AND p.date = ?`
 		args = append(args, *dateFilter.Start)
 	} else if dateFilter.Start != nil && dateFilter.End != nil {
-		base += ` AND p.date >= ? AND p.date <= ?`
+		where += ` AND p.date >= ? AND p.date <= ?`
 		args = append(args, *dateFilter.Start, *dateFilter.End)
 	} else if dateFilter.Start != nil {
-		base += ` AND p.date >= ?`
+		where += ` AND p.date >= ?`
 		args = append(args, *dateFilter.Start)
 	} else if dateFilter.End != nil {
-		base += ` AND p.date <= ?`
+		where += ` AND p.date <= ?`
 		args = append(args, *dateFilter.End)
 	}
 	if ownerFilter != nil {
-		base += ` AND p.user_id = ?`
+		where += ` AND p.user_id = ?`
 		args = append(args, *ownerFilter)
 	}
 	if len(hashtags) > 0 {
 		placeholders := strings.Repeat("?,", len(hashtags))
 		placeholders = strings.TrimSuffix(placeholders, ",")
-		base += fmt.Sprintf(" AND h.name IN (%s)", placeholders)
+		where += fmt.Sprintf(" AND h.name IN (%s)", placeholders)
 		for _, tag := range hashtags {
 			args = append(args, strings.ToLower(tag))
 		}
@@ -223,16 +229,16 @@ func buildPostQueryBase(ownerFilter *int64, dateFilter services.DateFilter, hash
 	if len(persons) > 0 {
 		placeholders := strings.Repeat("?,", len(persons))
 		placeholders = strings.TrimSuffix(placeholders, ",")
-		base += fmt.Sprintf(" AND pe.name IN (%s)", placeholders)
+		where += fmt.Sprintf(" AND pe.name IN (%s)", placeholders)
 		for _, person := range persons {
 			args = append(args, person)
 		}
 	}
 	if search != "" {
-		base += " AND p.text LIKE ?"
+		where += " AND p.text LIKE ?"
 		args = append(args, "%"+search+"%")
 	}
-	return base, args
+	return where, args
 }
 
 func (r *Repository) listPosts(queryer sqlx.Ext, ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error) {

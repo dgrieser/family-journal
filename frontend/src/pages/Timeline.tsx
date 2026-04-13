@@ -13,17 +13,24 @@ const PAGE_SIZE = 20;
 type ViewMode = 'day' | 'search';
 type Timespan = 'all' | 'last_week' | 'last_30_days' | 'this_year' | 'custom';
 
+function localDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getDateRange(timespan: Timespan, customStart: string, customEnd: string): { startDate?: string; endDate?: string } {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateString(new Date());
   if (timespan === 'last_week') {
     const d = new Date();
     d.setDate(d.getDate() - 7);
-    return { startDate: d.toISOString().split('T')[0], endDate: today };
+    return { startDate: localDateString(d), endDate: today };
   }
   if (timespan === 'last_30_days') {
     const d = new Date();
     d.setDate(d.getDate() - 30);
-    return { startDate: d.toISOString().split('T')[0], endDate: today };
+    return { startDate: localDateString(d), endDate: today };
   }
   if (timespan === 'this_year') {
     return { startDate: `${new Date().getFullYear()}-01-01`, endDate: today };
@@ -41,12 +48,13 @@ export const Timeline = () => {
   const { t, i18n } = useTranslation();
   const [posts, setPosts] = useState<Post[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: PAGE_SIZE, totalItems: 0, totalPages: 0 });
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => localDateString(new Date()));
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const [timespan, setTimespan] = useState<Timespan>('all');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedHashtags, setSelectedHashtags] = useState<string[]>([]);
   const [selectedPersons, setSelectedPersons] = useState<string[]>([]);
   const [allHashtags, setAllHashtags] = useState<string[]>([]);
@@ -97,8 +105,13 @@ export const Timeline = () => {
   }, []);
 
   useEffect(() => {
-    void fetchPosts({ page, viewMode, date, timespan, customStart, customEnd, search, selectedHashtags, selectedPersons });
-  }, [date, fetchPosts, page, viewMode, timespan, customStart, customEnd, search, selectedHashtags, selectedPersons]);
+    const id = window.setTimeout(() => setDebouncedSearch(search), 300);
+    return () => window.clearTimeout(id);
+  }, [search]);
+
+  useEffect(() => {
+    void fetchPosts({ page, viewMode, date, timespan, customStart, customEnd, search: debouncedSearch, selectedHashtags, selectedPersons });
+  }, [date, fetchPosts, page, viewMode, timespan, customStart, customEnd, debouncedSearch, selectedHashtags, selectedPersons]);
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -143,15 +156,21 @@ export const Timeline = () => {
   }, [personSearch, showFilters]);
 
   const changeDate = (days: number) => {
-    const d = new Date(date);
+    const d = new Date(date + 'T12:00:00');
     d.setDate(d.getDate() + days);
     setPage(1);
-    setDate(d.toISOString().split('T')[0]);
+    setDate(localDateString(d));
   };
 
   const switchMode = (mode: ViewMode) => {
     setViewMode(mode);
     setPage(1);
+    if (mode === 'day') {
+      setSearch('');
+      setSelectedHashtags([]);
+      setSelectedPersons([]);
+      setShowFilters(false);
+    }
   };
 
   const hasActiveFilters = selectedHashtags.length > 0 || selectedPersons.length > 0;
