@@ -112,6 +112,7 @@ mysql -u root -p familyjournal < backend/migrations/002_session_store.sql
 
 All endpoints are namespaced under `/api/v1`.
 Error responses are JSON in the form `{ "error": "message" }`.
+The API uses session cookies for authentication. For browser or custom clients, send cookies with requests and include the CSRF cookie value from `csrf_` in the `X-CSRF-Token` header for state-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`).
 List endpoints for posts and persons support `page` and `pageSize` query params.
 `pageSize` defaults to `20` when omitted and is capped at `100`.
 `GET /persons` also supports `search` to filter by partial person name matches.
@@ -137,7 +138,7 @@ These endpoints return:
 - `PUT /auth/profile` (update email and/or password; password change requires `currentPassword` and `newPassword`)
 
 ### Posts
-- `GET /posts?date=YYYY-MM-DD&hashtags=tag1,tag2&persons=name1,name2&search=query&page=1&pageSize=20`
+- `GET /posts?date=YYYY-MM-DD&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&hashtags=tag1,tag2&persons=name1,name2&search=query&page=1&pageSize=20`
 - `POST /posts`
 - `GET /posts/:id`
 - `PUT /posts/:id`
@@ -145,7 +146,18 @@ These endpoints return:
 - `POST /posts/:id/comments`
 - `PUT /comments/:id`
 - `DELETE /comments/:id`
-- `POST /posts/:id/attachments`
+- `POST /posts/:id/attachments` (multipart form field `files`, supports multiple files)
+- `GET /attachments/:id/download`
+- `DELETE /attachments/:id`
+
+Post create/update payload:
+
+```json
+{
+  "date": "2026-04-13",
+  "text": "Daily journal entry text"
+}
+```
 
 ### Persons and hashtags
 - `GET /persons?page=1&pageSize=20&search=lena`
@@ -153,15 +165,40 @@ These endpoints return:
 - `PUT /persons/:id`
 - `DELETE /persons/:id`
 - `GET /hashtags`
+- `POST /hashtags`
+- `PUT /hashtags/:id`
+- `DELETE /hashtags/:id`
+
+Person payload:
+
+```json
+{
+  "name": "Lena",
+  "description": "Optional description"
+}
+```
+
+Hashtag payload:
+
+```json
+{
+  "name": "therapy"
+}
+```
 
 ### Admin
 - `GET /admin/users`
-- `PATCH /admin/users/:id/role`
-- `PATCH /admin/users/:id/active`
+- `PATCH /admin/users/:id/role` with `{ "role": "admin" }` or `{ "role": "user" }`
+- `PATCH /admin/users/:id/active` with `{ "is_active": true }`
 
 ### Other routes
 - `GET /healthz`
-- `GET /api/v1/attachments/:id/download` (requires authentication)
+
+### Response notes
+- Post responses include nested `user`, `hashtags`, `persons`, `comments`, and `attachments` fields.
+- Comment responses include a nested `user` object with the author `id` and `email`.
+- Person responses include a nested `creator` object.
+- Hashtag responses may include a nested `creator` object when creator metadata is available.
 
 ## Frontend notes
 
