@@ -55,20 +55,42 @@ func (h *PostsHandler) List(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
 	}
+
+	var dateFilter services.DateFilter
 	dateParam := c.Query("date")
-	if dateParam == "" {
-		dateParam = time.Now().Format("2006-01-02")
+	startParam := c.Query("startDate")
+	endParam := c.Query("endDate")
+
+	if dateParam != "" {
+		d, err := time.Parse("2006-01-02", dateParam)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid date")
+		}
+		dateFilter.Start = &d
+		dateFilter.End = &d
+	} else {
+		if startParam != "" {
+			d, err := time.Parse("2006-01-02", startParam)
+			if err != nil {
+				return fiber.NewError(fiber.StatusBadRequest, "invalid startDate")
+			}
+			dateFilter.Start = &d
+		}
+		if endParam != "" {
+			d, err := time.Parse("2006-01-02", endParam)
+			if err != nil {
+				return fiber.NewError(fiber.StatusBadRequest, "invalid endDate")
+			}
+			dateFilter.End = &d
+		}
 	}
-	date, err := time.Parse("2006-01-02", dateParam)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid date")
-	}
+
 	tags := splitQueryList(c.Query("hashtags"))
 	persons := splitQueryList(c.Query("persons"))
 	search := c.Query("search")
 	pagination := parsePagination(c)
 	scope := services.NewAccessScope(userID, role)
-	posts, err := h.Service.ListPosts(scope, date, tags, persons, search, pagination)
+	posts, err := h.Service.ListPosts(scope, dateFilter, tags, persons, search, pagination)
 	if err != nil {
 		log.Printf("list posts error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to list posts")

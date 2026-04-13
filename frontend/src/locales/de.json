@@ -54,5 +54,15 @@
   "comment_error": "Kommentar konnte nicht hinzugefügt werden.",
   "action_error": "Aktion fehlgeschlagen. Möglicherweise fehlt die Berechtigung.",
   "created_by": "Erstellt von",
-  "created_at": "Erstellt am"
+  "created_at": "Erstellt am",
+  "view_day": "Tagesansicht",
+  "view_search": "Suche",
+  "timespan_all": "Gesamte Zeit",
+  "timespan_last_week": "Letzte Woche",
+  "timespan_last_30_days": "Letzte 30 Tage",
+  "timespan_this_year": "Dieses Jahr",
+  "timespan_custom": "Benutzerdefiniert",
+  "start_date": "Von",
+  "end_date": "Bis",
+  "no_posts_found": "Keine Einträge gefunden."
 }

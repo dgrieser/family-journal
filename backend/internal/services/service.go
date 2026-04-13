@@ -3,7 +3,6 @@ package services
 import (
 	"errors"
 	"regexp"
-	"time"
 
 	"familyjournal/backend/internal/models"
 )
@@ -48,9 +47,9 @@ type HashtagRepository interface {
 type PostRepository interface {
 	DeletePost(id int64, ownerFilter *int64) error
 	GetPost(id int64, ownerFilter *int64) (*models.Post, error)
-	ListPostsPaginated(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, int, error)
-	ListPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error)
-	CountPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (int, error)
+	ListPostsPaginated(ownerFilter *int64, dateFilter DateFilter, hashtags, persons []string, search string, limit, offset int) ([]models.Post, int, error)
+	ListPosts(ownerFilter *int64, dateFilter DateFilter, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error)
+	CountPosts(ownerFilter *int64, dateFilter DateFilter, hashtags, persons []string, search string) (int, error)
 	ListPersonsForPosts(postIDs []int64) (map[int64][]models.Person, error)
 	ListCommentsForPosts(postIDs []int64) (map[int64][]models.Comment, error)
 	ListAttachmentsForPosts(postIDs []int64) (map[int64][]models.Attachment, error)
