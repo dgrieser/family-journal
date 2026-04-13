@@ -124,6 +124,9 @@ export const Hashtags = () => {
                   {t('name')}
                 </th>
                 <th className="hidden sm:table-cell px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">
+                  {t('created_by')}
+                </th>
+                <th className="hidden sm:table-cell px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">
                   {t('created_at')}
                 </th>
                 <th className="px-5 py-3 text-right text-xs font-medium text-stone-400 uppercase tracking-wider"></th>
@@ -143,10 +146,16 @@ export const Hashtags = () => {
                         {h.name}
                       </span>
                       <div className="sm:hidden text-xs text-stone-400 mt-1">
+                        {h.creator?.email}
+                      </div>
+                      <div className="sm:hidden text-xs text-stone-400 mt-0.5">
                         {new Date(h.created_at).toLocaleDateString(i18n.language, {
                           year: 'numeric', month: 'short', day: 'numeric',
                         })}
                       </div>
+                    </td>
+                    <td className="hidden sm:table-cell px-5 py-3.5 text-sm text-stone-500">
+                      {h.creator?.email}
                     </td>
                     <td className="hidden sm:table-cell px-5 py-3.5 text-sm text-stone-500">
                       {new Date(h.created_at).toLocaleDateString(i18n.language, {

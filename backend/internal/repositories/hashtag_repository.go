@@ -46,8 +46,15 @@ func (r *Repository) ListHashtags(ownerFilter *int64) ([]models.Hashtag, error) 
 
 func (r *Repository) ListAllHashtags() ([]models.Hashtag, error) {
 	var tags []models.Hashtag
-	if err := r.DB.Select(&tags, `SELECT id, name, created_at, created_by_user_id FROM hashtags ORDER BY name ASC`); err != nil {
+	query := `SELECT h.id, h.name, h.created_at, h.created_by_user_id, COALESCE(u.email, '') AS creator_email
+		FROM hashtags h
+		LEFT JOIN users u ON u.id = h.created_by_user_id
+		ORDER BY h.name ASC`
+	if err := r.DB.Select(&tags, query); err != nil {
 		return nil, err
+	}
+	for i := range tags {
+		tags[i].HydrateCreator()
 	}
 	return tags, nil
 }
