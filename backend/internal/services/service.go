@@ -65,7 +65,7 @@ type CommentRepository interface {
 type AttachmentRepository interface {
 	CreateAttachment(att *models.Attachment) error
 	GetAttachmentByID(id int64, ownerFilter *int64) (*models.Attachment, error)
-	DeleteAttachmentByID(id int64) error
+	DeleteAttachmentByID(id int64, ownerFilter *int64) error
 }
 
 type Service struct {

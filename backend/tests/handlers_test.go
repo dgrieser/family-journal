@@ -192,7 +192,7 @@ func (f *fakeRepo) GetAttachmentByID(id int64, ownerFilter *int64) (*models.Atta
 	return nil, sql.ErrNoRows
 }
 
-func (f *fakeRepo) DeleteAttachmentByID(id int64) error { return nil }
+func (f *fakeRepo) DeleteAttachmentByID(id int64, ownerFilter *int64) error { return nil }
 
 func TestJSONErrorHandlerReturnsErrorObject(t *testing.T) {
 	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})

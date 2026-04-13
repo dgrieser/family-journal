@@ -403,7 +403,7 @@ func (h *PostsHandler) DeleteAttachment(c *fiber.Ctx) error {
 		log.Printf("delete attachment file error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete file")
 	}
-	if err := h.Service.DeleteAttachmentByID(int64(id)); err != nil {
+	if err := h.Service.DeleteAttachmentByID(scope, int64(id)); err != nil {
 		log.Printf("delete attachment db error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete attachment")
 	}

@@ -162,14 +162,14 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
       const postId = response.data.id;
       postSaved = true;
 
-      for (const id of pendingDeleteIds) {
+      await Promise.all(pendingDeleteIds.map(async (id) => {
         try {
           await api.delete(`/attachments/${id}`);
         } catch (err) {
           console.error('Failed to delete attachment', id, err);
           attachmentError = true;
         }
-      }
+      }));
 
       if (postId && files.length > 0) {
         const formData = new FormData();
@@ -177,10 +177,12 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
         await api.post(`/posts/${postId}/attachments`, formData);
       }
 
-      setText('');
-      setFiles([]);
-      setPendingDeleteIds([]);
-      onSuccess();
+      if (!attachmentError) {
+        setText('');
+        setFiles([]);
+        setPendingDeleteIds([]);
+        onSuccess();
+      }
     } catch (err) {
       console.error(err);
       const apiErr = err as AxiosError<{ error?: string }>;
@@ -193,7 +195,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
         setSubmitError(t('post_submit_error'));
       }
     } finally {
-      if (attachmentError && !submitError) {
+      if (attachmentError) {
         setSubmitError(t('attachment_delete_error'));
       }
       setIsSubmitting(false);
