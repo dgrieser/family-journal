@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { searchPersons } from '../persons';
@@ -63,6 +63,7 @@ export const Timeline = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   const fetchPosts = useCallback(async (params: {
     page: number;
@@ -221,19 +222,20 @@ export const Timeline = () => {
             >
               <ChevronLeft size={18} />
             </button>
-            <div className="relative flex items-center gap-2 bg-white border border-stone-200 px-3 py-2 rounded-md shadow-sm cursor-pointer">
+            <div className="relative flex items-center gap-2 bg-white border border-stone-200 px-3 py-2 rounded-md shadow-sm cursor-pointer" onClick={() => dateInputRef.current?.showPicker()}>
               <Calendar size={15} className="text-stone-400 flex-shrink-0" />
               <span className="text-sm text-stone-700 select-none whitespace-nowrap">
                 {new Date(date + 'T12:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </span>
               <input
+                ref={dateInputRef}
                 type="date"
                 value={date}
                 onChange={(e) => {
                   setPage(1);
                   setDate(e.target.value);
                 }}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                className="absolute inset-0 opacity-0 pointer-events-none w-full"
               />
             </div>
             <button

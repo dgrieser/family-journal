@@ -29,6 +29,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const personRequestIdRef = useRef(0);
   const personSearchTimeoutRef = useRef<number | null>(null);
 
@@ -207,15 +208,16 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
   const formContent = (
     <form onSubmit={handleSubmit}>
       <div className="mb-2">
-        <div className="relative inline-flex items-center gap-2 border border-stone-200 rounded px-2.5 py-1.5 cursor-pointer bg-white">
+        <div className="relative inline-flex items-center gap-2 border border-stone-200 rounded px-2.5 py-1.5 cursor-pointer bg-white" onClick={() => dateInputRef.current?.showPicker()}>
           <span className="text-sm text-stone-700 select-none whitespace-nowrap">
             {new Date(date + 'T12:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
           </span>
           <input
+            ref={dateInputRef}
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="absolute inset-0 opacity-0 cursor-pointer w-full"
+            className="absolute inset-0 opacity-0 pointer-events-none w-full"
           />
         </div>
       </div>
