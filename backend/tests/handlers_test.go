@@ -34,7 +34,7 @@ type fakeRepo struct {
 	totalPosts     int
 	totalPersons   int
 	listPostsArgs  struct {
-		date     time.Time
+		date     services.DateFilter
 		hashtags []string
 		persons  []string
 		search   string
@@ -131,8 +131,8 @@ func (f *fakeRepo) GetPost(id int64, ownerFilter *int64) (*models.Post, error) {
 	}
 	return &models.Post{}, nil
 }
-func (f *fakeRepo) ListPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error) {
-	f.listPostsArgs.date = date
+func (f *fakeRepo) ListPosts(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error) {
+	f.listPostsArgs.date = dateFilter
 	f.listPostsArgs.hashtags = hashtags
 	f.listPostsArgs.persons = persons
 	f.listPostsArgs.search = search
@@ -140,14 +140,14 @@ func (f *fakeRepo) ListPosts(ownerFilter *int64, date time.Time, hashtags, perso
 	f.listPostsArgs.offset = offset
 	return nil, nil
 }
-func (f *fakeRepo) ListPostsPaginated(ownerFilter *int64, date time.Time, hashtags, persons []string, search string, limit, offset int) ([]models.Post, int, error) {
-	posts, err := f.ListPosts(ownerFilter, date, hashtags, persons, search, limit, offset)
+func (f *fakeRepo) ListPostsPaginated(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string, limit, offset int) ([]models.Post, int, error) {
+	posts, err := f.ListPosts(ownerFilter, dateFilter, hashtags, persons, search, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 	return posts, f.totalPosts, nil
 }
-func (f *fakeRepo) CountPosts(ownerFilter *int64, date time.Time, hashtags, persons []string, search string) (int, error) {
+func (f *fakeRepo) CountPosts(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string) (int, error) {
 	return f.totalPosts, nil
 }
 func (f *fakeRepo) ReplacePostTags(postID int64, tags []models.Hashtag) error       { return nil }
@@ -741,7 +741,7 @@ func TestServiceNormalizesNilSlices(t *testing.T) {
 		t.Fatalf("expected hashtags slice to be non-nil")
 	}
 
-	postsPage, err := service.ListPosts(services.NewAccessScope(1, models.RoleUser), time.Now(), nil, nil, "", services.NewPagination(1, 20))
+	postsPage, err := service.ListPosts(services.NewAccessScope(1, models.RoleUser), services.DateFilter{}, nil, nil, "", services.NewPagination(1, 20))
 	if err != nil {
 		t.Fatalf("list posts: %v", err)
 	}
