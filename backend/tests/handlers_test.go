@@ -108,7 +108,7 @@ func (f *fakeRepo) CreateHashtag(tag *models.Hashtag) error              { retur
 func (f *fakeRepo) ListHashtags(ownerFilter *int64) ([]models.Hashtag, error) {
 	return nil, nil
 }
-func (f *fakeRepo) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
+func (f *fakeRepo) FindOrCreateHashtag(name string, userID int64) (*models.Hashtag, error) {
 	f.tagsCreated = append(f.tagsCreated, name)
 	return &models.Hashtag{ID: int64(len(f.tagsCreated)), Name: name}, nil
 }

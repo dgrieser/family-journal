@@ -69,7 +69,7 @@ func (r *Repository) SavePostWithRelations(ownerID int64, ownerFilter *int64, po
 
 	var tagModels []models.Hashtag
 	for _, tag := range tagNames {
-		model, execErr := findOrCreateHashtagTx(tx, tag)
+		model, execErr := findOrCreateHashtagTx(tx, tag, ownerID)
 		if execErr != nil {
 			return execErr
 		}

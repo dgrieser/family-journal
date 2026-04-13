@@ -82,6 +82,14 @@ func (r *Repository) UpdateHashtag(tag *models.Hashtag, ownerFilter *int64) erro
 			return models.ErrForbidden
 		}
 	}
+	fetchQuery := `SELECT h.id, h.name, h.created_at, h.created_by_user_id, COALESCE(u.email, '') AS creator_email
+		FROM hashtags h
+		LEFT JOIN users u ON u.id = h.created_by_user_id
+		WHERE h.id = ?`
+	if err := r.DB.Get(tag, fetchQuery, tag.ID); err != nil {
+		return err
+	}
+	tag.HydrateCreator()
 	return nil
 }
 
@@ -108,7 +116,7 @@ func (r *Repository) DeleteHashtag(id int64, ownerFilter *int64) error {
 	return nil
 }
 
-func (r *Repository) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
+func (r *Repository) FindOrCreateHashtag(name string, userID int64) (*models.Hashtag, error) {
 	name = strings.ToLower(name)
 	var tag models.Hashtag
 	query := `SELECT id, name, created_at, created_by_user_id FROM hashtags WHERE name = ?`
@@ -117,7 +125,7 @@ func (r *Repository) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
 	} else if err != sql.ErrNoRows {
 		return nil, err
 	}
-	tag = models.Hashtag{Name: name}
+	tag = models.Hashtag{Name: name, CreatedByUserID: &userID}
 	if err := r.CreateHashtag(&tag); err != nil {
 		if errors.Is(err, models.ErrDuplicate) {
 			if err2 := r.DB.Get(&tag, query, name); err2 != nil {
@@ -165,7 +173,7 @@ func (r *Repository) ListTagsForPosts(postIDs []int64) (map[int64][]models.Hasht
 	return results, nil
 }
 
-func findOrCreateHashtagTx(tx *sqlx.Tx, name string) (*models.Hashtag, error) {
+func findOrCreateHashtagTx(tx *sqlx.Tx, name string, userID int64) (*models.Hashtag, error) {
 	name = strings.ToLower(name)
 	var tag models.Hashtag
 	query := `SELECT id, name, created_at, created_by_user_id FROM hashtags WHERE name = ?`
@@ -174,9 +182,9 @@ func findOrCreateHashtagTx(tx *sqlx.Tx, name string) (*models.Hashtag, error) {
 	} else if err != sql.ErrNoRows {
 		return nil, err
 	}
-	tag = models.Hashtag{Name: name}
+	tag = models.Hashtag{Name: name, CreatedByUserID: &userID}
 	if err := createHashtagTx(tx, &tag); err != nil {
-		if isDuplicateKeyError(err) {
+		if errors.Is(err, models.ErrDuplicate) {
 			if err2 := tx.Get(&tag, query, name); err2 != nil {
 				return nil, err2
 			}
@@ -190,6 +198,9 @@ func findOrCreateHashtagTx(tx *sqlx.Tx, name string) (*models.Hashtag, error) {
 func createHashtagTx(tx *sqlx.Tx, tag *models.Hashtag) error {
 	res, err := tx.Exec(`INSERT INTO hashtags (name, created_at, created_by_user_id) VALUES (?, NOW(), ?)`, tag.Name, tag.CreatedByUserID)
 	if err != nil {
+		if isDuplicateKeyError(err) {
+			return models.ErrDuplicate
+		}
 		return err
 	}
 	id, err := lastInsertID(res)
