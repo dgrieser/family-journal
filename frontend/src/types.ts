@@ -21,6 +21,8 @@ export interface Hashtag {
   id: number;
   name: string;
   created_at: string;
+  created_by_user_id?: number;
+  creator?: { email: string };
 }
 
 export interface Attachment {

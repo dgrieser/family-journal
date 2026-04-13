@@ -309,19 +309,6 @@ func (h *PostsHandler) DeleteComment(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-func (h *PostsHandler) ListHashtags(c *fiber.Ctx) error {
-	userID, role, err := middleware.GetSessionUser(c, h.Store)
-	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
-	}
-	scope := services.NewAccessScope(userID, role)
-	tags, err := h.Service.ListHashtags(scope)
-	if err != nil {
-		log.Printf("list hashtags error: %v", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to list hashtags")
-	}
-	return c.JSON(tags)
-}
 
 func (h *PostsHandler) UploadAttachment(c *fiber.Ctx) error {
 	userID, role, err := middleware.GetSessionUser(c, h.Store)

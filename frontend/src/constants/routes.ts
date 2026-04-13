@@ -1,5 +1,6 @@
 export const APP_ROUTE_SEGMENTS = {
   PERSONS: 'persons',
+  HASHTAGS: 'hashtags',
   PROFILE: 'profile',
   ADMIN: 'admin',
   AUTH: 'auth',
@@ -11,6 +12,7 @@ export const APP_ROUTE_SEGMENTS = {
 export const APP_ROUTES = {
   ROOT: '/',
   PERSONS: `/${APP_ROUTE_SEGMENTS.PERSONS}`,
+  HASHTAGS: `/${APP_ROUTE_SEGMENTS.HASHTAGS}`,
   PROFILE: `/${APP_ROUTE_SEGMENTS.PROFILE}`,
   ADMIN: `/${APP_ROUTE_SEGMENTS.ADMIN}`,
   AUTH_LOGIN: `/${APP_ROUTE_SEGMENTS.AUTH}/${APP_ROUTE_SEGMENTS.LOGIN}`,
