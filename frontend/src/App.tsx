@@ -4,6 +4,7 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Timeline } from './pages/Timeline';
 import { Persons } from './pages/Persons';
+import { Hashtags } from './pages/Hashtags';
 import { Admin } from './pages/Admin';
 import { Profile } from './pages/Profile';
 import { Layout } from './components/Layout';
@@ -39,6 +40,7 @@ function App() {
         <Route path={APP_ROUTES.ROOT} element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Timeline />} />
           <Route path={APP_ROUTE_SEGMENTS.PERSONS} element={<Persons />} />
+          <Route path={APP_ROUTE_SEGMENTS.HASHTAGS} element={<Hashtags />} />
           <Route path={APP_ROUTE_SEGMENTS.PROFILE} element={<Profile />} />
           <Route path={APP_ROUTE_SEGMENTS.ADMIN} element={<AdminRoute><Admin /></AdminRoute>} />
         </Route>

@@ -39,9 +39,13 @@ type PersonRepository interface {
 }
 
 type HashtagRepository interface {
+	CreateHashtag(tag *models.Hashtag) error
 	ListHashtags(ownerFilter *int64) ([]models.Hashtag, error)
 	FindOrCreateHashtag(name string) (*models.Hashtag, error)
 	ListTagsForPosts(postIDs []int64) (map[int64][]models.Hashtag, error)
+	ListAllHashtags() ([]models.Hashtag, error)
+	UpdateHashtag(tag *models.Hashtag, ownerFilter *int64) error
+	DeleteHashtag(id int64, ownerFilter *int64) error
 }
 
 type PostRepository interface {

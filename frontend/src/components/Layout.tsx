@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store';
 import api from '../api';
-import { LayoutDashboard, Users, UserCog, User, LogOut, Languages, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, Hash, UserCog, User, LogOut, Languages, Menu, X } from 'lucide-react';
 import { APP_ROUTES, API_ROUTES } from '../constants/routes';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -103,6 +103,10 @@ export const Layout = () => {
               <Users size={17} />
               <span>{t('persons')}</span>
             </NavLink>
+            <NavLink to={APP_ROUTES.HASHTAGS} className={navLinkClass} onClick={closeDrawer}>
+              <Hash size={17} />
+              <span>{t('hashtags')}</span>
+            </NavLink>
             <NavLink to={APP_ROUTES.PROFILE} className={navLinkClass} onClick={closeDrawer}>
               <User size={17} />
               <span>{t('profile')}</span>
@@ -158,6 +162,10 @@ export const Layout = () => {
           <NavLink to={APP_ROUTES.PERSONS} className={navLinkClass}>
             <Users size={17} />
             <span>{t('persons')}</span>
+          </NavLink>
+          <NavLink to={APP_ROUTES.HASHTAGS} className={navLinkClass}>
+            <Hash size={17} />
+            <span>{t('hashtags')}</span>
           </NavLink>
           <NavLink to={APP_ROUTES.PROFILE} className={navLinkClass}>
             <User size={17} />

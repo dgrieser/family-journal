@@ -65,5 +65,8 @@
   "start_date": "From",
   "end_date": "To",
   "no_posts_found": "No posts found.",
-  "attachment_delete_error": "Post saved, but deleting some attachments failed."
+  "attachment_delete_error": "Post saved, but deleting some attachments failed.",
+  "hashtag_name": "Hashtag name",
+  "hashtag_exists": "Hashtag already exists.",
+  "no_hashtags": "No hashtags yet."
 }

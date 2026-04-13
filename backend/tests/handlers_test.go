@@ -104,6 +104,7 @@ func (f *fakeRepo) FindOrCreatePerson(userID int64, name string) (*models.Person
 	f.personsCreated = append(f.personsCreated, name)
 	return &models.Person{ID: int64(len(f.personsCreated)), Name: name}, nil
 }
+func (f *fakeRepo) CreateHashtag(tag *models.Hashtag) error              { return nil }
 func (f *fakeRepo) ListHashtags(ownerFilter *int64) ([]models.Hashtag, error) {
 	return nil, nil
 }
@@ -111,6 +112,9 @@ func (f *fakeRepo) FindOrCreateHashtag(name string) (*models.Hashtag, error) {
 	f.tagsCreated = append(f.tagsCreated, name)
 	return &models.Hashtag{ID: int64(len(f.tagsCreated)), Name: name}, nil
 }
+func (f *fakeRepo) ListAllHashtags() ([]models.Hashtag, error)                            { return nil, nil }
+func (f *fakeRepo) UpdateHashtag(tag *models.Hashtag, ownerFilter *int64) error           { return nil }
+func (f *fakeRepo) DeleteHashtag(id int64, ownerFilter *int64) error                      { return nil }
 func (f *fakeRepo) CreatePost(post *models.Post) error { post.ID = 1; return nil }
 func (f *fakeRepo) UpdatePost(post *models.Post) error { return nil }
 func (f *fakeRepo) DeletePost(id int64, ownerFilter *int64) error {

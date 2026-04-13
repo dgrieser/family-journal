@@ -92,6 +92,7 @@ func New(cfg config.Config, service *services.Service, store *session.Store) *fi
 		AllowedTypes: cfg.AllowedTypes,
 	}
 	personsHandler := &handlers.PersonsHandler{Service: service, Store: store}
+	hashtagsHandler := &handlers.HashtagsHandler{Service: service, Store: store}
 
 	api.Post("/auth/register", authHandler.Register)
 	api.Post("/auth/login", authHandler.Login)
@@ -116,7 +117,10 @@ func New(cfg config.Config, service *services.Service, store *session.Store) *fi
 	api.Put("/comments/:id", middleware.RequireAuth(store, service), postsHandler.UpdateComment)
 	api.Delete("/comments/:id", middleware.RequireAuth(store, service), postsHandler.DeleteComment)
 
-	api.Get("/hashtags", middleware.RequireAuth(store, service), postsHandler.ListHashtags)
+	api.Get("/hashtags", middleware.RequireAuth(store, service), hashtagsHandler.List)
+	api.Post("/hashtags", middleware.RequireAuth(store, service), hashtagsHandler.Create)
+	api.Put("/hashtags/:id", middleware.RequireAuth(store, service), hashtagsHandler.Update)
+	api.Delete("/hashtags/:id", middleware.RequireAuth(store, service), hashtagsHandler.Delete)
 	api.Get("/attachments/:id/download", middleware.RequireAuth(store, service), postsHandler.DownloadAttachmentByID)
 	api.Delete("/attachments/:id", middleware.RequireAuth(store, service), postsHandler.DeleteAttachment)
 	api.Get("/persons", middleware.RequireAuth(store, service), personsHandler.List)
