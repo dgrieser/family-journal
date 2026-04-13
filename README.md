@@ -23,6 +23,50 @@ Then start the stack:
 docker compose up --build
 ```
 
+If `docker compose` is not available, you can run the containers individually with plain Docker:
+
+The published backend and frontend images do not include MySQL. Run MySQL as a separate container and connect the backend to it over the shared Docker network.
+
+```bash
+cp .env.example .env
+
+docker network create familyjournal
+docker volume create familyjournal_mysql_data
+docker volume create familyjournal_uploads
+
+docker pull ghcr.io/dgrieser/family-journal-backend:latest
+docker pull ghcr.io/dgrieser/family-journal-frontend:latest
+
+docker run -d \
+  --name familyjournal-mysql \
+  --network familyjournal \
+  -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD=change-me \
+  -e MYSQL_DATABASE=familyjournal \
+  -v familyjournal_mysql_data:/var/lib/mysql \
+  mysql:8.3
+
+docker run -d \
+  --name familyjournal-backend \
+  --network familyjournal \
+  -p 8080:8080 \
+  -e MYSQL_DSN='root:change-me@tcp(familyjournal-mysql:3306)/familyjournal?parseTime=true' \
+  -e SESSION_SECRET='replace-with-long-random-secret' \
+  -e COOKIE_SECURE=false \
+  -e UPLOAD_DIR=/app/uploads \
+  -e MAX_UPLOAD_MB=25 \
+  -v familyjournal_uploads:/app/uploads \
+  ghcr.io/dgrieser/family-journal-backend:latest
+
+docker run -d \
+  --name familyjournal-frontend \
+  --network familyjournal \
+  -p 3000:80 \
+  ghcr.io/dgrieser/family-journal-frontend:latest
+```
+
+The startup order matters: start MySQL first, then the backend, then the frontend. The frontend nginx config proxies `/api`, `/uploads`, and `/healthz` to the backend container over the shared Docker network, so the backend container must be reachable there.
+
 Services:
 
 - Frontend: `http://localhost:3000`
