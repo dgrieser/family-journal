@@ -50,7 +50,7 @@ docker run -d \
   --name familyjournal-backend \
   --network familyjournal \
   -p 8080:8080 \
-  -e MYSQL_DSN='root:change-me@tcp(familyjournal-mysql:3306)/familyjournal?parseTime=true' \
+  -e MYSQL_DSN="root:${MYSQL_ROOT_PASSWORD:-change-me}@tcp(familyjournal-mysql:3306)/familyjournal?parseTime=true" \
   -e SESSION_SECRET='replace-with-long-random-secret' \
   -e COOKIE_SECURE=false \
   -e UPLOAD_DIR=/app/uploads \
