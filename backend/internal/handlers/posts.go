@@ -432,14 +432,13 @@ func parsePostDatetime(dateStr, timeStr string) (time.Time, error) {
 		}
 		return t, nil
 	}
-	if len(timeStr) > 5 {
-		timeStr = timeStr[:5]
+	combined := dateStr + "T" + timeStr
+	for _, layout := range []string{"2006-01-02T15:04:05", "2006-01-02T15:04"} {
+		if t, err := time.Parse(layout, combined); err == nil {
+			return t, nil
+		}
 	}
-	t, err := time.Parse("2006-01-02T15:04", dateStr+"T"+timeStr)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid date or time format")
-	}
-	return t, nil
+	return time.Time{}, fmt.Errorf("invalid date or time format")
 }
 
 func isAllowedType(contentType string, allowed []string) bool {

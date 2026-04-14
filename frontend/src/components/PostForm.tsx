@@ -14,10 +14,15 @@ interface PostFormProps {
   embedded?: boolean;
 }
 
+const localDateStr = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFormProps) => {
   const { t, i18n } = useTranslation();
   const [text, setText] = useState(initialData?.text || '');
-  const [date, setDate] = useState(initialData?.date.split('T')[0] ?? new Date().toISOString().split('T')[0]);
+  // For existing posts: slice the stored wall-clock datetime string directly so
+  // no timezone conversion occurs. For new posts: use local date/time components.
+  const [date, setDate] = useState(initialData?.date.split('T')[0] ?? localDateStr(new Date()));
   const [time, setTime] = useState(initialData ? initialData.date.slice(11, 16) : new Date().toTimeString().slice(0, 5));
   const [files, setFiles] = useState<File[]>([]);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<number[]>([]);
@@ -50,7 +55,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
       setTime(initialData.date.slice(11, 16));
     } else {
       setText('');
-      setDate(new Date().toISOString().split('T')[0]);
+      setDate(localDateStr(new Date()));
       setTime(new Date().toTimeString().slice(0, 5));
     }
     setFiles([]);
