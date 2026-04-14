@@ -35,9 +35,9 @@ func (r *Repository) SavePostWithRelations(ownerID int64, ownerFilter *int64, po
 
 	if post.ID == 0 {
 		post.UserID = ownerID
-		query := `INSERT INTO posts (user_id, date, time, text, created_at, updated_at)
-			VALUES (?, ?, ?, ?, NOW(), NOW())`
-		res, execErr := tx.Exec(query, post.UserID, post.Date, post.Time, post.Text)
+		query := `INSERT INTO posts (user_id, date, text, created_at, updated_at)
+			VALUES (?, ?, ?, NOW(), NOW())`
+		res, execErr := tx.Exec(query, post.UserID, post.Date, post.Text)
 		if execErr != nil {
 			return execErr
 		}
@@ -48,8 +48,8 @@ func (r *Repository) SavePostWithRelations(ownerID int64, ownerFilter *int64, po
 		post.ID = id
 	} else {
 		post.UserID = ownerID
-		query := `UPDATE posts SET text = ?, date = ?, time = ?, updated_at = NOW() WHERE id = ?`
-		args := []interface{}{post.Text, post.Date, post.Time, post.ID}
+		query := `UPDATE posts SET text = ?, date = ?, updated_at = NOW() WHERE id = ?`
+		args := []interface{}{post.Text, post.Date, post.ID}
 		if ownerFilter != nil {
 			query += ` AND user_id = ?`
 			args = append(args, *ownerFilter)
@@ -95,9 +95,9 @@ func (r *Repository) SavePostWithRelations(ownerID int64, ownerFilter *int64, po
 }
 
 func (r *Repository) CreatePost(post *models.Post) error {
-	query := `INSERT INTO posts (user_id, date, time, text, created_at, updated_at)
-		VALUES (?, ?, ?, ?, NOW(), NOW())`
-	res, err := r.DB.Exec(query, post.UserID, post.Date, post.Time, post.Text)
+	query := `INSERT INTO posts (user_id, date, text, created_at, updated_at)
+		VALUES (?, ?, ?, NOW(), NOW())`
+	res, err := r.DB.Exec(query, post.UserID, post.Date, post.Text)
 	if err != nil {
 		return err
 	}
@@ -110,8 +110,8 @@ func (r *Repository) CreatePost(post *models.Post) error {
 }
 
 func (r *Repository) UpdatePost(post *models.Post) error {
-	_, err := r.DB.Exec(`UPDATE posts SET text = ?, date = ?, time = ?, updated_at = NOW() WHERE id = ? AND user_id = ?`,
-		post.Text, post.Date, post.Time, post.ID, post.UserID)
+	_, err := r.DB.Exec(`UPDATE posts SET text = ?, date = ?, updated_at = NOW() WHERE id = ? AND user_id = ?`,
+		post.Text, post.Date, post.ID, post.UserID)
 	return err
 }
 
@@ -128,7 +128,7 @@ func (r *Repository) DeletePost(id int64, ownerFilter *int64) error {
 
 func (r *Repository) GetPost(id int64, ownerFilter *int64) (*models.Post, error) {
 	var post models.Post
-	query := `SELECT p.id, p.user_id, p.date, p.time, p.text, p.created_at, p.updated_at, u.email AS author_email FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id = ?`
+	query := `SELECT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at, u.email AS author_email FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id = ?`
 	args := []interface{}{id}
 	if ownerFilter != nil {
 		query += ` AND p.user_id = ?`
@@ -183,7 +183,7 @@ const postJoins = `LEFT JOIN post_hashtags ph ON ph.post_id = p.id
 
 func buildPostListQuery(ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string) (string, []interface{}) {
 	where, args := buildPostWhereClause(ownerFilter, dateFilter, hashtags, persons, search)
-	return `SELECT DISTINCT p.id, p.user_id, p.date, p.time, p.text, p.created_at, p.updated_at, u.email AS author_email
+	return `SELECT DISTINCT p.id, p.user_id, p.date, p.text, p.created_at, p.updated_at, u.email AS author_email
 		FROM posts p
 		JOIN users u ON u.id = p.user_id
 		` + postJoins + `
@@ -202,17 +202,17 @@ func buildPostWhereClause(ownerFilter *int64, dateFilter services.DateFilter, ha
 	where := `WHERE 1=1`
 	var args []interface{}
 	if dateFilter.Start != nil && dateFilter.End != nil && dateFilter.Start.Equal(*dateFilter.End) {
-		where += ` AND p.date = ?`
-		args = append(args, *dateFilter.Start)
+		where += ` AND DATE(p.date) = ?`
+		args = append(args, dateFilter.Start.Format("2006-01-02"))
 	} else if dateFilter.Start != nil && dateFilter.End != nil {
-		where += ` AND p.date >= ? AND p.date <= ?`
-		args = append(args, *dateFilter.Start, *dateFilter.End)
+		where += ` AND DATE(p.date) >= ? AND DATE(p.date) <= ?`
+		args = append(args, dateFilter.Start.Format("2006-01-02"), dateFilter.End.Format("2006-01-02"))
 	} else if dateFilter.Start != nil {
-		where += ` AND p.date >= ?`
-		args = append(args, *dateFilter.Start)
+		where += ` AND DATE(p.date) >= ?`
+		args = append(args, dateFilter.Start.Format("2006-01-02"))
 	} else if dateFilter.End != nil {
-		where += ` AND p.date <= ?`
-		args = append(args, *dateFilter.End)
+		where += ` AND DATE(p.date) <= ?`
+		args = append(args, dateFilter.End.Format("2006-01-02"))
 	}
 	if ownerFilter != nil {
 		where += ` AND p.user_id = ?`

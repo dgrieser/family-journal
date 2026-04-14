@@ -17,8 +17,8 @@ interface PostFormProps {
 export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFormProps) => {
   const { t, i18n } = useTranslation();
   const [text, setText] = useState(initialData?.text || '');
-  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
-  const [time, setTime] = useState(initialData?.time ?? new Date().toTimeString().slice(0, 5));
+  const [date, setDate] = useState(initialData?.date.split('T')[0] ?? new Date().toISOString().split('T')[0]);
+  const [time, setTime] = useState(initialData ? initialData.date.slice(11, 16) : new Date().toTimeString().slice(0, 5));
   const [files, setFiles] = useState<File[]>([]);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<number[]>([]);
   const [showHashtagSuggestions, setShowHashtagSuggestions] = useState(false);
@@ -47,7 +47,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     if (initialData) {
       setText(initialData.text);
       setDate(initialData.date.split('T')[0]);
-      setTime(initialData.time ?? new Date().toTimeString().slice(0, 5));
+      setTime(initialData.date.slice(11, 16));
     } else {
       setText('');
       setDate(new Date().toISOString().split('T')[0]);

@@ -50,7 +50,6 @@ export interface Post {
   user_id: number;
   user?: User;
   date: string;
-  time?: string | null;
   text: string;
   hashtags: Hashtag[];
   persons: Person[];
