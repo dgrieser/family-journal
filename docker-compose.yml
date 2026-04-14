@@ -1,5 +1,5 @@
 services:
-  mysql:
+  familyjournal-mysql:
     image: mysql:8.3
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-me}
@@ -15,16 +15,16 @@ services:
       retries: 20
       start_period: 30s
 
-  backend:
+  familyjournal-backend:
     build: ./backend
     environment:
-      MYSQL_DSN: ${MYSQL_DSN:-root:change-me@tcp(mysql:3306)/familyjournal?parseTime=true}
+      MYSQL_DSN: ${MYSQL_DSN:-root:change-me@tcp(familyjournal-mysql:3306)/familyjournal?parseTime=true}
       SESSION_SECRET: ${SESSION_SECRET:-replace-with-long-random-secret}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       UPLOAD_DIR: /app/uploads
       MAX_UPLOAD_MB: "25"
     depends_on:
-      mysql:
+      familyjournal-mysql:
         condition: service_healthy
     ports:
       - "8080:8080"
@@ -38,10 +38,14 @@ services:
       retries: 20
       start_period: 10s
 
-  frontend:
+  familyjournal-frontend:
     build: ./frontend
+    environment:
+      BACKEND_UPSTREAM: ${BACKEND_UPSTREAM:-familyjournal-backend}
+      BACKEND_PORT: ${BACKEND_PORT:-8080}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
     depends_on:
-      backend:
+      familyjournal-backend:
         condition: service_healthy
     ports:
       - "3000:80"

@@ -62,6 +62,7 @@ docker run -d \
   --name familyjournal-frontend \
   --network familyjournal \
   -p 3000:80 \
+  -e MAX_UPLOAD_MB=25 \
   ghcr.io/dgrieser/family-journal-frontend:latest
 ```
 
@@ -95,7 +96,15 @@ Services:
 
 ### Frontend
 
-No frontend-specific environment variables are required for the default Docker setup. The production Docker setup serves the frontend behind nginx and proxies `/api`, `/uploads`, and `/healthz` to the backend container. For local Vite development, the frontend also uses `/api` and `/uploads` proxies (see `frontend/vite.config.ts`).
+The production Docker setup serves the frontend behind nginx and proxies `/api`, `/uploads`, and `/healthz` to the backend container. For local Vite development, the frontend also uses `/api` and `/uploads` proxies (see `frontend/vite.config.ts`).
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `BACKEND_UPSTREAM` | Hostname of the backend container/service on the shared network | `familyjournal-backend` |
+| `BACKEND_PORT` | Backend port used by nginx upstream proxying | `8080` |
+| `MAX_UPLOAD_MB` | nginx upload body-size limit in megabytes; keep this aligned with the backend upload limit | `25` |
+
+The default `BACKEND_UPSTREAM=familyjournal-backend` matches both the documented standalone container name and the Docker Compose service name. Keep `MAX_UPLOAD_MB` aligned between frontend and backend so nginx and the API enforce the same upload limit.
 
 For cross-origin backend access outside Docker, set `CORS_ALLOW_ORIGINS` to the exact browser origins that should be allowed. Because the app uses session cookies, wildcard origins are not appropriate.
 

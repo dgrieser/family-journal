@@ -3,10 +3,10 @@ server {
   server_name _;
   root /usr/share/nginx/html;
 
-  client_max_body_size 25m;
+  client_max_body_size ${MAX_UPLOAD_MB}m;
 
   location /api/ {
-    proxy_pass http://backend:8080;
+    proxy_pass http://${BACKEND_UPSTREAM}:${BACKEND_PORT};
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -15,7 +15,7 @@ server {
   }
 
   location /uploads/ {
-    proxy_pass http://backend:8080;
+    proxy_pass http://${BACKEND_UPSTREAM}:${BACKEND_PORT};
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -24,7 +24,7 @@ server {
   }
 
   location = /healthz {
-    proxy_pass http://backend:8080;
+    proxy_pass http://${BACKEND_UPSTREAM}:${BACKEND_PORT};
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
