@@ -1,6 +1,6 @@
-# FamilyJournal
+# Family Journal
 
-FamilyJournal is a full-stack application for documenting daily care activities for children with officially recognized care levels. Go/Fiber backend together with React frontend, plus a MySQL database via Docker Compose.
+Family Journal is a full-stack application for documenting daily care activities for children with officially recognized care levels. Go/Fiber backend together with React frontend, plus a MySQL database via Docker Compose.
 
 ## Tech stack
 
