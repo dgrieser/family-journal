@@ -432,6 +432,9 @@ func parsePostDatetime(dateStr, timeStr string) (time.Time, error) {
 		}
 		return t, nil
 	}
+	if len(timeStr) > 5 {
+		timeStr = timeStr[:5]
+	}
 	t, err := time.Parse("2006-01-02T15:04", dateStr+"T"+timeStr)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("invalid date or time format")

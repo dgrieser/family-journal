@@ -202,17 +202,17 @@ func buildPostWhereClause(ownerFilter *int64, dateFilter services.DateFilter, ha
 	where := `WHERE 1=1`
 	var args []interface{}
 	if dateFilter.Start != nil && dateFilter.End != nil && dateFilter.Start.Equal(*dateFilter.End) {
-		where += ` AND DATE(p.date) = ?`
-		args = append(args, dateFilter.Start.Format("2006-01-02"))
+		where += ` AND p.date >= ? AND p.date < ?`
+		args = append(args, dateFilter.Start.Format("2006-01-02"), dateFilter.Start.AddDate(0, 0, 1).Format("2006-01-02"))
 	} else if dateFilter.Start != nil && dateFilter.End != nil {
-		where += ` AND DATE(p.date) >= ? AND DATE(p.date) <= ?`
-		args = append(args, dateFilter.Start.Format("2006-01-02"), dateFilter.End.Format("2006-01-02"))
+		where += ` AND p.date >= ? AND p.date < ?`
+		args = append(args, dateFilter.Start.Format("2006-01-02"), dateFilter.End.AddDate(0, 0, 1).Format("2006-01-02"))
 	} else if dateFilter.Start != nil {
-		where += ` AND DATE(p.date) >= ?`
+		where += ` AND p.date >= ?`
 		args = append(args, dateFilter.Start.Format("2006-01-02"))
 	} else if dateFilter.End != nil {
-		where += ` AND DATE(p.date) <= ?`
-		args = append(args, dateFilter.End.Format("2006-01-02"))
+		where += ` AND p.date < ?`
+		args = append(args, dateFilter.End.AddDate(0, 0, 1).Format("2006-01-02"))
 	}
 	if ownerFilter != nil {
 		where += ` AND p.user_id = ?`
@@ -243,7 +243,7 @@ func buildPostWhereClause(ownerFilter *int64, dateFilter services.DateFilter, ha
 
 func (r *Repository) listPosts(queryer sqlx.Ext, ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error) {
 	base, args := buildPostListQuery(ownerFilter, dateFilter, hashtags, persons, search)
-	base += " ORDER BY p.date DESC LIMIT ? OFFSET ?"
+	base += " ORDER BY p.date DESC, p.created_at DESC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 	var posts []models.Post
 	if err := sqlx.Select(queryer, &posts, base, args...); err != nil {
