@@ -95,7 +95,15 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
       {/* Header */}
       <div className="flex justify-between items-start mb-3">
         <div>
-          <span className="text-xs text-stone-900 block">{new Date(post.created_at).toLocaleString(i18n.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="text-xs text-stone-900 block">
+            {(() => {
+              const local = post.date.slice(0, 16); // "YYYY-MM-DDTHH:MM" — no Z, parsed as local time
+              const hasTime = local.slice(11) !== '00:00';
+              return hasTime
+                ? new Date(local).toLocaleString(i18n.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : new Date(local).toLocaleDateString(i18n.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            })()}
+          </span>
           <span className="text-xs text-stone-400 block mt-0.5">{post.user?.email}</span>
         </div>
         {(user?.id === post.user_id || user?.role === 'admin') && (

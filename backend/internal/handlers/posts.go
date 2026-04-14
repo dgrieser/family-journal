@@ -33,6 +33,7 @@ type PostsHandler struct {
 
 type postRequest struct {
 	Date string `json:"date"`
+	Time string `json:"time"`
 	Text string `json:"text"`
 }
 
@@ -125,9 +126,9 @@ func (h *PostsHandler) Create(c *fiber.Ctx) error {
 	if strings.TrimSpace(req.Text) == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "text is required")
 	}
-	date, err := time.Parse("2006-01-02", req.Date)
+	date, err := parsePostDatetime(req.Date, req.Time)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid date")
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	post := &models.Post{
 		UserID: userID,
@@ -159,9 +160,9 @@ func (h *PostsHandler) Update(c *fiber.Ctx) error {
 	if strings.TrimSpace(req.Text) == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "text is required")
 	}
-	date, err := time.Parse("2006-01-02", req.Date)
+	date, err := parsePostDatetime(req.Date, req.Time)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid date")
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	post := &models.Post{
 		ID:     int64(id),
@@ -419,6 +420,25 @@ func (h *PostsHandler) DownloadAttachmentByID(c *fiber.Ctx) error {
 	c.Set(fiber.HeaderContentDisposition, fmt.Sprintf("attachment; filename=%q", filepath.Base(attachment.FileName)))
 	c.Type(attachment.FileType)
 	return c.SendFile(path)
+}
+
+// parsePostDatetime combines a date string (YYYY-MM-DD) and optional time string (HH:MM)
+// into a single time.Time value. When time is empty, midnight (00:00) is used.
+func parsePostDatetime(dateStr, timeStr string) (time.Time, error) {
+	if timeStr == "" {
+		t, err := time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid date")
+		}
+		return t, nil
+	}
+	combined := dateStr + "T" + timeStr
+	for _, layout := range []string{"2006-01-02T15:04:05", "2006-01-02T15:04"} {
+		if t, err := time.Parse(layout, combined); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("invalid date or time format")
 }
 
 func isAllowedType(contentType string, allowed []string) bool {
