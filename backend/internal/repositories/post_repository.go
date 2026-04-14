@@ -243,7 +243,7 @@ func buildPostWhereClause(ownerFilter *int64, dateFilter services.DateFilter, ha
 
 func (r *Repository) listPosts(queryer sqlx.Ext, ownerFilter *int64, dateFilter services.DateFilter, hashtags, persons []string, search string, limit, offset int) ([]models.Post, error) {
 	base, args := buildPostListQuery(ownerFilter, dateFilter, hashtags, persons, search)
-	base += " ORDER BY p.created_at DESC LIMIT ? OFFSET ?"
+	base += " ORDER BY p.date DESC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 	var posts []models.Post
 	if err := sqlx.Select(queryer, &posts, base, args...); err != nil {
