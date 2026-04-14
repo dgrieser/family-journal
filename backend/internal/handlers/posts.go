@@ -33,6 +33,7 @@ type PostsHandler struct {
 
 type postRequest struct {
 	Date string `json:"date"`
+	Time string `json:"time"`
 	Text string `json:"text"`
 }
 
@@ -134,6 +135,10 @@ func (h *PostsHandler) Create(c *fiber.Ctx) error {
 		Date:   date,
 		Text:   req.Text,
 	}
+	if req.Time != "" {
+		t := req.Time
+		post.Time = &t
+	}
 	scope := services.NewAccessScope(userID, role)
 	if err := h.Service.CreateOrUpdatePost(scope, post); err != nil {
 		log.Printf("create post error: %v", err)
@@ -168,6 +173,10 @@ func (h *PostsHandler) Update(c *fiber.Ctx) error {
 		UserID: userID,
 		Date:   date,
 		Text:   req.Text,
+	}
+	if req.Time != "" {
+		t := req.Time
+		post.Time = &t
 	}
 	scope := services.NewAccessScope(userID, role)
 	if err := h.Service.CreateOrUpdatePost(scope, post); err != nil {

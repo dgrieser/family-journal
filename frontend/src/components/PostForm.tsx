@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { AxiosError } from 'axios';
 import api from '../api';
 import { searchPersons } from '../persons';
-import { Send, Paperclip, X, Image } from 'lucide-react';
+import { Send, Paperclip, X, Image, Clock } from 'lucide-react';
 import type { Post, Hashtag, Attachment } from '../types';
 import { buildHighlightHtml } from '../utils/tagColors';
 
@@ -18,6 +18,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
   const { t, i18n } = useTranslation();
   const [text, setText] = useState(initialData?.text || '');
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+  const [time, setTime] = useState(initialData?.time ?? new Date().toTimeString().slice(0, 5));
   const [files, setFiles] = useState<File[]>([]);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<number[]>([]);
   const [showHashtagSuggestions, setShowHashtagSuggestions] = useState(false);
@@ -30,6 +31,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
   const personRequestIdRef = useRef(0);
   const personSearchTimeoutRef = useRef<number | null>(null);
 
@@ -45,9 +47,11 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     if (initialData) {
       setText(initialData.text);
       setDate(initialData.date.split('T')[0]);
+      setTime(initialData.time ?? new Date().toTimeString().slice(0, 5));
     } else {
       setText('');
       setDate(new Date().toISOString().split('T')[0]);
+      setTime(new Date().toTimeString().slice(0, 5));
     }
     setFiles([]);
     setPendingDeleteIds([]);
@@ -157,7 +161,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     try {
       const isUpdate = !!initialData;
       const url = isUpdate ? `/posts/${initialData.id}` : '/posts';
-      const payload = { text, date };
+      const payload = { text, date, time };
       const config = { headers: { 'Content-Type': 'application/json' } };
       const response = await (isUpdate ? api.put(url, payload, config) : api.post(url, payload, config));
       const postId = response.data.id;
@@ -207,7 +211,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
 
   const formContent = (
     <form onSubmit={handleSubmit}>
-      <div className="mb-2">
+      <div className="mb-2 flex items-center gap-2 flex-wrap">
         <div className="relative inline-flex items-center gap-2 border border-stone-200 rounded px-2.5 py-1.5 cursor-pointer bg-white" onClick={() => dateInputRef.current?.showPicker()}>
           <span className="text-sm text-stone-700 select-none whitespace-nowrap">
             {new Date(date + 'T12:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
@@ -217,6 +221,19 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            className="absolute inset-0 opacity-0 pointer-events-none w-full"
+          />
+        </div>
+        <div className="relative inline-flex items-center gap-1.5 border border-stone-200 rounded px-2.5 py-1.5 cursor-pointer bg-white" onClick={() => timeInputRef.current?.showPicker()}>
+          <Clock size={14} className="text-stone-400 flex-shrink-0" />
+          <span className="text-sm text-stone-700 select-none whitespace-nowrap">
+            {time ? new Date(`1970-01-01T${time}`).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          </span>
+          <input
+            ref={timeInputRef}
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
             className="absolute inset-0 opacity-0 pointer-events-none w-full"
           />
         </div>
