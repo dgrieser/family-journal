@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
-import { UserCog, Shield, ShieldAlert } from 'lucide-react';
+import { UserCog, Shield, ShieldAlert, Power } from 'lucide-react';
 import type { User } from '../types';
 import { extractError } from '../utils/apiError';
 import { ErrorAlert } from '../components/ErrorAlert';
@@ -55,16 +55,33 @@ export const Admin = () => {
           <thead>
             <tr className="border-b border-stone-100 bg-stone-50">
               <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('email')}</th>
-              <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('role')}</th>
-              <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider">{t('active')}</th>
+              <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider hidden md:table-cell">{t('role')}</th>
+              <th className="px-5 py-3 text-left text-xs font-medium text-stone-400 uppercase tracking-wider hidden md:table-cell">{t('active')}</th>
               <th className="px-5 py-3 text-right text-xs font-medium text-stone-400 uppercase tracking-wider"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
             {users.map((u: User) => (
               <tr key={u.id} className="hover:bg-stone-50 transition-colors">
-                <td className="px-5 py-3.5 text-sm text-stone-800">{u.email}</td>
-                <td className="px-5 py-3.5">
+                <td className="px-5 py-3.5 text-sm text-stone-800">
+                  {u.email}
+                  {/* Mobile-only: show role + active badges below email */}
+                  <div className="md:hidden flex flex-wrap gap-1.5 mt-1">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      u.role === 'admin' ? 'bg-stone-800 text-stone-100' : 'bg-stone-100 text-stone-600'
+                    }`}>
+                      {u.role === 'admin' ? t('admin_role') : t('user')}
+                    </span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      u.is_active
+                        ? 'bg-green-50 text-green-700 border border-green-100'
+                        : 'bg-red-50 text-red-600 border border-red-100'
+                    }`}>
+                      {u.is_active ? t('active') : t('inactive')}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-5 py-3.5 hidden md:table-cell">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                     u.role === 'admin'
                       ? 'bg-stone-800 text-stone-100'
@@ -73,7 +90,7 @@ export const Admin = () => {
                     {u.role === 'admin' ? t('admin_role') : t('user')}
                   </span>
                 </td>
-                <td className="px-5 py-3.5">
+                <td className="px-5 py-3.5 hidden md:table-cell">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                     u.is_active
                       ? 'bg-green-50 text-green-700 border border-green-100'
@@ -83,7 +100,37 @@ export const Admin = () => {
                   </span>
                 </td>
                 <td className="px-5 py-3.5 text-right">
-                  <div className="flex justify-end gap-3">
+                  {/* Mobile: icon-only buttons */}
+                  <div className="flex justify-end gap-2 md:hidden">
+                    {u.role === 'admin' ? (
+                      <button
+                        onClick={() => handleRoleChange(u.id, 'user')}
+                        title={t('demote')}
+                        className="p-1.5 text-red-500 hover:text-red-700 transition-colors"
+                      >
+                        <ShieldAlert size={16} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleRoleChange(u.id, 'admin')}
+                        title={t('promote')}
+                        className="p-1.5 text-violet-700 hover:text-violet-600 transition-colors"
+                      >
+                        <Shield size={16} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleToggleActive(u.id, !u.is_active)}
+                      title={u.is_active ? t('deactivate') : t('activate')}
+                      className={`p-1.5 transition-colors ${
+                        u.is_active ? 'text-stone-500 hover:text-stone-700' : 'text-green-600 hover:text-green-700'
+                      }`}
+                    >
+                      <Power size={16} />
+                    </button>
+                  </div>
+                  {/* Desktop: text + icon buttons */}
+                  <div className="hidden md:flex justify-end gap-3">
                     {u.role === 'admin' ? (
                       <button
                         onClick={() => handleRoleChange(u.id, 'user')}
