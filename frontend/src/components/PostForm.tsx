@@ -82,6 +82,17 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     };
   }, []);
 
+  // Sync backdrop scroll after each text change (covers browser auto-scroll when
+  // the cursor moves below the visible area, which does not fire onScroll on iOS).
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      if (textareaRef.current && backdropRef.current) {
+        backdropRef.current.scrollTop = textareaRef.current.scrollTop;
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [text]);
+
   const fetchPersonSuggestions = async (query: string) => {
     const requestId = personRequestIdRef.current + 1;
     personRequestIdRef.current = requestId;
@@ -260,7 +271,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
             padding: '0.75rem',
             fontSize: '0.875rem',
             fontFamily: 'inherit',
-            lineHeight: 'inherit',
+            lineHeight: '1.25rem',
             whiteSpace: 'pre-wrap',
             overflowWrap: 'break-word',
             overflowY: 'auto',

@@ -21,9 +21,19 @@ body {
 /* Textarea backdrop for tag highlighting — hidden scrollbar keeps alignment with textarea */
 .tag-highlight-backdrop {
   scrollbar-width: none; /* Firefox */
+  /* Prevent iOS Safari from silently adjusting font size, which would break
+     text-metric parity with the textarea overlay. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 .tag-highlight-backdrop::-webkit-scrollbar {
   display: none; /* Chrome / Safari */
+}
+
+/* Prevent iOS Safari font-size auto-adjustment on the textarea itself. */
+.tag-textarea {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Keep text selection visible when textarea has transparent text */
