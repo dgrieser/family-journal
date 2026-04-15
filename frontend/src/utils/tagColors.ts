@@ -21,7 +21,7 @@ export function goldenAngleHue(word: string): number {
     h1 = Math.imul(h1, 16777619); // FNV-1a prime; Math.imul avoids float precision loss
     h1 = h1 >>> 0;
     // djb2 step (independent second hash)
-    h2 = ((h2 << 5) + h2) ^ c;
+    h2 = Math.imul(h2, 33) ^ c;
     h2 = h2 >>> 0;
   }
   // Combine: multiply h2 by the 32-bit Fibonacci/golden-ratio constant before XOR
