@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { MessageSquare, Trash2, Edit2, Download, User as UserIcon, Tag, Send, Paperclip } from 'lucide-react';
@@ -8,6 +8,7 @@ import { getTagColors, TAG_PATTERN } from '../utils/tagColors';
 import { extractError } from '../utils/apiError';
 import { ErrorAlert } from './ErrorAlert';
 import { PostForm } from './PostForm';
+import { ConfirmDialog } from './ConfirmDialog';
 
 function renderTextWithTags(text: string) {
   const parts = text.split(TAG_PATTERN);
@@ -43,17 +44,16 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   const [error, setError] = useState<string | null>(null);
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const pendingDelete = useRef<(() => Promise<void>) | null>(null);
 
-  const handleDelete = async () => {
-    if (window.confirm(t('delete') + '?')) {
-      try {
-        await api.delete(`/posts/${post.id}`);
-        setError(null);
-        onUpdate();
-      } catch (err) {
-        setError(extractError(err, t('delete_error')));
-      }
-    }
+  const handleDelete = () => {
+    pendingDelete.current = async () => {
+      await api.delete(`/posts/${post.id}`);
+      setError(null);
+      onUpdate();
+    };
+    setConfirmOpen(true);
   };
 
   const handleAddComment = async (e: React.FormEvent) => {
@@ -69,14 +69,24 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
     }
   };
 
-  const handleDeleteComment = async (commentId: number) => {
-    if (!window.confirm(t('delete') + '?')) return;
-    try {
+  const handleDeleteComment = (commentId: number) => {
+    pendingDelete.current = async () => {
       await api.delete(`/comments/${commentId}`);
       setError(null);
       onUpdate();
+    };
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setConfirmOpen(false);
+    if (!pendingDelete.current) return;
+    try {
+      await pendingDelete.current();
     } catch (err) {
       setError(extractError(err, t('delete_error')));
+    } finally {
+      pendingDelete.current = null;
     }
   };
 
@@ -222,6 +232,12 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
           <span>{post.comments?.length || 0}</span>
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => { setConfirmOpen(false); pendingDelete.current = null; }}
+      />
 
       {/* Comments */}
       {showComments && (

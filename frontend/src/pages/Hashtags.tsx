@@ -5,6 +5,7 @@ import { Hash, Plus, Trash2, Edit2, Check } from 'lucide-react';
 import type { Hashtag } from '../types';
 import { extractError } from '../utils/apiError';
 import { ErrorAlert } from '../components/ErrorAlert';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { getTagColors } from '../utils/tagColors';
 import { useAuthStore } from '../store';
 
@@ -15,6 +16,7 @@ export const Hashtags = () => {
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
 
   const fetchHashtags = useCallback(async () => {
     const res = await api.get<Hashtag[]>('/hashtags');
@@ -52,15 +54,19 @@ export const Hashtags = () => {
     setError(null);
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm(t('delete') + '?')) {
-      try {
-        await api.delete(`/hashtags/${id}`);
-        setError(null);
-        void fetchHashtags();
-      } catch (err) {
-        setError(extractError(err, t('delete_error')));
-      }
+  const handleDelete = (id: number) => {
+    setConfirmId(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (confirmId === null) return;
+    setConfirmId(null);
+    try {
+      await api.delete(`/hashtags/${confirmId}`);
+      setError(null);
+      void fetchHashtags();
+    } catch (err) {
+      setError(extractError(err, t('delete_error')));
     }
   };
 
@@ -69,6 +75,12 @@ export const Hashtags = () => {
 
   return (
     <div>
+      <ConfirmDialog
+        open={confirmId !== null}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmId(null)}
+      />
+
       <h2 className="text-xl font-semibold text-stone-900 mb-6 flex items-center gap-2">
         <Hash size={20} className="text-stone-400" /> {t('hashtags')}
       </h2>

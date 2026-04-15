@@ -69,5 +69,7 @@
   "attachment_delete_error": "Eintrag gespeichert, aber das Löschen einiger Anhänge ist fehlgeschlagen.",
   "hashtag_name": "Hashtag-Name",
   "hashtag_exists": "Hashtag existiert bereits.",
-  "no_hashtags": "Noch keine Hashtags."
+  "no_hashtags": "Noch keine Hashtags.",
+  "confirm_delete": "Eintrag löschen?",
+  "confirm_delete_body": "Diese Aktion kann nicht rückgängig gemacht werden."
 }

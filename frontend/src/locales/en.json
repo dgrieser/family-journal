@@ -69,5 +69,7 @@
   "attachment_delete_error": "Post saved, but deleting some attachments failed.",
   "hashtag_name": "Hashtag name",
   "hashtag_exists": "Hashtag already exists.",
-  "no_hashtags": "No hashtags yet."
+  "no_hashtags": "No hashtags yet.",
+  "confirm_delete": "Delete this item?",
+  "confirm_delete_body": "This action cannot be undone."
 }
