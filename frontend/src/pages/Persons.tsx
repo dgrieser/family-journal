@@ -6,6 +6,7 @@ import type { PaginatedResponse, PaginationMeta, Person } from '../types';
 import { extractError } from '../utils/apiError';
 import { getTagColors } from '../utils/tagColors';
 import { ErrorAlert } from '../components/ErrorAlert';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAuthStore } from '../store';
 
 const PAGE_SIZE = 20;
@@ -20,6 +21,7 @@ export const Persons = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
 
   const fetchPersons = useCallback(async (nextPage: number) => {
     const res = await api.get<PaginatedResponse<Person>>('/persons', {
@@ -62,15 +64,19 @@ export const Persons = () => {
     setError(null);
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm(t('delete') + '?')) {
-      try {
-        await api.delete(`/persons/${id}`);
-        setError(null);
-        void fetchPersons(page);
-      } catch (err) {
-        setError(extractError(err, t('delete_error')));
-      }
+  const handleDelete = (id: number) => {
+    setConfirmId(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (confirmId === null) return;
+    setConfirmId(null);
+    try {
+      await api.delete(`/persons/${confirmId}`);
+      setError(null);
+      void fetchPersons(page);
+    } catch (err) {
+      setError(extractError(err, t('delete_error')));
     }
   };
 
@@ -78,6 +84,12 @@ export const Persons = () => {
 
   return (
     <div>
+      <ConfirmDialog
+        open={confirmId !== null}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmId(null)}
+      />
+
       <h2 className="text-xl font-semibold text-stone-900 mb-6 flex items-center gap-2">
         <Users size={20} className="text-stone-400" /> {t('persons')}
       </h2>
