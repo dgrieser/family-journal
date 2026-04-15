@@ -84,14 +84,13 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
 
   // Sync backdrop scroll after each text change (covers browser auto-scroll when
   // the cursor moves below the visible area, which does not fire onScroll on iOS).
-  // Debounced at 80 ms so rapid keystrokes don't trigger a sync on every character.
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const id = requestAnimationFrame(() => {
       if (textareaRef.current && backdropRef.current) {
         backdropRef.current.scrollTop = textareaRef.current.scrollTop;
       }
-    }, 80);
-    return () => clearTimeout(timer);
+    });
+    return () => cancelAnimationFrame(id);
   }, [text]);
 
   const fetchPersonSuggestions = async (query: string) => {
