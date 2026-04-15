@@ -70,6 +70,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   };
 
   const handleDeleteComment = async (commentId: number) => {
+    if (!window.confirm(t('delete') + '?')) return;
     try {
       await api.delete(`/comments/${commentId}`);
       setError(null);
