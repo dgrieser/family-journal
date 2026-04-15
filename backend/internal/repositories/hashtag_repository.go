@@ -3,7 +3,6 @@ package repositories
 import (
 	"database/sql"
 	"errors"
-	"strings"
 	"time"
 
 	"familyjournal/backend/internal/models"
@@ -117,9 +116,8 @@ func (r *Repository) DeleteHashtag(id int64, ownerFilter *int64) error {
 }
 
 func (r *Repository) FindOrCreateHashtag(name string, userID int64) (*models.Hashtag, error) {
-	name = strings.ToLower(name)
 	var tag models.Hashtag
-	query := `SELECT id, name, created_at, created_by_user_id FROM hashtags WHERE name = ?`
+	query := `SELECT id, name, created_at, created_by_user_id FROM hashtags WHERE LOWER(name) = LOWER(?)`
 	if err := r.DB.Get(&tag, query, name); err == nil {
 		return &tag, nil
 	} else if err != sql.ErrNoRows {
@@ -174,9 +172,8 @@ func (r *Repository) ListTagsForPosts(postIDs []int64) (map[int64][]models.Hasht
 }
 
 func findOrCreateHashtagTx(tx *sqlx.Tx, name string, userID int64) (*models.Hashtag, error) {
-	name = strings.ToLower(name)
 	var tag models.Hashtag
-	query := `SELECT id, name, created_at, created_by_user_id FROM hashtags WHERE name = ?`
+	query := `SELECT id, name, created_at, created_by_user_id FROM hashtags WHERE LOWER(name) = LOWER(?)`
 	if err := tx.Get(&tag, query, name); err == nil {
 		return &tag, nil
 	} else if err != sql.ErrNoRows {

@@ -119,10 +119,10 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
 
     if (lastWord.startsWith('#')) {
       cancelPendingPersonSearch();
-      const query = lastWord.slice(1).toLowerCase();
+      const query = lastWord.slice(1);
       setShowHashtagSuggestions(true);
       setShowPersonSuggestions(false);
-      setSuggestions(allHashtags.filter(h => h.toLowerCase().includes(query)));
+      setSuggestions(allHashtags.filter(h => h.toLowerCase().includes(query.toLowerCase())));
     } else if (lastWord.startsWith('@')) {
       const query = lastWord.slice(1).toLowerCase();
       setShowPersonSuggestions(true);
@@ -144,8 +144,13 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
   const applySuggestion = (suggestion: string) => {
     const words = text.split(/\s/);
     const lastWord = words[words.length - 1];
-    const prefix = lastWord.startsWith('#') ? '#' : '@';
-    words[words.length - 1] = prefix + suggestion + ' ';
+    if (lastWord.startsWith('#')) {
+      const typedPart = lastWord.slice(1);
+      const completed = typedPart + suggestion.slice(typedPart.length);
+      words[words.length - 1] = '#' + completed + ' ';
+    } else {
+      words[words.length - 1] = '@' + suggestion + ' ';
+    }
     setText(words.join(' '));
     setShowHashtagSuggestions(false);
     setShowPersonSuggestions(false);
