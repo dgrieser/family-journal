@@ -1,22 +1,32 @@
 /**
- * Golden angle color assignment for persons and hashtags.
- * hue_i = (i * 137.508) % 360
+ * Stable hue assignment for persons and hashtags.
  *
- * The djb2 hash converts a word into a stable integer index,
- * then the golden angle step ensures maximum perceptual separation.
+ * Runs FNV-1a and djb2 in one pass, then combines them with a Fibonacci
+ * mix step. Two independent hashes break the clustering that any single hash
+ * produces for short, structurally similar words (e.g. German tags sharing
+ * common character ranges).
  */
 
 /** Shared regex for splitting / matching @mention and #hashtag tokens. */
 export const TAG_PATTERN = /([@#][\p{L}\d_]+)/gu;
 
 export function goldenAngleHue(word: string): number {
-  let hash = 5381;
   const s = word.toLowerCase();
+  let h1 = 2166136261; // FNV-1a 32-bit offset basis
+  let h2 = 5381;       // djb2 seed
   for (let i = 0; i < s.length; i++) {
-    hash = ((hash << 5) + hash) ^ s.charCodeAt(i);
-    hash = hash >>> 0; // keep unsigned 32-bit
+    const c = s.charCodeAt(i);
+    // FNV-1a step
+    h1 ^= c;
+    h1 = Math.imul(h1, 16777619); // FNV-1a prime; Math.imul avoids float precision loss
+    h1 = h1 >>> 0;
+    // djb2 step (independent second hash)
+    h2 = ((h2 << 5) + h2) ^ c;
+    h2 = h2 >>> 0;
   }
-  return (hash * 137.508) % 360;
+  // Combine: multiply h2 by the 32-bit Fibonacci/golden-ratio constant before XOR
+  // so that correlated low bits in h1 and h2 land in different output positions.
+  return ((h1 ^ Math.imul(h2, 0x9e3779b9)) >>> 0) % 360;
 }
 
 export interface TagColors {
