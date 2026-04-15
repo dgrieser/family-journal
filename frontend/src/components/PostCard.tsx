@@ -41,6 +41,8 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editCommentText, setEditCommentText] = useState('');
 
   const handleDelete = async () => {
     if (window.confirm(t('delete') + '?')) {
@@ -75,6 +77,30 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
     } catch (err) {
       setError(extractError(err, t('delete_error')));
     }
+  };
+
+  const handleEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditCommentText(comment.text);
+  };
+
+  const handleSaveComment = async (commentId: number) => {
+    const trimmed = editCommentText.trim();
+    if (!trimmed) return;
+    try {
+      await api.put(`/comments/${commentId}`, { text: trimmed });
+      setEditingCommentId(null);
+      setEditCommentText('');
+      setError(null);
+      onUpdate();
+    } catch (err) {
+      setError(extractError(err, t('comment_edit_error')));
+    }
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditCommentText('');
   };
 
   if (isEditing) {
@@ -206,14 +232,55 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
                 <span className="mx-1 text-stone-300">·</span>
                 <span className="text-stone-400">{new Date(c.created_at).toLocaleString(i18n.language, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
               </div>
-              <div className="text-sm text-stone-700">{c.text}</div>
-              {(user?.id === c.user_id || user?.role === 'admin') && (
-                <button
-                  onClick={() => handleDeleteComment(c.id)}
-                  className="absolute top-2 right-2 p-0.5 text-stone-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
-                >
-                  <Trash2 size={13} />
-                </button>
+              {editingCommentId === c.id ? (
+                <div className="mt-1">
+                  <textarea
+                    value={editCommentText}
+                    onChange={(e) => setEditCommentText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveComment(c.id); }
+                      else if (e.key === 'Escape') { handleCancelEditComment(); }
+                    }}
+                    className="w-full text-sm text-stone-700 border border-violet-300 rounded px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    rows={2}
+                    autoFocus
+                  />
+                  <div className="flex gap-2 mt-1.5">
+                    <button
+                      onClick={() => handleSaveComment(c.id)}
+                      disabled={!editCommentText.trim()}
+                      className="text-xs font-medium text-white bg-violet-600 hover:bg-violet-500 px-2.5 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t('save')}
+                    </button>
+                    <button
+                      onClick={handleCancelEditComment}
+                      className="text-xs font-medium text-stone-500 hover:text-stone-700 px-2.5 py-1 rounded transition-colors"
+                    >
+                      {t('cancel')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="text-sm text-stone-700 pr-12">{c.text}</div>
+                  {(user?.id === c.user_id || user?.role === 'admin') && (
+                    <div className="absolute top-2 right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition">
+                      <button
+                        onClick={() => handleEditComment(c)}
+                        className="p-0.5 text-stone-300 hover:text-violet-500"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteComment(c.id)}
+                        className="p-0.5 text-stone-300 hover:text-red-500"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ))}

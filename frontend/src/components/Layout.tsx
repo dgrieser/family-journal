@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store';
 import api from '../api';
@@ -40,14 +40,16 @@ export const Layout = () => {
 
       {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between bg-slate-800 px-5 py-4 flex-shrink-0">
-        <div className="flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
-          <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-400 ml-[8px] mb-[-2px]">
-            Family
-          </span>
-          <span className="text-5xl font-bold text-white leading-none" style={{ letterSpacing: '-0.02em' }}>
-            Journal
-          </span>
-        </div>
+        <Link to={APP_ROUTES.ROOT} className="block">
+          <div className="flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
+            <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-400 ml-[8px] mb-[-2px]">
+              Family
+            </span>
+            <span className="text-5xl font-bold text-white leading-none" style={{ letterSpacing: '-0.02em' }}>
+              Journal
+            </span>
+          </div>
+        </Link>
         <button
           onClick={() => setDrawerOpen(true)}
           className="p-2 text-slate-300 hover:text-violet-400 rounded transition-colors"
@@ -76,14 +78,16 @@ export const Layout = () => {
         >
           {/* Drawer header */}
           <div className="px-5 pt-7 pb-5 border-b-2 border-violet-600 flex items-center justify-between flex-shrink-0 bg-slate-900/60">
-            <div className="flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
-              <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-400 ml-[8px] mb-[-2px]">
-                Family
-              </span>
-              <span className="text-5xl font-bold text-white leading-none" style={{ letterSpacing: '-0.02em' }}>
-                Journal
-              </span>
-            </div>
+            <Link to={APP_ROUTES.ROOT} className="block" onClick={closeDrawer}>
+              <div className="flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
+                <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-400 ml-[8px] mb-[-2px]">
+                  Family
+                </span>
+                <span className="text-5xl font-bold text-white leading-none" style={{ letterSpacing: '-0.02em' }}>
+                  Journal
+                </span>
+              </div>
+            </Link>
             <button
               onClick={closeDrawer}
               className="p-1.5 text-slate-400 hover:text-violet-400 rounded transition-colors"
@@ -143,14 +147,16 @@ export const Layout = () => {
       <nav className="hidden md:flex bg-slate-800 text-slate-300 md:w-[var(--sidebar-width)] flex-shrink-0 flex-col">
         {/* Brand */}
         <div className="px-5 pt-7 pb-5 border-b-2 border-violet-600 flex items-center justify-between flex-shrink-0 bg-slate-900/60">
-          <div className="flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
-            <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-400 ml-[8px] mb-[-2px]">
-              Family
-            </span>
-            <span className="text-5xl font-bold text-white leading-none" style={{ letterSpacing: '-0.02em' }}>
-              Journal
-            </span>
-          </div>
+          <Link to={APP_ROUTES.ROOT} className="block">
+            <div className="flex flex-col gap-0" style={{ fontFamily: 'var(--font-display)' }}>
+              <span className="text-xs font-medium tracking-[0.35em] uppercase text-violet-400 ml-[8px] mb-[-2px]">
+                Family
+              </span>
+              <span className="text-5xl font-bold text-white leading-none" style={{ letterSpacing: '-0.02em' }}>
+                Journal
+              </span>
+            </div>
+          </Link>
         </div>
 
         {/* Nav links */}
