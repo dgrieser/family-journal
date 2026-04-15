@@ -85,8 +85,10 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   };
 
   const handleSaveComment = async (commentId: number) => {
+    const trimmed = editCommentText.trim();
+    if (!trimmed) return;
     try {
-      await api.put(`/comments/${commentId}`, { text: editCommentText });
+      await api.put(`/comments/${commentId}`, { text: trimmed });
       setEditingCommentId(null);
       setEditCommentText('');
       setError(null);
@@ -235,6 +237,10 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
                   <textarea
                     value={editCommentText}
                     onChange={(e) => setEditCommentText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveComment(c.id); }
+                      else if (e.key === 'Escape') { handleCancelEditComment(); }
+                    }}
                     className="w-full text-sm text-stone-700 border border-violet-300 rounded px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
                     rows={2}
                     autoFocus
@@ -242,7 +248,8 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
                   <div className="flex gap-2 mt-1.5">
                     <button
                       onClick={() => handleSaveComment(c.id)}
-                      className="text-xs font-medium text-white bg-violet-600 hover:bg-violet-500 px-2.5 py-1 rounded transition-colors"
+                      disabled={!editCommentText.trim()}
+                      className="text-xs font-medium text-white bg-violet-600 hover:bg-violet-500 px-2.5 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {t('save')}
                     </button>
