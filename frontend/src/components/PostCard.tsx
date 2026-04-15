@@ -79,10 +79,10 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   };
 
   const handleConfirmDelete = async () => {
-    setConfirmOpen(false);
     if (!pendingDelete.current) return;
     try {
       await pendingDelete.current();
+      setConfirmOpen(false);
     } catch (err) {
       setError(extractError(err, t('delete_error')));
     } finally {
