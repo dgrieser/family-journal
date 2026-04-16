@@ -146,7 +146,9 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     const lastWord = words[words.length - 1];
     if (lastWord.startsWith('#')) {
       const typedPart = lastWord.slice(1);
-      const completed = typedPart + suggestion.slice(typedPart.length);
+      const completed = suggestion.toLowerCase().startsWith(typedPart.toLowerCase())
+        ? typedPart + suggestion.slice(typedPart.length)
+        : suggestion;
       words[words.length - 1] = '#' + completed + ' ';
     } else {
       words[words.length - 1] = '@' + suggestion + ' ';
