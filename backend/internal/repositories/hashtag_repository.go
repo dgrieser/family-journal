@@ -12,7 +12,7 @@ import (
 )
 
 func (r *Repository) CreateHashtag(tag *models.Hashtag) error {
-	res, err := r.DB.Exec(`INSERT INTO hashtags (name, created_at, created_by_user_id) VALUES (?, NOW(), ?)`, tag.Name, tag.CreatedByUserID)
+	res, err := r.DB.Exec(`INSERT INTO hashtags (name, name_lower, created_at, created_by_user_id) VALUES (?, ?, NOW(), ?)`, tag.Name, strings.ToLower(tag.Name), tag.CreatedByUserID)
 	if err != nil {
 		if isDuplicateKeyError(err) {
 			return models.ErrDuplicate
@@ -60,8 +60,8 @@ func (r *Repository) ListAllHashtags() ([]models.Hashtag, error) {
 }
 
 func (r *Repository) UpdateHashtag(tag *models.Hashtag, ownerFilter *int64) error {
-	query := `UPDATE hashtags SET name = ? WHERE id = ?`
-	args := []interface{}{tag.Name, tag.ID}
+	query := `UPDATE hashtags SET name = ?, name_lower = ? WHERE id = ?`
+	args := []interface{}{tag.Name, strings.ToLower(tag.Name), tag.ID}
 	if ownerFilter != nil {
 		query += ` AND created_by_user_id = ?`
 		args = append(args, *ownerFilter)
@@ -117,10 +117,10 @@ func (r *Repository) DeleteHashtag(id int64, ownerFilter *int64) error {
 }
 
 func (r *Repository) FindOrCreateHashtag(name string, userID int64) (*models.Hashtag, error) {
-	name = strings.ToLower(name)
+	lowerName := strings.ToLower(name)
 	var tag models.Hashtag
-	query := `SELECT id, name, created_at, created_by_user_id FROM hashtags WHERE name = ?`
-	if err := r.DB.Get(&tag, query, name); err == nil {
+	query := `SELECT id, name, created_at, created_by_user_id FROM hashtags WHERE name_lower = ?`
+	if err := r.DB.Get(&tag, query, lowerName); err == nil {
 		return &tag, nil
 	} else if err != sql.ErrNoRows {
 		return nil, err
@@ -128,7 +128,7 @@ func (r *Repository) FindOrCreateHashtag(name string, userID int64) (*models.Has
 	tag = models.Hashtag{Name: name, CreatedByUserID: &userID}
 	if err := r.CreateHashtag(&tag); err != nil {
 		if errors.Is(err, models.ErrDuplicate) {
-			if err2 := r.DB.Get(&tag, query, name); err2 != nil {
+			if err2 := r.DB.Get(&tag, query, lowerName); err2 != nil {
 				return nil, err2
 			}
 			return &tag, nil
@@ -174,10 +174,10 @@ func (r *Repository) ListTagsForPosts(postIDs []int64) (map[int64][]models.Hasht
 }
 
 func findOrCreateHashtagTx(tx *sqlx.Tx, name string, userID int64) (*models.Hashtag, error) {
-	name = strings.ToLower(name)
+	lowerName := strings.ToLower(name)
 	var tag models.Hashtag
-	query := `SELECT id, name, created_at, created_by_user_id FROM hashtags WHERE name = ?`
-	if err := tx.Get(&tag, query, name); err == nil {
+	query := `SELECT id, name, created_at, created_by_user_id FROM hashtags WHERE name_lower = ?`
+	if err := tx.Get(&tag, query, lowerName); err == nil {
 		return &tag, nil
 	} else if err != sql.ErrNoRows {
 		return nil, err
@@ -185,7 +185,7 @@ func findOrCreateHashtagTx(tx *sqlx.Tx, name string, userID int64) (*models.Hash
 	tag = models.Hashtag{Name: name, CreatedByUserID: &userID}
 	if err := createHashtagTx(tx, &tag); err != nil {
 		if errors.Is(err, models.ErrDuplicate) {
-			if err2 := tx.Get(&tag, query, name); err2 != nil {
+			if err2 := tx.Get(&tag, query, lowerName); err2 != nil {
 				return nil, err2
 			}
 			return &tag, nil
@@ -196,7 +196,7 @@ func findOrCreateHashtagTx(tx *sqlx.Tx, name string, userID int64) (*models.Hash
 }
 
 func createHashtagTx(tx *sqlx.Tx, tag *models.Hashtag) error {
-	res, err := tx.Exec(`INSERT INTO hashtags (name, created_at, created_by_user_id) VALUES (?, NOW(), ?)`, tag.Name, tag.CreatedByUserID)
+	res, err := tx.Exec(`INSERT INTO hashtags (name, name_lower, created_at, created_by_user_id) VALUES (?, ?, NOW(), ?)`, tag.Name, strings.ToLower(tag.Name), tag.CreatedByUserID)
 	if err != nil {
 		if isDuplicateKeyError(err) {
 			return models.ErrDuplicate

@@ -19,9 +19,10 @@ func (s *Service) ParseHashtags(text string) []string {
 	unique := map[string]struct{}{}
 	var tags []string
 	for _, match := range matches {
-		tag := strings.ToLower(match[1])
-		if _, ok := unique[tag]; !ok {
-			unique[tag] = struct{}{}
+		tag := match[1]
+		key := strings.ToLower(tag)
+		if _, ok := unique[key]; !ok {
+			unique[key] = struct{}{}
 			tags = append(tags, tag)
 		}
 	}
