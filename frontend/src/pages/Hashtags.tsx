@@ -29,7 +29,7 @@ export const Hashtags = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const normalized = name.replace(/^#/, '').trim().toLowerCase();
+    const normalized = name.replace(/^#/, '').trim();
     if (!normalized) return;
     try {
       if (editingId) {
