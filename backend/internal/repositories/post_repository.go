@@ -221,7 +221,7 @@ func buildPostWhereClause(ownerFilter *int64, dateFilter services.DateFilter, ha
 	if len(hashtags) > 0 {
 		placeholders := strings.Repeat("?,", len(hashtags))
 		placeholders = strings.TrimSuffix(placeholders, ",")
-		where += fmt.Sprintf(" AND h.name IN (%s)", placeholders)
+		where += fmt.Sprintf(" AND h.name_lower IN (%s)", placeholders)
 		for _, tag := range hashtags {
 			args = append(args, strings.ToLower(tag))
 		}
