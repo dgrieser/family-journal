@@ -120,9 +120,10 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     if (lastWord.startsWith('#')) {
       cancelPendingPersonSearch();
       const query = lastWord.slice(1);
+      const lowerQuery = query.toLowerCase();
       setShowHashtagSuggestions(true);
       setShowPersonSuggestions(false);
-      setSuggestions(allHashtags.filter(h => h.toLowerCase().includes(query.toLowerCase())));
+      setSuggestions(allHashtags.filter(h => h.toLowerCase().includes(lowerQuery)));
     } else if (lastWord.startsWith('@')) {
       const query = lastWord.slice(1).toLowerCase();
       setShowPersonSuggestions(true);
