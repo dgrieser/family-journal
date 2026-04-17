@@ -301,7 +301,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
           }}
           placeholder={text ? '' : t('new_post')}
           style={{ background: 'transparent', caretColor: '#57534e', color: text ? 'transparent' : undefined }}
-          className="tag-textarea w-full border border-stone-200 rounded-md p-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 min-h-[100px] resize-none transition relative"
+          className="tag-textarea w-full border border-stone-200 rounded-md p-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-violet-500 focus:ring-inset focus:ring-1 focus:ring-violet-500 min-h-[100px] resize-none transition relative"
         />
         {(showHashtagSuggestions || showPersonSuggestions) && suggestions.length > 0 && (
           <div className="absolute z-10 bg-white border border-stone-200 rounded-md shadow-lg mt-1 w-full max-h-40 overflow-y-auto">
