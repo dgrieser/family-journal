@@ -64,28 +64,52 @@ const ensureMirror = (): { mirror: HTMLDivElement; marker: HTMLSpanElement } => 
   return { mirror, marker };
 };
 
+interface StyleCache {
+  element: HTMLTextAreaElement;
+  width: number;
+  height: number;
+  lineHeight: number;
+}
+
+let styleCache: StyleCache | null = null;
+
 export const getCaretCoordinates = (
   textarea: HTMLTextAreaElement,
   position: number,
 ): CaretCoordinates => {
   const { mirror: m, marker: k } = ensureMirror();
-  const computed = window.getComputedStyle(textarea);
-  const style = m.style as unknown as Record<string, string>;
+  const width = textarea.offsetWidth;
+  const height = textarea.offsetHeight;
 
-  for (const prop of MIRRORED_PROPERTIES) {
-    const value = computed[prop];
-    if (typeof value === 'string') {
-      style[prop as string] = value;
+  if (
+    !styleCache ||
+    styleCache.element !== textarea ||
+    styleCache.width !== width ||
+    styleCache.height !== height
+  ) {
+    const computed = window.getComputedStyle(textarea);
+    const style = m.style as unknown as Record<string, string>;
+    for (const prop of MIRRORED_PROPERTIES) {
+      const value = computed[prop];
+      if (typeof value === 'string') {
+        style[prop as string] = value;
+      }
     }
+    styleCache = {
+      element: textarea,
+      width,
+      height,
+      lineHeight: parseFloat(computed.lineHeight),
+    };
   }
 
   m.textContent = textarea.value.slice(0, position);
   k.textContent = textarea.value[position] || '.';
   m.appendChild(k);
 
-  const top = k.offsetTop;
-  const left = k.offsetLeft;
-  const height = parseInt(computed.lineHeight, 10) || k.offsetHeight;
-
-  return { top, left, height };
+  return {
+    top: k.offsetTop,
+    left: k.offsetLeft,
+    height: styleCache.lineHeight || k.offsetHeight,
+  };
 };

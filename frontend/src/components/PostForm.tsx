@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AxiosError } from 'axios';
 import api from '../api';
@@ -120,24 +120,24 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     setSelectedIndex(0);
   }, [suggestions]);
 
+  const updateCaretPosition = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const coords = getCaretCoordinates(el, el.selectionStart);
+    setCaretPos({ top: coords.top - el.scrollTop, height: coords.height });
+  }, []);
+
   useEffect(() => {
     if (!suggestionsOpen) return;
     const onResize = () => updateCaretPosition();
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [suggestionsOpen]);
+  }, [suggestionsOpen, updateCaretPosition]);
 
   useEffect(() => {
     if (!suggestionsOpen) return;
     suggestionItemRefs.current[selectedIndex]?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex, suggestionsOpen]);
-
-  const updateCaretPosition = () => {
-    const el = textareaRef.current;
-    if (!el) return;
-    const coords = getCaretCoordinates(el, el.selectionStart);
-    setCaretPos({ top: coords.top - el.scrollTop, height: coords.height });
-  };
 
   const fetchPersonSuggestions = async (query: string) => {
     const requestId = personRequestIdRef.current + 1;
@@ -402,7 +402,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
               backdropRef.current.scrollTop = e.currentTarget.scrollTop;
             }
             if (suggestionsOpen) {
-              updateCaretPosition();
+              requestAnimationFrame(updateCaretPosition);
             }
           }}
           placeholder={text ? '' : t('new_post')}
