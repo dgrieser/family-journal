@@ -258,7 +258,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
                       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveComment(c.id); }
                       else if (e.key === 'Escape') { handleCancelEditComment(); }
                     }}
-                    className="w-full text-sm text-stone-700 border border-violet-300 rounded px-2 py-1.5 resize-none focus:outline-none focus:ring-inset focus:ring-1 focus:ring-violet-500"
+                    className="w-full text-sm text-stone-700 border border-violet-300 rounded px-2 py-1.5 resize-none focus:outline-none focus:border-violet-500 focus:ring-inset focus:ring-1 focus:ring-violet-500 transition"
                     rows={2}
                     autoFocus
                   />
