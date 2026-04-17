@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AxiosError } from 'axios';
 import api from '../api';
@@ -6,6 +6,12 @@ import { searchPersons } from '../persons';
 import { Send, Paperclip, X, Image, Clock } from 'lucide-react';
 import type { Post, Hashtag, Attachment } from '../types';
 import { buildHighlightHtml } from '../utils/tagColors';
+import { getCaretCoordinates } from '../utils/caretCoordinates';
+
+interface CaretPos {
+  top: number;
+  height: number;
+}
 
 interface PostFormProps {
   onSuccess: () => void;
@@ -32,6 +38,11 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
   const [allHashtags, setAllHashtags] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [caretPos, setCaretPos] = useState<CaretPos | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false,
+  );
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -39,6 +50,10 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
   const timeInputRef = useRef<HTMLInputElement>(null);
   const personRequestIdRef = useRef(0);
   const personSearchTimeoutRef = useRef<number | null>(null);
+  const suggestionItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const suggestionsOpen =
+    (showHashtagSuggestions || showPersonSuggestions) && suggestions.length > 0;
 
   const cancelPendingPersonSearch = () => {
     if (personSearchTimeoutRef.current !== null) {
@@ -93,6 +108,37 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     return () => cancelAnimationFrame(id);
   }, [text]);
 
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 767px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mql.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [suggestions]);
+
+  const updateCaretPosition = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const coords = getCaretCoordinates(el, el.selectionStart);
+    setCaretPos({ top: coords.top - el.scrollTop, height: coords.height });
+  }, []);
+
+  useEffect(() => {
+    if (!suggestionsOpen) return;
+    const onResize = () => updateCaretPosition();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [suggestionsOpen, updateCaretPosition]);
+
+  useEffect(() => {
+    if (!suggestionsOpen) return;
+    suggestionItemRefs.current[selectedIndex]?.scrollIntoView({ block: 'nearest' });
+  }, [selectedIndex, suggestionsOpen]);
+
   const fetchPersonSuggestions = async (query: string) => {
     const requestId = personRequestIdRef.current + 1;
     personRequestIdRef.current = requestId;
@@ -110,22 +156,37 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     }
   };
 
+  // Returns the whitespace-delimited token containing the caret, or null if
+  // the caret is on whitespace.
+  const findWordAtCursor = (value: string, cursor: number) => {
+    if (cursor > 0 && /\s/.test(value[cursor - 1]) && (cursor >= value.length || /\s/.test(value[cursor]))) {
+      return null;
+    }
+    let start = cursor;
+    while (start > 0 && !/\s/.test(value[start - 1])) start--;
+    let end = cursor;
+    while (end < value.length && !/\s/.test(value[end])) end++;
+    return { start, end, word: value.slice(start, end) };
+  };
+
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setText(value);
 
-    const words = value.split(/\s/);
-    const lastWord = words[words.length - 1];
+    const cursor = e.target.selectionStart;
+    const token = findWordAtCursor(value, cursor);
+    const word = token?.word ?? '';
 
-    if (lastWord.startsWith('#')) {
+    if (word.startsWith('#')) {
       cancelPendingPersonSearch();
-      const query = lastWord.slice(1);
+      const query = word.slice(1);
       const lowerQuery = query.toLowerCase();
       setShowHashtagSuggestions(true);
       setShowPersonSuggestions(false);
       setSuggestions(allHashtags.filter(h => h.toLowerCase().includes(lowerQuery)));
-    } else if (lastWord.startsWith('@')) {
-      const query = lastWord.slice(1).toLowerCase();
+      requestAnimationFrame(updateCaretPosition);
+    } else if (word.startsWith('@')) {
+      const query = word.slice(1).toLowerCase();
       setShowPersonSuggestions(true);
       setShowHashtagSuggestions(false);
       if (personSearchTimeoutRef.current !== null) {
@@ -134,31 +195,72 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
       personSearchTimeoutRef.current = window.setTimeout(() => {
         void fetchPersonSuggestions(query);
       }, 300);
+      requestAnimationFrame(updateCaretPosition);
     } else {
       cancelPendingPersonSearch();
       setShowHashtagSuggestions(false);
       setShowPersonSuggestions(false);
       setSuggestions([]);
+      setCaretPos(null);
+    }
+  };
+
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!suggestionsOpen) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex((i) => (i + 1) % suggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      const idx = Math.min(selectedIndex, suggestions.length - 1);
+      applySuggestion(suggestions[idx]);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setShowHashtagSuggestions(false);
+      setShowPersonSuggestions(false);
+      setCaretPos(null);
     }
   };
 
   const applySuggestion = (suggestion: string) => {
-    const words = text.split(/\s/);
-    const lastWord = words[words.length - 1];
-    if (lastWord.startsWith('#')) {
-      const typedPart = lastWord.slice(1);
+    const el = textareaRef.current;
+    if (!el) return;
+    const cursor = el.selectionStart;
+    const token = findWordAtCursor(text, cursor);
+    if (!token) return;
+    const { start, end, word } = token;
+
+    let replacement: string;
+    if (word.startsWith('#')) {
+      const typedPart = word.slice(1);
       const completed = suggestion.toLowerCase().startsWith(typedPart.toLowerCase())
         ? typedPart + suggestion.slice(typedPart.length)
         : suggestion;
-      words[words.length - 1] = '#' + completed + ' ';
+      replacement = '#' + completed;
     } else {
-      words[words.length - 1] = '@' + suggestion + ' ';
+      replacement = '@' + suggestion;
     }
-    setText(words.join(' '));
+
+    // Append a trailing space only if the following character isn't already whitespace.
+    const needsSpace = end >= text.length || !/\s/.test(text[end]);
+    const insert = needsSpace ? replacement + ' ' : replacement;
+
+    const newText = text.slice(0, start) + insert + text.slice(end);
+    const newCursor = start + insert.length;
+
+    setText(newText);
     setShowHashtagSuggestions(false);
     setShowPersonSuggestions(false);
+    setCaretPos(null);
     cancelPendingPersonSearch();
-    textareaRef.current?.focus();
+
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(newCursor, newCursor);
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -294,23 +396,48 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
           ref={textareaRef}
           value={text}
           onChange={handleTextChange}
+          onKeyDown={handleTextareaKeyDown}
           onScroll={(e) => {
             if (backdropRef.current) {
               backdropRef.current.scrollTop = e.currentTarget.scrollTop;
+            }
+            if (suggestionsOpen) {
+              requestAnimationFrame(updateCaretPosition);
             }
           }}
           placeholder={text ? '' : t('new_post')}
           style={{ background: 'transparent', caretColor: '#57534e', color: text ? 'transparent' : undefined }}
           className="tag-textarea w-full border border-stone-200 rounded-md p-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-violet-500 focus:ring-inset focus:ring-1 focus:ring-violet-500 min-h-[100px] resize-none transition relative"
         />
-        {(showHashtagSuggestions || showPersonSuggestions) && suggestions.length > 0 && (
-          <div className="absolute z-10 bg-white border border-stone-200 rounded-md shadow-lg mt-1 w-full max-h-40 overflow-y-auto">
-            {suggestions.map(s => (
+        {suggestionsOpen && (
+          <div
+            className="absolute z-10 left-0 right-0 bg-white border border-stone-200 rounded-md shadow-lg max-h-40 overflow-y-auto"
+            style={
+              caretPos
+                ? isMobile
+                  ? {
+                      top: caretPos.top,
+                      transform: 'translateY(-100%) translateY(-4px)',
+                    }
+                  : {
+                      top: caretPos.top + caretPos.height + 4,
+                    }
+                : { top: '100%', marginTop: 4 }
+            }
+          >
+            {suggestions.map((s, i) => (
               <button
                 key={s}
+                ref={(el) => {
+                  suggestionItemRefs.current[i] = el;
+                }}
                 type="button"
+                onMouseEnter={() => setSelectedIndex(i)}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => applySuggestion(s)}
-                className="block w-full text-left px-3.5 py-2 text-sm hover:bg-stone-50 text-stone-700 transition-colors"
+                className={`block w-full text-left px-3.5 py-2 text-sm text-stone-700 transition-colors ${
+                  i === selectedIndex ? 'bg-stone-100' : 'hover:bg-stone-50'
+                }`}
               >
                 {s}
               </button>
