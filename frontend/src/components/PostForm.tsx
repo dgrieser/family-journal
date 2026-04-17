@@ -156,23 +156,37 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     }
   };
 
+  // Returns the whitespace-delimited token containing the caret, or null if
+  // the caret is on whitespace.
+  const findWordAtCursor = (value: string, cursor: number) => {
+    if (cursor > 0 && /\s/.test(value[cursor - 1]) && (cursor >= value.length || /\s/.test(value[cursor]))) {
+      return null;
+    }
+    let start = cursor;
+    while (start > 0 && !/\s/.test(value[start - 1])) start--;
+    let end = cursor;
+    while (end < value.length && !/\s/.test(value[end])) end++;
+    return { start, end, word: value.slice(start, end) };
+  };
+
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setText(value);
 
-    const words = value.split(/\s/);
-    const lastWord = words[words.length - 1];
+    const cursor = e.target.selectionStart;
+    const token = findWordAtCursor(value, cursor);
+    const word = token?.word ?? '';
 
-    if (lastWord.startsWith('#')) {
+    if (word.startsWith('#')) {
       cancelPendingPersonSearch();
-      const query = lastWord.slice(1);
+      const query = word.slice(1);
       const lowerQuery = query.toLowerCase();
       setShowHashtagSuggestions(true);
       setShowPersonSuggestions(false);
       setSuggestions(allHashtags.filter(h => h.toLowerCase().includes(lowerQuery)));
       requestAnimationFrame(updateCaretPosition);
-    } else if (lastWord.startsWith('@')) {
-      const query = lastWord.slice(1).toLowerCase();
+    } else if (word.startsWith('@')) {
+      const query = word.slice(1).toLowerCase();
       setShowPersonSuggestions(true);
       setShowHashtagSuggestions(false);
       if (personSearchTimeoutRef.current !== null) {
@@ -212,23 +226,41 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
   };
 
   const applySuggestion = (suggestion: string) => {
-    const words = text.split(/\s/);
-    const lastWord = words[words.length - 1];
-    if (lastWord.startsWith('#')) {
-      const typedPart = lastWord.slice(1);
+    const el = textareaRef.current;
+    if (!el) return;
+    const cursor = el.selectionStart;
+    const token = findWordAtCursor(text, cursor);
+    if (!token) return;
+    const { start, end, word } = token;
+
+    let replacement: string;
+    if (word.startsWith('#')) {
+      const typedPart = word.slice(1);
       const completed = suggestion.toLowerCase().startsWith(typedPart.toLowerCase())
         ? typedPart + suggestion.slice(typedPart.length)
         : suggestion;
-      words[words.length - 1] = '#' + completed + ' ';
+      replacement = '#' + completed;
     } else {
-      words[words.length - 1] = '@' + suggestion + ' ';
+      replacement = '@' + suggestion;
     }
-    setText(words.join(' '));
+
+    // Append a trailing space only if the following character isn't already whitespace.
+    const needsSpace = end >= text.length || !/\s/.test(text[end]);
+    const insert = needsSpace ? replacement + ' ' : replacement;
+
+    const newText = text.slice(0, start) + insert + text.slice(end);
+    const newCursor = start + insert.length;
+
+    setText(newText);
     setShowHashtagSuggestions(false);
     setShowPersonSuggestions(false);
     setCaretPos(null);
     cancelPendingPersonSearch();
-    textareaRef.current?.focus();
+
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(newCursor, newCursor);
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
