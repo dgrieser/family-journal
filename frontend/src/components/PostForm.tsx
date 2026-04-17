@@ -433,6 +433,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
                 }}
                 type="button"
                 onMouseEnter={() => setSelectedIndex(i)}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => applySuggestion(s)}
                 className={`block w-full text-left px-3.5 py-2 text-sm text-stone-700 transition-colors ${
                   i === selectedIndex ? 'bg-stone-100' : 'hover:bg-stone-50'

@@ -64,14 +64,17 @@ const ensureMirror = (): { mirror: HTMLDivElement; marker: HTMLSpanElement } => 
   return { mirror, marker };
 };
 
-interface StyleCache {
-  element: HTMLTextAreaElement;
+interface CachedStyles {
   width: number;
   height: number;
   lineHeight: number;
 }
 
-let styleCache: StyleCache | null = null;
+// WeakMap so cached textareas can be garbage-collected after their component
+// unmounts. WeakRef tracks which textarea the shared mirror is currently
+// styled for without pinning it.
+const styleCache = new WeakMap<HTMLTextAreaElement, CachedStyles>();
+let mirrorTargetRef: WeakRef<HTMLTextAreaElement> | null = null;
 
 export const getCaretCoordinates = (
   textarea: HTMLTextAreaElement,
@@ -80,13 +83,10 @@ export const getCaretCoordinates = (
   const { mirror: m, marker: k } = ensureMirror();
   const width = textarea.offsetWidth;
   const height = textarea.offsetHeight;
+  let cached = styleCache.get(textarea);
+  const mirrorMatches = mirrorTargetRef?.deref() === textarea;
 
-  if (
-    !styleCache ||
-    styleCache.element !== textarea ||
-    styleCache.width !== width ||
-    styleCache.height !== height
-  ) {
+  if (!cached || !mirrorMatches || cached.width !== width || cached.height !== height) {
     const computed = window.getComputedStyle(textarea);
     const style = m.style as unknown as Record<string, string>;
     for (const prop of MIRRORED_PROPERTIES) {
@@ -95,12 +95,13 @@ export const getCaretCoordinates = (
         style[prop as string] = value;
       }
     }
-    styleCache = {
-      element: textarea,
+    cached = {
       width,
       height,
       lineHeight: parseFloat(computed.lineHeight),
     };
+    styleCache.set(textarea, cached);
+    mirrorTargetRef = new WeakRef(textarea);
   }
 
   m.textContent = textarea.value.slice(0, position);
@@ -110,6 +111,6 @@ export const getCaretCoordinates = (
   return {
     top: k.offsetTop,
     left: k.offsetLeft,
-    height: styleCache.lineHeight || k.offsetHeight,
+    height: cached.lineHeight || k.offsetHeight,
   };
 };
