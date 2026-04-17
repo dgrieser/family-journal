@@ -3,6 +3,8 @@ package services
 import (
 	"database/sql"
 	"errors"
+
+	"familyjournal/backend/internal/email"
 	"familyjournal/backend/internal/models"
 
 	"golang.org/x/crypto/bcrypt"
@@ -51,5 +53,10 @@ func (s *Service) UpdateUserRole(userID int64, role string) error {
 }
 
 func (s *Service) UpdateUserActive(userID int64, active bool) error {
+	if active {
+		if user, err := s.Users.GetUserByID(userID); err == nil {
+			email.SendAccountActivated(s.Email, user.Email)
+		}
+	}
 	return s.Users.UpdateUserActive(userID, active)
 }

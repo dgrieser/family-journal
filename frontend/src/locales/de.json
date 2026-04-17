@@ -47,7 +47,7 @@
   "page_status": "Seite {{page}} von {{total}}",
   "dont_have_account": "Noch kein Konto?",
   "already_have_account": "Schon ein Konto?",
-  "registration_success_login": "Registrierung erfolgreich. Bitte anmelden.",
+  "registration_success_login": "Registrierung eingereicht. Ihr Konto muss von einem Administrator freigegeben werden, bevor Sie sich anmelden können. Sie erhalten eine E-Mail, sobald Ihr Konto aktiviert wurde.",
   "post_submit_error": "Der Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.",
   "post_partial_upload_error": "Eintrag gespeichert, aber das Hochladen der Anhänge ist fehlgeschlagen.",
   "delete_error": "Löschen fehlgeschlagen. Möglicherweise fehlt die Berechtigung.",

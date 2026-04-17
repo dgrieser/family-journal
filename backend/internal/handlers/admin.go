@@ -62,5 +62,10 @@ func (h *AdminHandler) UpdateActive(c *fiber.Ctx) error {
 		log.Printf("update user active error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update user")
 	}
-	return c.SendStatus(fiber.StatusNoContent)
+	user, err := h.Service.GetUserByID(int64(id))
+	if err != nil {
+		log.Printf("get user after active update error: %v", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to retrieve user")
+	}
+	return c.JSON(user)
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"regexp"
 
+	"familyjournal/backend/internal/email"
 	"familyjournal/backend/internal/models"
 )
 
@@ -79,6 +80,7 @@ type Service struct {
 	Posts       PostRepository
 	Comments    CommentRepository
 	Attachments AttachmentRepository
+	Email       email.Sender
 }
 
 func ensureSlice[T any](items []T) []T {
@@ -88,7 +90,7 @@ func ensureSlice[T any](items []T) []T {
 	return items
 }
 
-func New(users UserRepository, persons PersonRepository, hashtags HashtagRepository, posts PostRepository, comments CommentRepository, attachments AttachmentRepository) *Service {
+func New(users UserRepository, persons PersonRepository, hashtags HashtagRepository, posts PostRepository, comments CommentRepository, attachments AttachmentRepository, emailSender email.Sender) *Service {
 	return &Service{
 		Users:       users,
 		Persons:     persons,
@@ -96,5 +98,6 @@ func New(users UserRepository, persons PersonRepository, hashtags HashtagReposit
 		Posts:       posts,
 		Comments:    comments,
 		Attachments: attachments,
+		Email:       emailSender,
 	}
 }

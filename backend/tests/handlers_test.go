@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"familyjournal/backend/internal/email"
 	"familyjournal/backend/internal/handlers"
 	"familyjournal/backend/internal/models"
 	"familyjournal/backend/internal/services"
@@ -314,20 +315,20 @@ func TestJSONErrorHandlerUsesStatusTextForClientErrorsWithoutMessage(t *testing.
 	}
 }
 
-func newAuthTestApp() *fiber.App {
+func newAuthTestApp() (*fiber.App, *fakeRepo) {
 	repo := newFakeRepo()
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	service := services.New(repo, repo, repo, repo, repo, repo, email.New(email.Config{}))
 	store := session.New()
 	app := fiber.New(fiber.Config{ErrorHandler: handlers.JSONErrorHandler})
 	h := &handlers.AuthHandler{Service: service, Store: store}
 	app.Post("/register", h.Register)
 	app.Post("/login", h.Login)
 	app.Get("/profile", h.Profile)
-	return app
+	return app, repo
 }
 
 func TestRegisterLoginSession(t *testing.T) {
-	app := newAuthTestApp()
+	app, repo := newAuthTestApp()
 
 	payload, err := json.Marshal(map[string]string{"email": "test@example.com", "password": "secret"})
 	if err != nil {
@@ -350,11 +351,23 @@ func TestRegisterLoginSession(t *testing.T) {
 		t.Fatalf("expected unauthorized profile right after register: %v", err)
 	}
 
+	// Newly registered users are inactive; login must fail until activated.
+	req = httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected login to fail for inactive user, got status %d err %v", resp.StatusCode, err)
+	}
+
+	// Simulate admin activation by flipping IsActive in the fake repo.
+	user := repo.users["test@example.com"]
+	user.IsActive = true
+
 	req = httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err = app.Test(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		t.Fatalf("login failed: %v", err)
+		t.Fatalf("login failed after activation: %v", err)
 	}
 	cookie := resp.Header.Get("Set-Cookie")
 	if cookie == "" {
@@ -370,7 +383,7 @@ func TestRegisterLoginSession(t *testing.T) {
 }
 
 func TestRegisterRejectsInvalidEmail(t *testing.T) {
-	app := newAuthTestApp()
+	app, _ := newAuthTestApp()
 
 	payload, err := json.Marshal(map[string]string{"email": "not-an-email", "password": "secret"})
 	if err != nil {
@@ -402,12 +415,12 @@ func TestRegisterRejectsInvalidEmail(t *testing.T) {
 
 func TestCreatePostParsesTagsAndPersons(t *testing.T) {
 	repo := newFakeRepo()
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	service := services.New(repo, repo, repo, repo, repo, repo, email.New(email.Config{}))
 	post := &models.Post{UserID: 1, Date: time.Now(), Text: "Today #Care with @Lena"}
 	if err := service.CreateOrUpdatePost(services.NewAccessScope(1, models.RoleUser), post); err != nil {
 		t.Fatalf("create post: %v", err)
 	}
-	if len(repo.tagsCreated) != 1 || repo.tagsCreated[0] != "care" {
+	if len(repo.tagsCreated) != 1 || repo.tagsCreated[0] != "Care" {
 		t.Fatalf("expected hashtag creation")
 	}
 	if len(repo.personsCreated) != 1 || repo.personsCreated[0] != "Lena" {
@@ -418,7 +431,7 @@ func TestCreatePostParsesTagsAndPersons(t *testing.T) {
 func TestListPostsFilters(t *testing.T) {
 	repo := newFakeRepo()
 	repo.totalPosts = 42
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	service := services.New(repo, repo, repo, repo, repo, repo, email.New(email.Config{}))
 	store := session.New()
 	app := fiber.New()
 	postsHandler := &handlers.PostsHandler{Service: service, Store: store}
@@ -472,7 +485,7 @@ func TestListPersonsFilters(t *testing.T) {
 	repo := newFakeRepo()
 	repo.totalPersons = 3
 	repo.personsToList = []models.Person{{ID: 1, Name: "Lena"}}
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	service := services.New(repo, repo, repo, repo, repo, repo, email.New(email.Config{}))
 	store := session.New()
 	app := fiber.New()
 	personsHandler := &handlers.PersonsHandler{Service: service, Store: store}
@@ -517,7 +530,7 @@ func TestListPersonsFilters(t *testing.T) {
 
 func TestAdminDeletePostUsesUnscopedAccess(t *testing.T) {
 	repo := newFakeRepo()
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	service := services.New(repo, repo, repo, repo, repo, repo, email.New(email.Config{}))
 
 	err := service.DeletePost(services.NewAccessScope(99, models.RoleAdmin), 42)
 	if err != nil {
@@ -537,7 +550,7 @@ func TestDeletePostRemovesAttachmentFiles(t *testing.T) {
 		},
 	}
 
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	service := services.New(repo, repo, repo, repo, repo, repo, email.New(email.Config{}))
 	store := session.New()
 	uploadDir := t.TempDir()
 	filePath := filepath.Join(uploadDir, "test-file.jpg")
@@ -580,7 +593,7 @@ func TestDeletePostAttemptsAllAttachmentDeletesOnError(t *testing.T) {
 		},
 	}
 
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	service := services.New(repo, repo, repo, repo, repo, repo, email.New(email.Config{}))
 	store := session.New()
 	uploadDir := t.TempDir()
 
@@ -634,7 +647,7 @@ func TestDeletePostUsesBaseFileNameForAttachmentCleanup(t *testing.T) {
 		},
 	}
 
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	service := services.New(repo, repo, repo, repo, repo, repo, email.New(email.Config{}))
 	store := session.New()
 	uploadDir := t.TempDir()
 	parentDir := filepath.Dir(uploadDir)
@@ -677,7 +690,7 @@ func TestDownloadAttachmentByIDSetsSafeDownloadHeaders(t *testing.T) {
 	repo := newFakeRepo()
 	repo.attachmentByID = &models.Attachment{FileName: "sample.png", FileType: "image/png"}
 
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	service := services.New(repo, repo, repo, repo, repo, repo, email.New(email.Config{}))
 	store := session.New()
 	uploadDir := t.TempDir()
 	filePath := filepath.Join(uploadDir, "sample.png")
@@ -715,7 +728,7 @@ func TestDownloadAttachmentByIDSetsSafeDownloadHeaders(t *testing.T) {
 
 func TestServiceNormalizesNilSlices(t *testing.T) {
 	repo := newFakeRepo()
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	service := services.New(repo, repo, repo, repo, repo, repo, email.New(email.Config{}))
 
 	users, err := service.ListUsers()
 	if err != nil {
