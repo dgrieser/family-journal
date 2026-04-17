@@ -6,6 +6,12 @@ import { searchPersons } from '../persons';
 import { Send, Paperclip, X, Image, Clock } from 'lucide-react';
 import type { Post, Hashtag, Attachment } from '../types';
 import { buildHighlightHtml } from '../utils/tagColors';
+import { getCaretCoordinates } from '../utils/caretCoordinates';
+
+interface CaretPos {
+  top: number;
+  height: number;
+}
 
 interface PostFormProps {
   onSuccess: () => void;
@@ -32,6 +38,11 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
   const [allHashtags, setAllHashtags] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [caretPos, setCaretPos] = useState<CaretPos | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false,
+  );
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -39,6 +50,10 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
   const timeInputRef = useRef<HTMLInputElement>(null);
   const personRequestIdRef = useRef(0);
   const personSearchTimeoutRef = useRef<number | null>(null);
+  const suggestionItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const suggestionsOpen =
+    (showHashtagSuggestions || showPersonSuggestions) && suggestions.length > 0;
 
   const cancelPendingPersonSearch = () => {
     if (personSearchTimeoutRef.current !== null) {
@@ -93,6 +108,37 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     return () => cancelAnimationFrame(id);
   }, [text]);
 
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 767px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mql.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [suggestions]);
+
+  useEffect(() => {
+    if (!suggestionsOpen) return;
+    const onResize = () => updateCaretPosition();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [suggestionsOpen]);
+
+  useEffect(() => {
+    if (!suggestionsOpen) return;
+    suggestionItemRefs.current[selectedIndex]?.scrollIntoView({ block: 'nearest' });
+  }, [selectedIndex, suggestionsOpen]);
+
+  const updateCaretPosition = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const coords = getCaretCoordinates(el, el.selectionStart);
+    setCaretPos({ top: coords.top - el.scrollTop, height: coords.height });
+  };
+
   const fetchPersonSuggestions = async (query: string) => {
     const requestId = personRequestIdRef.current + 1;
     personRequestIdRef.current = requestId;
@@ -124,6 +170,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
       setShowHashtagSuggestions(true);
       setShowPersonSuggestions(false);
       setSuggestions(allHashtags.filter(h => h.toLowerCase().includes(lowerQuery)));
+      requestAnimationFrame(updateCaretPosition);
     } else if (lastWord.startsWith('@')) {
       const query = lastWord.slice(1).toLowerCase();
       setShowPersonSuggestions(true);
@@ -134,11 +181,33 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
       personSearchTimeoutRef.current = window.setTimeout(() => {
         void fetchPersonSuggestions(query);
       }, 300);
+      requestAnimationFrame(updateCaretPosition);
     } else {
       cancelPendingPersonSearch();
       setShowHashtagSuggestions(false);
       setShowPersonSuggestions(false);
       setSuggestions([]);
+      setCaretPos(null);
+    }
+  };
+
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!suggestionsOpen) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex((i) => (i + 1) % suggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      const idx = Math.min(selectedIndex, suggestions.length - 1);
+      applySuggestion(suggestions[idx]);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setShowHashtagSuggestions(false);
+      setShowPersonSuggestions(false);
+      setCaretPos(null);
     }
   };
 
@@ -157,6 +226,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     setText(words.join(' '));
     setShowHashtagSuggestions(false);
     setShowPersonSuggestions(false);
+    setCaretPos(null);
     cancelPendingPersonSearch();
     textareaRef.current?.focus();
   };
@@ -294,23 +364,47 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
           ref={textareaRef}
           value={text}
           onChange={handleTextChange}
+          onKeyDown={handleTextareaKeyDown}
           onScroll={(e) => {
             if (backdropRef.current) {
               backdropRef.current.scrollTop = e.currentTarget.scrollTop;
+            }
+            if (suggestionsOpen) {
+              updateCaretPosition();
             }
           }}
           placeholder={text ? '' : t('new_post')}
           style={{ background: 'transparent', caretColor: '#57534e', color: text ? 'transparent' : undefined }}
           className="tag-textarea w-full border border-stone-200 rounded-md p-3 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-violet-500 focus:ring-inset focus:ring-1 focus:ring-violet-500 min-h-[100px] resize-none transition relative"
         />
-        {(showHashtagSuggestions || showPersonSuggestions) && suggestions.length > 0 && (
-          <div className="absolute z-10 bg-white border border-stone-200 rounded-md shadow-lg mt-1 w-full max-h-40 overflow-y-auto">
-            {suggestions.map(s => (
+        {suggestionsOpen && (
+          <div
+            className="absolute z-10 left-0 right-0 bg-white border border-stone-200 rounded-md shadow-lg max-h-40 overflow-y-auto"
+            style={
+              caretPos
+                ? isMobile
+                  ? {
+                      top: caretPos.top,
+                      transform: 'translateY(-100%) translateY(-4px)',
+                    }
+                  : {
+                      top: caretPos.top + caretPos.height + 4,
+                    }
+                : { top: '100%', marginTop: 4 }
+            }
+          >
+            {suggestions.map((s, i) => (
               <button
                 key={s}
+                ref={(el) => {
+                  suggestionItemRefs.current[i] = el;
+                }}
                 type="button"
+                onMouseEnter={() => setSelectedIndex(i)}
                 onClick={() => applySuggestion(s)}
-                className="block w-full text-left px-3.5 py-2 text-sm hover:bg-stone-50 text-stone-700 transition-colors"
+                className={`block w-full text-left px-3.5 py-2 text-sm text-stone-700 transition-colors ${
+                  i === selectedIndex ? 'bg-stone-100' : 'hover:bg-stone-50'
+                }`}
               >
                 {s}
               </button>
