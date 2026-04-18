@@ -1,6 +1,7 @@
 package email
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"time"
 )
+
+const smtpTimeout = 30 * time.Second
 
 type Sender interface {
 	Send(to, subject, body string) error
@@ -36,22 +39,40 @@ func New(cfg Config) Sender {
 	return &smtpSender{cfg: cfg}
 }
 
+// sanitizeHeader strips CR and LF from a string to prevent header injection.
+func sanitizeHeader(s string) string {
+	s = strings.ReplaceAll(s, "\r", "")
+	s = strings.ReplaceAll(s, "\n", "")
+	return s
+}
+
 func (s *smtpSender) send(recipients []string, toHeader, subject, body string) error {
 	addr := net.JoinHostPort(s.cfg.Host, fmt.Sprintf("%d", s.cfg.Port))
-	msg := strings.Join([]string{
-		"From: " + s.cfg.From,
-		"To: " + toHeader,
-		"Subject: " + subject,
-		"Date: " + time.Now().Format(time.RFC1123Z),
-		"MIME-Version: 1.0",
-		"Content-Type: text/plain; charset=UTF-8",
-		"",
-		body,
-	}, "\r\n")
 
-	var auth smtp.Auth
+	conn, err := net.DialTimeout("tcp", addr, smtpTimeout)
+	if err != nil {
+		return fmt.Errorf("smtp dial: %w", err)
+	}
+	conn.SetDeadline(time.Now().Add(smtpTimeout)) //nolint:errcheck
+
+	c, err := smtp.NewClient(conn, s.cfg.Host)
+	if err != nil {
+		conn.Close()
+		return fmt.Errorf("smtp client: %w", err)
+	}
+	defer c.Close()
+
+	if ok, _ := c.Extension("STARTTLS"); ok {
+		if err := c.StartTLS(&tls.Config{ServerName: s.cfg.Host}); err != nil {
+			return fmt.Errorf("smtp starttls: %w", err)
+		}
+	}
+
 	if s.cfg.User != "" {
-		auth = smtp.PlainAuth("", s.cfg.User, s.cfg.Password, s.cfg.Host)
+		auth := smtp.PlainAuth("", s.cfg.User, s.cfg.Password, s.cfg.Host)
+		if err := c.Auth(auth); err != nil {
+			return fmt.Errorf("smtp auth: %w", err)
+		}
 	}
 
 	envelopeFrom := s.cfg.From
@@ -59,7 +80,36 @@ func (s *smtpSender) send(recipients []string, toHeader, subject, body string) e
 		envelopeFrom = parsed.Address
 	}
 
-	return smtp.SendMail(addr, auth, envelopeFrom, recipients, []byte(msg))
+	msg := strings.Join([]string{
+		"From: " + s.cfg.From,
+		"To: " + sanitizeHeader(toHeader),
+		"Subject: " + sanitizeHeader(subject),
+		"Date: " + time.Now().Format(time.RFC1123Z),
+		"MIME-Version: 1.0",
+		"Content-Type: text/plain; charset=UTF-8",
+		"",
+		body,
+	}, "\r\n")
+
+	if err := c.Mail(envelopeFrom); err != nil {
+		return fmt.Errorf("smtp MAIL FROM: %w", err)
+	}
+	for _, r := range recipients {
+		if err := c.Rcpt(r); err != nil {
+			return fmt.Errorf("smtp RCPT TO %s: %w", r, err)
+		}
+	}
+	w, err := c.Data()
+	if err != nil {
+		return fmt.Errorf("smtp DATA: %w", err)
+	}
+	if _, err := w.Write([]byte(msg)); err != nil {
+		return fmt.Errorf("smtp write: %w", err)
+	}
+	if err := w.Close(); err != nil {
+		return fmt.Errorf("smtp close data: %w", err)
+	}
+	return c.Quit()
 }
 
 func (s *smtpSender) Send(to, subject, body string) error {
@@ -73,8 +123,8 @@ func (s *smtpSender) SendMulti(to []string, subject, body string) error {
 	return s.send(to, strings.Join(to, ", "), subject, body)
 }
 
-func (n *noOpSender) Send(_, _, _ string) error              { return nil }
-func (n *noOpSender) SendMulti(_ []string, _, _ string) error { return nil }
+func (n *noOpSender) Send(_, _, _ string) error               { return nil }
+func (n *noOpSender) SendMulti(_ []string, _, _ string) error  { return nil }
 
 func SendRegistrationPending(s Sender, to string) {
 	go func() {
