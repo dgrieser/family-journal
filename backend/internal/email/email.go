@@ -91,7 +91,7 @@ func (s *smtpSender) send(recipients []string, toHeader, subject, body string) e
 		"MIME-Version: 1.0",
 		"Content-Type: text/plain; charset=UTF-8",
 		"",
-		body,
+		strings.ReplaceAll(strings.ReplaceAll(body, "\r\n", "\n"), "\n", "\r\n"),
 	}, "\r\n")
 
 	if err := c.Mail(envelopeFrom); err != nil {
