@@ -31,12 +31,20 @@ func (s *Service) Register(userEmail, password string) (*models.User, error) {
 		return nil, err
 	}
 
-	email.SendRegistrationPending(s.Email, user.Email)
+	go func() {
+		if err := email.SendRegistrationPending(s.Email, user.Email); err != nil {
+			log.Printf("email: registration pending to %s: %v", user.Email, err)
+		}
+	}()
 
 	if adminEmails, err := s.Users.GetAdminEmails(); err != nil {
 		log.Printf("register: failed to get admin emails for notification: %v", err)
 	} else {
-		email.SendNewUserNotification(s.Email, adminEmails, user.Email)
+		go func() {
+			if err := email.SendNewUserNotification(s.Email, adminEmails, user.Email); err != nil {
+				log.Printf("email: new user notification: %v", err)
+			}
+		}()
 	}
 
 	return user, nil

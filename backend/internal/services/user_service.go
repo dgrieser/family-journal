@@ -3,6 +3,7 @@ package services
 import (
 	"database/sql"
 	"errors"
+	"log"
 
 	"familyjournal/backend/internal/email"
 	"familyjournal/backend/internal/models"
@@ -65,7 +66,11 @@ func (s *Service) UpdateUserActive(userID int64, active bool) (*models.User, err
 	}
 	user.IsActive = active
 	if active {
-		email.SendAccountActivated(s.Email, user.Email)
+		go func() {
+			if err := email.SendAccountActivated(s.Email, user.Email); err != nil {
+				log.Printf("email: account activated for %s: %v", user.Email, err)
+			}
+		}()
 	}
 	return user, nil
 }
