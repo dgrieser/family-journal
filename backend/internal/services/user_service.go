@@ -52,14 +52,20 @@ func (s *Service) UpdateUserRole(userID int64, role string) error {
 	return s.Users.UpdateUserRole(userID, role)
 }
 
-func (s *Service) UpdateUserActive(userID int64, active bool) error {
+func (s *Service) UpdateUserActive(userID int64, active bool) (*models.User, error) {
+	user, err := s.Users.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if user.IsActive == active {
+		return user, nil
+	}
 	if err := s.Users.UpdateUserActive(userID, active); err != nil {
-		return err
+		return nil, err
 	}
+	user.IsActive = active
 	if active {
-		if user, err := s.Users.GetUserByID(userID); err == nil {
-			email.SendAccountActivated(s.Email, user.Email)
-		}
+		email.SendAccountActivated(s.Email, user.Email)
 	}
-	return nil
+	return user, nil
 }

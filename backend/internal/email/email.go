@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"strings"
 )
@@ -50,7 +51,12 @@ func (s *smtpSender) Send(to, subject, body string) error {
 		auth = smtp.PlainAuth("", s.cfg.User, s.cfg.Password, s.cfg.Host)
 	}
 
-	return smtp.SendMail(addr, auth, s.cfg.From, []string{to}, []byte(msg))
+	envelopeFrom := s.cfg.From
+	if parsed, err := mail.ParseAddress(s.cfg.From); err == nil {
+		envelopeFrom = parsed.Address
+	}
+
+	return smtp.SendMail(addr, auth, envelopeFrom, []string{to}, []byte(msg))
 }
 
 func (n *noOpSender) Send(_, _, _ string) error {
