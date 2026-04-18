@@ -72,5 +72,5 @@ func (s *Service) UpdateUserActive(userID int64, active bool) (*models.User, err
 			}
 		}()
 	}
-	return user, nil
+	return s.Users.GetUserByID(userID)
 }
