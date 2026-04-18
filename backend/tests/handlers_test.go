@@ -78,7 +78,8 @@ func (f *fakeRepo) GetUserByID(id int64) (*models.User, error) {
 
 func (f *fakeRepo) UpdateUserProfile(id int64, email string) error               { return nil }
 func (f *fakeRepo) UpdateUserPassword(id int64, passwordHash string) error       { return nil }
-func (f *fakeRepo) ListUsers() ([]models.User, error)                            { return nil, nil }
+func (f *fakeRepo) ListUsers() ([]models.User, error) { return nil, nil }
+func (f *fakeRepo) GetAdminEmails() ([]string, error) { return nil, nil }
 func (f *fakeRepo) UpdateUserRole(id int64, role string) error                   { return nil }
 func (f *fakeRepo) UpdateUserActive(id int64, active bool) error                 { return nil }
 func (f *fakeRepo) CreatePerson(person *models.Person) error                     { return nil }

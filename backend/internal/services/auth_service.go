@@ -6,7 +6,6 @@ import (
 
 	"familyjournal/backend/internal/email"
 	"familyjournal/backend/internal/models"
-
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,14 +32,7 @@ func (s *Service) Register(userEmail, password string) (*models.User, error) {
 
 	email.SendRegistrationPending(s.Email, user.Email)
 
-	allUsers, err := s.Users.ListUsers()
-	if err == nil {
-		var adminEmails []string
-		for _, u := range allUsers {
-			if u.Role == models.RoleAdmin {
-				adminEmails = append(adminEmails, u.Email)
-			}
-		}
+	if adminEmails, err := s.Users.GetAdminEmails(); err == nil {
 		email.SendNewUserNotification(s.Email, adminEmails, user.Email)
 	}
 

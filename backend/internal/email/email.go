@@ -3,6 +3,7 @@ package email
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/smtp"
 	"strings"
 )
@@ -33,7 +34,7 @@ func New(cfg Config) Sender {
 }
 
 func (s *smtpSender) Send(to, subject, body string) error {
-	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
+	addr := net.JoinHostPort(s.cfg.Host, fmt.Sprintf("%d", s.cfg.Port))
 	msg := strings.Join([]string{
 		"From: " + s.cfg.From,
 		"To: " + to,

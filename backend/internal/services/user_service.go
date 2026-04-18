@@ -53,10 +53,13 @@ func (s *Service) UpdateUserRole(userID int64, role string) error {
 }
 
 func (s *Service) UpdateUserActive(userID int64, active bool) error {
+	if err := s.Users.UpdateUserActive(userID, active); err != nil {
+		return err
+	}
 	if active {
 		if user, err := s.Users.GetUserByID(userID); err == nil {
 			email.SendAccountActivated(s.Email, user.Email)
 		}
 	}
-	return s.Users.UpdateUserActive(userID, active)
+	return nil
 }

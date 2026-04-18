@@ -53,6 +53,14 @@ func (r *Repository) ListUsers() ([]models.User, error) {
 	return users, nil
 }
 
+func (r *Repository) GetAdminEmails() ([]string, error) {
+	var emails []string
+	if err := r.DB.Select(&emails, `SELECT email FROM users WHERE role = ? AND active = TRUE`, "admin"); err != nil {
+		return nil, err
+	}
+	return emails, nil
+}
+
 func (r *Repository) UpdateUserRole(id int64, role string) error {
 	_, err := r.DB.Exec(`UPDATE users SET role = ?, updated_at = NOW() WHERE id = ?`, role, id)
 	return err
