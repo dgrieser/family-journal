@@ -79,12 +79,14 @@ func (s *smtpSender) send(recipients []string, toHeader, subject, body string) e
 	}
 
 	envelopeFrom := s.cfg.From
+	fromHeader := s.cfg.From
 	if parsed, err := mail.ParseAddress(s.cfg.From); err == nil {
 		envelopeFrom = parsed.Address
+		fromHeader = parsed.String()
 	}
 
 	msg := strings.Join([]string{
-		"From: " + s.cfg.From,
+		"From: " + sanitizeHeader(fromHeader),
 		"To: " + sanitizeHeader(toHeader),
 		"Subject: " + mime.QEncoding.Encode("utf-8", sanitizeHeader(subject)),
 		"Date: " + time.Now().Format(time.RFC1123Z),
