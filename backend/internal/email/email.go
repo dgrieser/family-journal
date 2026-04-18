@@ -7,10 +7,12 @@ import (
 	"net/mail"
 	"net/smtp"
 	"strings"
+	"time"
 )
 
 type Sender interface {
 	Send(to, subject, body string) error
+	SendMulti(to []string, subject, body string) error
 }
 
 type Config struct {
@@ -34,12 +36,13 @@ func New(cfg Config) Sender {
 	return &smtpSender{cfg: cfg}
 }
 
-func (s *smtpSender) Send(to, subject, body string) error {
+func (s *smtpSender) send(recipients []string, toHeader, subject, body string) error {
 	addr := net.JoinHostPort(s.cfg.Host, fmt.Sprintf("%d", s.cfg.Port))
 	msg := strings.Join([]string{
 		"From: " + s.cfg.From,
-		"To: " + to,
+		"To: " + toHeader,
 		"Subject: " + subject,
+		"Date: " + time.Now().Format(time.RFC1123Z),
 		"MIME-Version: 1.0",
 		"Content-Type: text/plain; charset=UTF-8",
 		"",
@@ -56,12 +59,22 @@ func (s *smtpSender) Send(to, subject, body string) error {
 		envelopeFrom = parsed.Address
 	}
 
-	return smtp.SendMail(addr, auth, envelopeFrom, []string{to}, []byte(msg))
+	return smtp.SendMail(addr, auth, envelopeFrom, recipients, []byte(msg))
 }
 
-func (n *noOpSender) Send(_, _, _ string) error {
-	return nil
+func (s *smtpSender) Send(to, subject, body string) error {
+	return s.send([]string{to}, to, subject, body)
 }
+
+func (s *smtpSender) SendMulti(to []string, subject, body string) error {
+	if len(to) == 0 {
+		return nil
+	}
+	return s.send(to, strings.Join(to, ", "), subject, body)
+}
+
+func (n *noOpSender) Send(_, _, _ string) error              { return nil }
+func (n *noOpSender) SendMulti(_ []string, _, _ string) error { return nil }
 
 func SendRegistrationPending(s Sender, to string) {
 	go func() {
@@ -99,10 +112,8 @@ func SendNewUserNotification(s Sender, adminEmails []string, newUserEmail string
 			"  " + newUserEmail + "\r\n\r\n" +
 			"Please log in to the admin panel to review and activate their account.\r\n\r\n" +
 			"Family Journal"
-		for _, admin := range adminEmails {
-			if err := s.Send(admin, subject, body); err != nil {
-				log.Printf("email: failed to send new user notification to admin %s: %v", admin, err)
-			}
+		if err := s.SendMulti(adminEmails, subject, body); err != nil {
+			log.Printf("email: failed to send new user notification to admins: %v", err)
 		}
 	}()
 }

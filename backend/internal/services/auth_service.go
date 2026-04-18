@@ -1,6 +1,7 @@
 package services
 
 import (
+	"log"
 	"net/mail"
 	"strings"
 
@@ -32,7 +33,9 @@ func (s *Service) Register(userEmail, password string) (*models.User, error) {
 
 	email.SendRegistrationPending(s.Email, user.Email)
 
-	if adminEmails, err := s.Users.GetAdminEmails(); err == nil {
+	if adminEmails, err := s.Users.GetAdminEmails(); err != nil {
+		log.Printf("register: failed to get admin emails for notification: %v", err)
+	} else {
 		email.SendNewUserNotification(s.Email, adminEmails, user.Email)
 	}
 
