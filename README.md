@@ -93,6 +93,12 @@ Services:
 | `DB_MAX_LIFETIME_MINUTES` | Max connection lifetime (minutes) | `5` |
 | `RATE_LIMIT_MAX` | Requests allowed per rate-limit window (`<=0` disables limiter) | `200` |
 | `RATE_LIMIT_WINDOW_SECONDS` | Rate-limit window in seconds | `60` |
+| `ADMIN_EMAIL` | Email of an existing user to promote to admin on startup | *(optional)* |
+| `SMTP_HOST` | SMTP server hostname; if unset, no emails are sent | *(optional)* |
+| `SMTP_PORT` | SMTP server port | `587` |
+| `SMTP_USER` | SMTP authentication username | *(optional)* |
+| `SMTP_PASSWORD` | SMTP authentication password | *(optional)* |
+| `SMTP_FROM` | Sender address used in outgoing emails | *(optional)* |
 
 ### Frontend
 
@@ -107,6 +113,20 @@ The production Docker setup serves the frontend behind nginx and proxies `/api`,
 The default `BACKEND_UPSTREAM=familyjournal-backend` matches both the documented standalone container name and the Docker Compose service name. Keep `MAX_UPLOAD_MB` aligned between frontend and backend so nginx and the API enforce the same upload limit.
 
 For cross-origin backend access outside Docker, set `CORS_ALLOW_ORIGINS` to the exact browser origins that should be allowed. Because the app uses session cookies, wildcard origins are not appropriate.
+
+## Admin verification and email notifications
+
+New user registrations require admin approval before the account is active. When a user registers:
+
+1. Their account is created in an inactive state.
+2. The registering user receives a "pending approval" email (if SMTP is configured).
+3. All admin users in the database receive a notification email about the new registration.
+4. An admin must activate the account via `PATCH /admin/users/:id/active` with `{ "is_active": true }`.
+5. The user receives an "account activated" email once an admin enables their account.
+
+Email sending is entirely optional. Set `SMTP_HOST` to enable it; leave it unset to skip all email delivery silently.
+
+To bootstrap the first admin account, set `ADMIN_EMAIL` to the email of an already-registered user. On startup the backend will promote that user to the `admin` role.
 
 ## Database migrations
 
@@ -198,7 +218,7 @@ Hashtag payload:
 ### Admin
 - `GET /admin/users`
 - `PATCH /admin/users/:id/role` with `{ "role": "admin" }` or `{ "role": "user" }`
-- `PATCH /admin/users/:id/active` with `{ "is_active": true }`
+- `PATCH /admin/users/:id/active` with `{ "is_active": true }` — activating a user triggers an account-activated email to that user
 
 ### Other routes
 - `GET /healthz`
