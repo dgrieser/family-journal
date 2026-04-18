@@ -58,9 +58,10 @@ func (h *AdminHandler) UpdateActive(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid payload")
 	}
-	if err := h.Service.UpdateUserActive(int64(id), req.IsActive); err != nil {
+	user, err := h.Service.UpdateUserActive(int64(id), req.IsActive)
+	if err != nil {
 		log.Printf("update user active error: %v", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update user")
 	}
-	return c.SendStatus(fiber.StatusNoContent)
+	return c.JSON(user)
 }

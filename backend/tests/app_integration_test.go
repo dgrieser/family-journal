@@ -8,6 +8,7 @@ import (
 
 	appbuilder "familyjournal/backend/internal/app"
 	"familyjournal/backend/internal/config"
+	"familyjournal/backend/internal/email"
 	"familyjournal/backend/internal/services"
 
 	"github.com/gofiber/fiber/v2"
@@ -74,7 +75,7 @@ func newIntegratedTestApp(t *testing.T, origins []string) *fiber.App {
 	t.Helper()
 
 	repo := newFakeRepo()
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	service := services.New(repo, repo, repo, repo, repo, repo, email.New(email.Config{}))
 	store := session.New(session.Config{
 		CookieHTTPOnly: true,
 		CookieSameSite: "Lax",

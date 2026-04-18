@@ -3,6 +3,9 @@ package services
 import (
 	"database/sql"
 	"errors"
+	"log"
+
+	"familyjournal/backend/internal/email"
 	"familyjournal/backend/internal/models"
 
 	"golang.org/x/crypto/bcrypt"
@@ -50,6 +53,24 @@ func (s *Service) UpdateUserRole(userID int64, role string) error {
 	return s.Users.UpdateUserRole(userID, role)
 }
 
-func (s *Service) UpdateUserActive(userID int64, active bool) error {
-	return s.Users.UpdateUserActive(userID, active)
+func (s *Service) UpdateUserActive(userID int64, active bool) (*models.User, error) {
+	user, err := s.Users.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if user.IsActive == active {
+		return user, nil
+	}
+	if err := s.Users.UpdateUserActive(userID, active); err != nil {
+		return nil, err
+	}
+	user.IsActive = active
+	if active {
+		go func() {
+			if err := email.SendAccountActivated(s.Email, user.Email); err != nil {
+				log.Printf("email: account activated for %s: %v", user.Email, err)
+			}
+		}()
+	}
+	return s.Users.GetUserByID(userID)
 }

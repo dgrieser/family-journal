@@ -47,7 +47,7 @@
   "page_status": "Page {{page}} of {{total}}",
   "dont_have_account": "Don't have an account?",
   "already_have_account": "Already have an account?",
-  "registration_success_login": "Registration successful. Please log in.",
+  "registration_success_login": "Registration submitted. Your account requires admin approval before you can log in. You will receive an email once your account is activated.",
   "post_submit_error": "Could not save the post. Please try again.",
   "post_partial_upload_error": "Post saved, but uploading attachments failed.",
   "delete_error": "Could not delete. You may not have permission.",

@@ -23,6 +23,11 @@ type Config struct {
 	RateLimitMax  int
 	RateLimitTTL  int
 	AdminEmail    string
+	SMTPHost      string
+	SMTPPort      int
+	SMTPUser      string
+	SMTPPassword  string
+	SMTPFrom      string
 }
 
 func Load() Config {
@@ -42,6 +47,11 @@ func Load() Config {
 		RateLimitMax:  int(getEnvInt("RATE_LIMIT_MAX", 200)),
 		RateLimitTTL:  int(getEnvInt("RATE_LIMIT_WINDOW_SECONDS", 60)),
 		AdminEmail:    getEnv("ADMIN_EMAIL", ""),
+		SMTPHost:      getEnv("SMTP_HOST", ""),
+		SMTPPort:      int(getEnvInt("SMTP_PORT", 587)),
+		SMTPUser:      getEnv("SMTP_USER", ""),
+		SMTPPassword:  getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:      getEnv("SMTP_FROM", ""),
 	}
 }
 

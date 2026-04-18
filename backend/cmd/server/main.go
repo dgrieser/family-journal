@@ -12,6 +12,7 @@ import (
 	appbuilder "familyjournal/backend/internal/app"
 	"familyjournal/backend/internal/config"
 	"familyjournal/backend/internal/db"
+	"familyjournal/backend/internal/email"
 	"familyjournal/backend/internal/models"
 	"familyjournal/backend/internal/repositories"
 	"familyjournal/backend/internal/services"
@@ -63,7 +64,14 @@ func main() {
 			}
 		}
 	}
-	service := services.New(repo, repo, repo, repo, repo, repo)
+	emailSender := email.New(email.Config{
+		Host:     cfg.SMTPHost,
+		Port:     cfg.SMTPPort,
+		User:     cfg.SMTPUser,
+		Password: cfg.SMTPPassword,
+		From:     cfg.SMTPFrom,
+	})
+	service := services.New(repo, repo, repo, repo, repo, repo, emailSender)
 	storage := sessionstore.NewMySQLStore(database)
 
 	store := session.New(session.Config{
