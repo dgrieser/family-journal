@@ -37,10 +37,12 @@ export interface TagColors {
 
 export function getTagColors(word: string): TagColors {
   const hue = goldenAngleHue(word);
+  // oklch gives perceptually uniform brightness across all hues (HSL makes
+  // yellow nearly invisible at high lightness, blue muddy at low lightness).
   return {
-    color: `hsl(${hue}, 65%, 35%)`,
-    background: `hsl(${hue}, 80%, 92%)`,
-    border: `hsl(${hue}, 55%, 80%)`,
+    color: `oklch(38% 0.15 ${hue})`,
+    background: `oklch(93% 0.07 ${hue})`,
+    border: `oklch(78% 0.11 ${hue})`,
   };
 }
 
@@ -64,17 +66,16 @@ export function buildHighlightHtml(text: string): string {
   return parts
     .map((part) => {
       if (/^[@#][\p{L}\d_]+$/u.test(part)) {
-        const name = part.slice(1);
-        const hue = goldenAngleHue(name);
+        const { color, background, border } = getTagColors(part.slice(1));
         // Use box-shadow instead of padding/border so the mark adds zero
         // horizontal width — keeping text metrics identical to the textarea
         // and preserving cursor position alignment.
         return (
           `<mark style="` +
-          `background:hsl(${hue},80%,92%);` +
-          `color:hsl(${hue},65%,35%);` +
+          `background:${background};` +
+          `color:${color};` +
           `border-radius:3px;` +
-          `box-shadow:0 0 0 1px hsl(${hue},55%,80%)` +
+          `box-shadow:0 0 0 1px ${border}` +
           `">${escapeHtml(part)}</mark>`
         );
       }
