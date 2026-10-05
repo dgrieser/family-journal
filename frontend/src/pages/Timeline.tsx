@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { searchPersons } from '../persons';
@@ -61,57 +61,54 @@ export const Timeline = () => {
   const [personSearch, setPersonSearch] = useState('');
   const [matchingPersons, setMatchingPersons] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [page, setPage] = useState(1);
   const dateInputRef = useRef<HTMLInputElement>(null);
-
-  const fetchPosts = useCallback(async (params: {
-    page: number;
-    viewMode: ViewMode;
-    date: string;
-    timespan: Timespan;
-    customStart: string;
-    customEnd: string;
-    search: string;
-    selectedHashtags: string[];
-    selectedPersons: string[];
-  }) => {
-    setLoading(true);
-    try {
-      const apiParams: Record<string, string | number> = {
-        page: params.page,
-        pageSize: PAGE_SIZE,
-        search: params.search,
-        hashtags: params.selectedHashtags.join(','),
-        persons: params.selectedPersons.join(','),
-      };
-
-      if (params.viewMode === 'day') {
-        apiParams.date = params.date;
-      } else {
-        const range = getDateRange(params.timespan, params.customStart, params.customEnd);
-        if (range.startDate) apiParams.startDate = range.startDate;
-        if (range.endDate) apiParams.endDate = range.endDate;
-      }
-
-      const response = await api.get<PaginatedResponse<Post>>('/posts', { params: apiParams });
-      setPosts(response.data.items);
-      setPagination(response.data.pagination);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     const id = window.setTimeout(() => setDebouncedSearch(search), 300);
     return () => window.clearTimeout(id);
   }, [search]);
 
+  // `loading` is derived: it is true until the response for the current query
+  // (including manual reloads) has arrived.
+  const queryKey = JSON.stringify([page, viewMode, date, timespan, customStart, customEnd, debouncedSearch, selectedHashtags, selectedPersons, reloadKey]);
+  const loading = loadedKey !== queryKey;
+  const reloadPosts = () => setReloadKey(k => k + 1);
+
   useEffect(() => {
-    void fetchPosts({ page, viewMode, date, timespan, customStart, customEnd, search: debouncedSearch, selectedHashtags, selectedPersons });
-  }, [date, fetchPosts, page, viewMode, timespan, customStart, customEnd, debouncedSearch, selectedHashtags, selectedPersons]);
+    let ignore = false;
+    const apiParams: Record<string, string | number> = {
+      page,
+      pageSize: PAGE_SIZE,
+      search: debouncedSearch,
+      hashtags: selectedHashtags.join(','),
+      persons: selectedPersons.join(','),
+    };
+
+    if (viewMode === 'day') {
+      apiParams.date = date;
+    } else {
+      const range = getDateRange(timespan, customStart, customEnd);
+      if (range.startDate) apiParams.startDate = range.startDate;
+      if (range.endDate) apiParams.endDate = range.endDate;
+    }
+
+    api.get<PaginatedResponse<Post>>('/posts', { params: apiParams })
+      .then(response => {
+        if (ignore) return;
+        setPosts(response.data.items);
+        setPagination(response.data.pagination);
+      })
+      .catch(err => console.error(err))
+      .finally(() => {
+        if (!ignore) setLoadedKey(queryKey);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [queryKey, page, viewMode, date, timespan, customStart, customEnd, debouncedSearch, selectedHashtags, selectedPersons]);
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -425,7 +422,7 @@ export const Timeline = () => {
       {viewMode !== 'search' && (
         <PostForm
           onSuccess={() => {
-            void fetchPosts({ page, viewMode, date, timespan, customStart, customEnd, search, selectedHashtags, selectedPersons });
+            reloadPosts();
           }}
         />
       )}
@@ -442,7 +439,7 @@ export const Timeline = () => {
             <PostCard
               key={post.id}
               post={post}
-              onUpdate={() => void fetchPosts({ page, viewMode, date, timespan, customStart, customEnd, search, selectedHashtags, selectedPersons })}
+              onUpdate={reloadPosts}
             />
           ))}
         </div>

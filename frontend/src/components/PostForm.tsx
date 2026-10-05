@@ -55,6 +55,11 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
   const suggestionsOpen =
     (showHashtagSuggestions || showPersonSuggestions) && suggestions.length > 0;
 
+  const updateSuggestions = (next: string[]) => {
+    setSuggestions(next);
+    setSelectedIndex(0);
+  };
+
   const cancelPendingPersonSearch = () => {
     if (personSearchTimeoutRef.current !== null) {
       window.clearTimeout(personSearchTimeoutRef.current);
@@ -62,20 +67,6 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     }
     personRequestIdRef.current += 1;
   };
-
-  useEffect(() => {
-    if (initialData) {
-      setText(initialData.text);
-      setDate(initialData.date.split('T')[0]);
-      setTime(initialData.date.slice(11, 16));
-    } else {
-      setText('');
-      setDate(localDateStr(new Date()));
-      setTime(new Date().toTimeString().slice(0, 5));
-    }
-    setFiles([]);
-    setPendingDeleteIds([]);
-  }, [initialData]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -111,14 +102,9 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 767px)');
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    setIsMobile(mql.matches);
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);
   }, []);
-
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [suggestions]);
 
   const updateCaretPosition = useCallback(() => {
     const el = textareaRef.current;
@@ -146,12 +132,12 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
     try {
       const persons = await searchPersons(query);
       if (personRequestIdRef.current === requestId) {
-        setSuggestions(persons.map((person) => person.name));
+        updateSuggestions(persons.map((person) => person.name));
       }
     } catch (err) {
       console.error(err);
       if (personRequestIdRef.current === requestId) {
-        setSuggestions([]);
+        updateSuggestions([]);
       }
     }
   };
@@ -183,7 +169,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
       const lowerQuery = query.toLowerCase();
       setShowHashtagSuggestions(true);
       setShowPersonSuggestions(false);
-      setSuggestions(allHashtags.filter(h => h.toLowerCase().includes(lowerQuery)));
+      updateSuggestions(allHashtags.filter(h => h.toLowerCase().includes(lowerQuery)));
       requestAnimationFrame(updateCaretPosition);
     } else if (word.startsWith('@')) {
       const query = word.slice(1).toLowerCase();
@@ -200,7 +186,7 @@ export const PostForm = ({ onSuccess, onCancel, initialData, embedded }: PostFor
       cancelPendingPersonSearch();
       setShowHashtagSuggestions(false);
       setShowPersonSuggestions(false);
-      setSuggestions([]);
+      updateSuggestions([]);
       setCaretPos(null);
     }
   };

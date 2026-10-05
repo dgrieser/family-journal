@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { Users, Plus, Trash2, Edit2, Check } from 'lucide-react';
@@ -23,17 +23,24 @@ export const Persons = () => {
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
 
-  const fetchPersons = useCallback(async (nextPage: number) => {
-    const res = await api.get<PaginatedResponse<Person>>('/persons', {
-      params: { page: nextPage, pageSize: PAGE_SIZE }
-    });
-    setPersons(res.data.items);
-    setPagination(res.data.pagination);
-  }, []);
+  const [reloadKey, setReloadKey] = useState(0);
+  const reloadPersons = () => setReloadKey(k => k + 1);
 
   useEffect(() => {
-    void fetchPersons(page);
-  }, [fetchPersons, page]);
+    let ignore = false;
+    api.get<PaginatedResponse<Person>>('/persons', {
+      params: { page, pageSize: PAGE_SIZE }
+    })
+      .then(res => {
+        if (ignore) return;
+        setPersons(res.data.items);
+        setPagination(res.data.pagination);
+      })
+      .catch(err => console.error(err));
+    return () => {
+      ignore = true;
+    };
+  }, [page, reloadKey]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -47,11 +54,8 @@ export const Persons = () => {
       setDescription('');
       setEditingId(null);
       setError(null);
-      if (page === 1) {
-        await fetchPersons(1);
-      } else {
-        setPage(1);
-      }
+      setPage(1);
+      reloadPersons();
     } catch (err) {
       setError(extractError(err, t('action_error')));
     }
@@ -74,7 +78,7 @@ export const Persons = () => {
     try {
       await api.delete(`/persons/${confirmId}`);
       setError(null);
-      void fetchPersons(page);
+      reloadPersons();
     } catch (err) {
       setError(extractError(err, t('delete_error')));
     }

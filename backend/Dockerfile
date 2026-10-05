@@ -1,11 +1,11 @@
-FROM golang:1.22-alpine AS build
+FROM golang:1.27-alpine AS build
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . ./
 RUN go build -o server ./cmd/server
 
-FROM alpine:3.19
+FROM alpine:3.24
 WORKDIR /app
 RUN adduser -D appuser
 COPY --from=build /app/server ./server

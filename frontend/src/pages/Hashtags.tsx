@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
 import { Hash, Plus, Trash2, Edit2, Check } from 'lucide-react';
@@ -18,14 +18,20 @@ export const Hashtags = () => {
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
 
-  const fetchHashtags = useCallback(async () => {
-    const res = await api.get<Hashtag[]>('/hashtags');
-    setHashtags(res.data);
-  }, []);
+  const [reloadKey, setReloadKey] = useState(0);
+  const reloadHashtags = () => setReloadKey(k => k + 1);
 
   useEffect(() => {
-    void fetchHashtags();
-  }, [fetchHashtags]);
+    let ignore = false;
+    api.get<Hashtag[]>('/hashtags')
+      .then(res => {
+        if (!ignore) setHashtags(res.data);
+      })
+      .catch(err => console.error(err));
+    return () => {
+      ignore = true;
+    };
+  }, [reloadKey]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -40,7 +46,7 @@ export const Hashtags = () => {
       setName('');
       setEditingId(null);
       setError(null);
-      await fetchHashtags();
+      reloadHashtags();
     } catch (err: unknown) {
       const raw = extractError(err, t('action_error'));
       const msg = raw.toLowerCase().includes('already exists') ? t('hashtag_exists') : raw;
@@ -64,7 +70,7 @@ export const Hashtags = () => {
     try {
       await api.delete(`/hashtags/${confirmId}`);
       setError(null);
-      void fetchHashtags();
+      reloadHashtags();
     } catch (err) {
       setError(extractError(err, t('delete_error')));
     }
