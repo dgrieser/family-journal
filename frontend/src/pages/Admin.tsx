@@ -11,17 +11,16 @@ export const Admin = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
-    try {
-      const res = await api.get('/admin/users');
-      setUsers(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   useEffect(() => {
-    fetchUsers();
+    let ignore = false;
+    api.get<User[]>('/admin/users')
+      .then(res => {
+        if (!ignore) setUsers(res.data);
+      })
+      .catch(err => console.error(err));
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleRoleChange = async (userId: number, newRole: string) => {
